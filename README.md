@@ -1,5 +1,2 @@
-Vulkan Plaground is a place for very simple experiments with the Vulkan graphics/compute API
+osg2vsg is a utility library that convertes OpenSceneGraph images and 3d modules into VSG equivalents
 
-## Documents
-> [Areas of Interest](docs/AreasOfInterest.md)
-> [3rd Party Resources](docs/3rdPartyResources.md)
