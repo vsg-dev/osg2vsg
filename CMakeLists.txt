@@ -59,6 +59,8 @@ find_package(osgViewer)
 find_package(GLFW)
 find_package(Vulkan)
 
+find_package(VSG)
+
 find_package(Threads)
 
 find_library(DL_LIBRARY dl)
@@ -70,4 +72,3 @@ ENDIF()
 
 # src directory contains all the example applications etc.
 add_subdirectory(src)
-add_subdirectory(applications)
