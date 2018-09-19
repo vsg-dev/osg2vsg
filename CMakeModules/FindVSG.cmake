@@ -45,14 +45,16 @@ find_path(VSG_INCLUDE_DIR
   PATHS
     ${VSG_DIR}/include
     "$ENV{VSG_DIR}/include"
-  NO_DEFAULT_PATH
+    ${CMAKE_PREFIX_PATH}
   )
 
 find_library(VSG_LIBRARY
     NAMES vsg
     PATHS
     ${VSG_DIR}/lib
-    "$ENV{VSG_DIR}/lib")
+    "$ENV{VSG_DIR}/lib"
+    ${CMAKE_PREFIX_PATH}
+)
 
 set(VSG_LIBRARIES ${VSG_LIBRARY})
 set(VSG_INCLUDE_DIRS ${VSG_INCLUDE_DIR})
