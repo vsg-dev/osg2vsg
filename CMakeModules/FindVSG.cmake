@@ -38,6 +38,7 @@
 
 message("FindVSG.cmake VSG_DIR=" ${VSG_DIR})
 message("FindVSG.cmake Using env" $ENV{VSG_DIR})
+message("FindVSG.cmake Using CMAKE_PREFIX_PATH = " ${CMAKE_PREFIX_PATH})
 
 find_path(VSG_INCLUDE_DIR
   NAMES vsg/all.h
