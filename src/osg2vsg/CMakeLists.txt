@@ -24,3 +24,13 @@ else ()
 endif()
 
 TARGET_LINK_LIBRARIES(osg2vsg ${Vulkan_LIBRARY} ${Vulkan_LIBRARIES}  ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES})
+
+install(TARGETS osg2vsg
+        LIBRARY
+            DESTINATION lib
+            COMPONENT libosg2vsg
+)
+
+
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/osg2vsg DESTINATION include)
+
