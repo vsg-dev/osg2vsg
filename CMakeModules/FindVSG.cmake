@@ -36,16 +36,11 @@
 
 # VSG header file
 
-message("FindVSG.cmake VSG_DIR=" ${VSG_DIR})
-message("FindVSG.cmake Using env" $ENV{VSG_DIR})
-message("FindVSG.cmake Using CMAKE_PREFIX_PATH = " ${CMAKE_PREFIX_PATH})
-
 find_path(VSG_INCLUDE_DIR
   NAMES vsg/all.h
   PATHS
     ${VSG_DIR}/include
     "$ENV{VSG_DIR}/include"
-    ${CMAKE_PREFIX_PATH}
   )
 
 find_library(VSG_LIBRARY
@@ -53,7 +48,6 @@ find_library(VSG_LIBRARY
     PATHS
     ${VSG_DIR}/lib
     "$ENV{VSG_DIR}/lib"
-    ${CMAKE_PREFIX_PATH}
 )
 
 set(VSG_LIBRARIES ${VSG_LIBRARY})
