@@ -22,9 +22,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_BINDIR})
 # find the various depdendencies
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${CMAKE_SOURCE_DIR}/CMakeModules/")
 
-# set compilation to use C++11
-set(CMAKE_CXX_STANDARD 11)
-#set(CMAKE_CXX_STANDARD 14)
+# set compilation to use C++17
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Change the default build type to Release
 IF(NOT CMAKE_BUILD_TYPE)
