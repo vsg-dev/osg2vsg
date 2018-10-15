@@ -53,6 +53,8 @@ find_library(VSG_LIBRARY
 set(VSG_LIBRARIES ${VSG_LIBRARY})
 set(VSG_INCLUDE_DIRS ${VSG_INCLUDE_DIR})
 
+#set(VSG_DEFINITIONS -DVSG_SHARED_LIBRARY)
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(VSG
   DEFAULT_MSG

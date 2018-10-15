@@ -7,22 +7,20 @@ include_directories(
     ${VSG_INCLUDE_DIR}
 )
 
+SET(HEADER_PATH ${CMAKE_SOURCE_DIR}/include/osg2vsg)
+
 set(HEADERS
-    Export.h
-    ImageUtils.h
+    ${HEADER_PATH}/Export.h
+    ${HEADER_PATH}/ImageUtils.h
 )
 
 set(SOURCES
     ImageUtils.cpp
 )
 
-if   (BUILD_SHARED_LIBS)
-    add_definitions(-DVSG_LIBRARY)
-    add_library(osg2vsg SHARED ${HEADER_FILES} ${SOURCES})
-else ()
-    add_definitions(-DVSG_LIBRARY_STATIC)
-    add_library(osg2vsg STATIC ${HEADER_FILES} ${SOURCES})
-endif()
+add_definitions(${VSG_DEFINITIONS})
+
+add_library(osg2vsg ${HEADERS} ${SOURCES})
 
 target_link_libraries(osg2vsg ${Vulkan_LIBRARY} ${Vulkan_LIBRARIES}  ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES})
 
