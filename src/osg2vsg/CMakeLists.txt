@@ -1,6 +1,7 @@
 
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_BINARY_DIR}/include
     ${OSG_INCLUDE_DIR}
     ${Vulkan_INCLUDE_DIR}
     ${VSG_INCLUDE_DIR}
