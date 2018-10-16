@@ -3,8 +3,6 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_BINARY_DIR}/include
     ${OSG_INCLUDE_DIR}
-    ${Vulkan_INCLUDE_DIR}
-    ${VSG_INCLUDE_DIR}
 )
 
 SET(HEADER_PATH ${CMAKE_SOURCE_DIR}/include/osg2vsg)
@@ -20,7 +18,7 @@ set(SOURCES
 
 add_library(osg2vsg ${HEADERS} ${SOURCES})
 
-target_link_libraries(osg2vsg VSG::VSG ${Vulkan_LIBRARIES}  ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES})
+target_link_libraries(osg2vsg VSG::VSG Vulkan::Vulkan ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES})
 
 install(TARGETS osg2vsg
         LIBRARY DESTINATION lib
