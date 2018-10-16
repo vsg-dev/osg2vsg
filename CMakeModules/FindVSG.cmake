@@ -54,7 +54,7 @@ set(VSG_LIBRARIES ${VSG_LIBRARY})
 set(VSG_INCLUDE_DIRS ${VSG_INCLUDE_DIR})
 
 # We weed to work out how to auto-detect whether we have found a shared library or not then enable the following definition
-# set(VSG_DEFINITIONS -DVSG_SHARED_LIBRARY)
+#set(VSG_DEFINITIONS VSG_SHARED_LIBRARY)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(VSG

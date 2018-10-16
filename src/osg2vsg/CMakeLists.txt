@@ -20,9 +20,7 @@ set(SOURCES
 
 add_library(osg2vsg ${HEADERS} ${SOURCES})
 
-add_definitions(${VSG_DEFINITIONS})
-
-target_link_libraries(osg2vsg ${VSG_LIBRARIES} ${Vulkan_LIBRARIES}  ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES})
+target_link_libraries(osg2vsg VSG::VSG ${Vulkan_LIBRARIES}  ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES})
 
 install(TARGETS osg2vsg
         LIBRARY DESTINATION lib
