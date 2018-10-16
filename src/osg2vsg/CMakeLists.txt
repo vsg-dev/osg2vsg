@@ -18,11 +18,11 @@ set(SOURCES
     ImageUtils.cpp
 )
 
-add_definitions(${VSG_DEFINITIONS})
-
 add_library(osg2vsg ${HEADERS} ${SOURCES})
 
-target_link_libraries(osg2vsg ${Vulkan_LIBRARY} ${Vulkan_LIBRARIES}  ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES})
+add_definitions(${VSG_DEFINITIONS})
+
+target_link_libraries(osg2vsg ${VSG_LIBRARIES} ${Vulkan_LIBRARIES}  ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES})
 
 install(TARGETS osg2vsg
         LIBRARY DESTINATION lib

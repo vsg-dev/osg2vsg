@@ -53,7 +53,8 @@ find_library(VSG_LIBRARY
 set(VSG_LIBRARIES ${VSG_LIBRARY})
 set(VSG_INCLUDE_DIRS ${VSG_INCLUDE_DIR})
 
-#set(VSG_DEFINITIONS -DVSG_SHARED_LIBRARY)
+# We weed to work out how to auto-detect whether we have found a shared library or not then enable the following definition
+# set(VSG_DEFINITIONS -DVSG_SHARED_LIBRARY)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(VSG
@@ -65,6 +66,7 @@ find_package_handle_standard_args(VSG
 if(VSG_FOUND AND NOT TARGET VSG::VSG)
   add_library(VSG::VSG UNKNOWN IMPORTED)
   set_target_properties(VSG::VSG PROPERTIES
+    INTERFACE_COMPILE_DEFINITIONS "${VSG_DEFINITIONS}"
     IMPORTED_LOCATION "${VSG_LIBRARIES}"
     INTERFACE_INCLUDE_DIRECTORIES "${VSG_INCLUDE_DIRS}")
 endif()
