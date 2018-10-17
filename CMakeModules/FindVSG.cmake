@@ -1,4 +1,4 @@
-# FindVSG,cmake sourced from the GL_vs_VK project, (C) Copyright (c) 2017 Damian Dydo
+# FindVSG,cmake sourced from the GL_vs_VK project, (C) Copyright (c) 2017 Damian Dyńdo
 #
 # This module is taken from CMake original find-modules and adapted for the
 # needs of this project:
