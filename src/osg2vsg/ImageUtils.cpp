@@ -51,7 +51,7 @@ struct WriteRow : public osg::CastAndScaleToFloatOperation
 
 vsg::ref_ptr<osg::Image> formatImage(osg::Image* image, GLenum pixelFormat)
 {
-    vsg::ref_ptr<osg::Image> new_image = new osg::Image;
+    vsg::ref_ptr<osg::Image> new_image( new osg::Image);
     new_image->allocateImage(image->s(), image->t(), image->r(), pixelFormat, GL_UNSIGNED_BYTE);
 
     // need to copy pixels from image to new_image;
