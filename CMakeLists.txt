@@ -7,6 +7,12 @@ set(OUTPUT_LIBDIR ${PROJECT_BINARY_DIR}/lib)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${OUTPUT_LIBDIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_BINDIR})
+
+SET(CMAKE_DEBUG_POSTFIX "d" CACHE STRING "add a postfix, usually d on windows")
+SET(CMAKE_RELEASE_POSTFIX "" CACHE STRING "add a postfix, usually empty on windows")
+SET(CMAKE_RELWITHDEBINFO_POSTFIX "rd" CACHE STRING "add a postfix, usually empty on windows")
+SET(CMAKE_MINSIZEREL_POSTFIX "s" CACHE STRING "add a postfix, usually empty on windows")
+
 if(WIN32)
     SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${OUTPUT_BINDIR})
 else(WIN32)
@@ -14,8 +20,16 @@ else(WIN32)
 endif(WIN32)
 
 # set up local bin directory to place all binaries
-make_directory(${OUTPUT_BINDIR})
-make_directory(${OUTPUT_LIBDIR})
+if(WIN32)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${OUTPUT_BINDIR})
+    # set up local bin directory to place all binaries
+    make_directory(${OUTPUT_BINDIR})
+    make_directory(${OUTPUT_LIBDIR})
+else(WIN32)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${OUTPUT_LIBDIR})
+    # set up local bin directory to place all binaries
+    make_directory(${OUTPUT_LIBDIR})
+endif(WIN32)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_BINDIR})
 
