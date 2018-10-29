@@ -83,4 +83,4 @@ add_custom_target(clobber
 )
 
 # src directory contains all the example applications etc.
-add_subdirectory(src)
+add_subdirectory(src/osg2vsg)

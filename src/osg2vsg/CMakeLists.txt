@@ -18,6 +18,8 @@ set(SOURCES
 
 add_library(osg2vsg ${HEADERS} ${SOURCES})
 
+set_property(TARGET osg2vsg PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 target_link_libraries(osg2vsg VSG::VSG Vulkan::Vulkan ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES})
 
 install(TARGETS osg2vsg
