@@ -1,4 +1,4 @@
-# FindVSG,cmake sourced from the GL_vs_VK project, (C) Copyright (c) 2017 Damian Dydo
+# FindVSG,cmake sourced from the GL_vs_VK project, (C) Copyright (c) 2017 Damian Dyńdo
 #
 # This module is taken from CMake original find-modules and adapted for the
 # needs of this project:
@@ -57,7 +57,7 @@ find_library(VSG_LIBRARY_DEBUG
     "$ENV{VSG_DIR}/lib"
 )
 
-set(VSG_LIBRARIES ${VSG_LIBRARY})
+set(VSG_LIBRARIES optimized ${VSG_LIBRARY_RELEASE} debug ${VSG_LIBRARY_DEBUG})
 set(VSG_INCLUDE_DIRS ${VSG_INCLUDE_DIR})
 
 include(SelectLibraryConfigurations)
@@ -86,7 +86,7 @@ if (VSG_FOUND)
         "${CMAKE_BINARY_DIR}"
         ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CmakeTmp/vsg_test.cxx
         CMAKE_FLAGS -DINCLUDE_DIRECTORIES:STRING=${VSG_INCLUDE_DIR}
-        LINK_LIBRARIES ${VSG_LIBRARY}
+        LINK_LIBRARIES ${VSG_LIBRARIES}
         COMPILE_OUTPUT_VARIABLE CompileOutput
         RUN_OUTPUT_VARIABLE RunOutput
     )
@@ -108,13 +108,18 @@ endif()
 
 # mark_as_advanced(VSG_INCLUDE_DIR VSG_LIBRARY)
 
+
 if(VSG_FOUND)
 
     if (NOT TARGET VSG::VSG)
 
         add_library(VSG::VSG UNKNOWN IMPORTED)
 
-        set_target_properties(VSG::VSG PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${VSG_INCLUDE_DIR}")
+        set_target_properties(VSG::VSG PROPERTIES
+            IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
+            INTERFACE_INCLUDE_DIRECTORIES "${VSG_INCLUDE_DIR}"
+            INTERFACE_COMPILE_DEFINITIONS "${VSG_DEFINITIONS}"
+        )
 
         if (VSG_LIBRARY_RELEASE)
             set_property(TARGET VSG::VSG APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
