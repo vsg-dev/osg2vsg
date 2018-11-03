@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.7)
 
 project(VulkanPlayground)
 
@@ -33,14 +33,6 @@ endif(WIN32)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_BINDIR})
 
-# find the various depdendencies
-set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${CMAKE_SOURCE_DIR}/CMakeModules/")
-
-# set compilation to use C++17
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
 # Change the default build type to Release
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
@@ -66,17 +58,8 @@ find_package(osg)
 find_package(osgDB)
 find_package(osgUtil)
 
-find_package(GLFW)
 find_package(Vulkan)
-
-find_package(VSG)
-
-find_package(Threads)
-
-find_library(DL_LIBRARY dl)
-if(NOT DL_LIBRARY)
-    set(DL_LIBRARY "") # change from NOTFOUND to empty when passed to linker
-endif()
+find_package(vsg)
 
 add_custom_target(clobber
     COMMAND git clean -d -f -x
