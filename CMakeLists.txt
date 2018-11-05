@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.7)
 
-project(osg2vsg)
-
-set(OSG2VSG_MAJOR_VERSION 0)
-set(OSG2VSG_MINOR_VERSION 0)
-set(OSG2VSG_PATCH_VERSION 0)
+project(OSG2VSG
+    VERSION 0.0.0
+    DESCRIPTION "OpenSceneGra/Vulkan/VkSceneGraph integration library"
+    LANGUAGES CXX
+)
 set(OSG2VSG_SOVERSION 0)
 
 set(OUTPUT_BINDIR ${PROJECT_BINARY_DIR}/bin)
