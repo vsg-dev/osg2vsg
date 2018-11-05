@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.7)
 
-project(VulkanPlayground)
+project(osg2vsg)
 
 set(OSG2VSG_MAJOR_VERSION 0)
 set(OSG2VSG_MINOR_VERSION 0)
@@ -68,6 +68,11 @@ find_package(vsg)
 
 add_custom_target(clobber
     COMMAND git clean -d -f -x
+)
+
+# automatically buil_all_h build target to generate the include/vsg/all.h from the headers in the include/vsg/* directories
+add_custom_target(uninstall
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/build/uninstall.cmake
 )
 
 # src directory contains all the example applications etc.
