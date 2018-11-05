@@ -43,9 +43,6 @@ endif()
 
 
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/osg2vsg DESTINATION include)
-if (NOT(${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_SOURCE_DIR}))
-    install(DIRECTORY ${CMAKE_BINARY_DIR}/include/osg2vsg DESTINATION include)
-endif()
 
 # [==[
 install(EXPORT osg2vsgTargets
