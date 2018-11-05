@@ -19,7 +19,6 @@ set_property(TARGET osg2vsg PROPERTY CXX_STANDARD 17)
 
 target_include_directories(osg2vsg PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
-    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>
     ${OSG_INCLUDE_DIR}
 )
