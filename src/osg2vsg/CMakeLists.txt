@@ -26,7 +26,7 @@ target_include_directories(osg2vsg PUBLIC
 target_link_libraries(osg2vsg PUBLIC
     vsg::vsg
     Vulkan::Vulkan
-    ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES}
+    ${OPENTHREADS_LIBRARIES} ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES}
 )
 
 
