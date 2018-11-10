@@ -26,7 +26,7 @@ To provide a convenient way to load images and create a VSG/Vulkan compatible im
 vsg::ImageData imageData = osg2vsg::readImageFile(device, commandPool, graphicsQueue, "myfile.png")
 ```
 
-An example of osg2vsg::readImageFile(..) being used be be found in the [vsgExamples](https://github.com/vsg-dev/vsgExamples) repository's [vsgdraw](https://github.com/vsg-dev/vsgExamples/examples_osg2vsg/vsgdraw).
+An example of osg2vsg::readImageFile(..) being used be be found in the [vsgExamples](https://github.com/vsg-dev/vsgExamples) repository's [vsgdraw](https://github.com/vsg-dev/vsgExamples/tree/master/examples_osg2vsg/vsgdraw).
 
 ## Building and installing osg2vsg
 
