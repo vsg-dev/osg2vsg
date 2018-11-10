@@ -2,6 +2,7 @@ include(CMakeFindDependencyMacro)
 
 find_dependency(Vulkan)
 find_dependency(vsg)
+find_dependency(OpenThreads)
 find_dependency(osg)
 find_dependency(osgUtil)
 find_dependency(osgDB)
