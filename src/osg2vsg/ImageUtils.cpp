@@ -11,7 +11,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 </editor-fold> */
 
 #include <osg2vsg/ImageUtils.h>
-#include <vsg/vk/CommandVisitor.h>
+#include <vsg/vk/CommandBuffer.h>
 
 namespace osg2vsg
 {
