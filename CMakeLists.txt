@@ -10,6 +10,8 @@ set(OSG2VSG_SOVERSION 0)
 set(OUTPUT_BINDIR ${PROJECT_BINARY_DIR}/bin)
 set(OUTPUT_LIBDIR ${PROJECT_BINARY_DIR}/lib)
 
+#set(OSG_PLUGINS_DIRECTORY osgPlugins-$OSG_MAJOR_VERSION}.$OSG_MINOR_VERSION}.${OSG_PATCH_VERSION})
+
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${OUTPUT_LIBDIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_BINDIR})
 
@@ -77,3 +79,4 @@ add_custom_target(uninstall
 
 # src directory contains all the example applications etc.
 add_subdirectory(src/osg2vsg)
+add_subdirectory(src/osgPlugins/vsg)
