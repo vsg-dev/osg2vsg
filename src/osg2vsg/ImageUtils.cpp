@@ -74,7 +74,7 @@ vsg::ref_ptr<vsg::Data> convertToVsg(const osg::Image* image)
     // we want to pass ownership of the new_image data onto th vsg_image so reset the allocation mode on the image to prevent deletetion.
     new_image->setAllocationMode(osg::Image::NO_DELETE);
 
-    vsg::ref_ptr<vsg::ubvec4Array2D> vsg_image(new vsg::ubvec4Array2D(new_image->s(), new_image->t()));
+    vsg::ref_ptr<vsg::ubvec4Array2D> vsg_image(new vsg::ubvec4Array2D(new_image->s(), new_image->t(), reinterpret_cast<vsg::ubvec4*>(new_image->data())));
 
     return vsg_image;
 }
