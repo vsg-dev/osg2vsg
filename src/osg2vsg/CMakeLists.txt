@@ -29,7 +29,6 @@ target_link_libraries(osg2vsg PUBLIC
     ${OPENTHREADS_LIBRARIES} ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES}
 )
 
-
 install(TARGETS osg2vsg EXPORT osg2vsgTargets
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib

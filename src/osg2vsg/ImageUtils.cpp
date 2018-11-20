@@ -49,10 +49,10 @@ struct WriteRow : public osg::CastAndScaleToFloatOperation
     }
 };
 
-vsg::ref_ptr<osg::Image> formatImage(osg::Image* image, GLenum pixelFormat)
+osg::ref_ptr<osg::Image> formatImageToRGBA(const osg::Image* image)
 {
-    vsg::ref_ptr<osg::Image> new_image( new osg::Image);
-    new_image->allocateImage(image->s(), image->t(), image->r(), pixelFormat, GL_UNSIGNED_BYTE);
+    osg::ref_ptr<osg::Image> new_image( new osg::Image);
+    new_image->allocateImage(image->s(), image->t(), image->r(), GL_RGBA, GL_UNSIGNED_BYTE);
 
     // need to copy pixels from image to new_image;
     for(int r=0;r<image->r();++r)
@@ -67,6 +67,19 @@ vsg::ref_ptr<osg::Image> formatImage(osg::Image* image, GLenum pixelFormat)
     return new_image;
 }
 
+vsg::ref_ptr<vsg::Data> convertToVsg(const osg::Image* image)
+{
+    osg::ref_ptr<osg::Image> new_image = formatImageToRGBA(image);
+
+    // we want to pass ownership of the new_image data onto th vsg_image so reset the allocation mode on the image to prevent deletetion.
+    new_image->setAllocationMode(osg::Image::NO_DELETE);
+
+    vsg::ref_ptr<vsg::ubvec4Array2D> vsg_image(new vsg::ubvec4Array2D(new_image->s(), new_image->t()));
+
+    return vsg_image;
+}
+
+
 vsg::ImageData readImageFile(vsg::Device* device, vsg::CommandPool* commandPool, VkQueue graphicsQueue, const std::string& filename)
 {
     osg::ref_ptr<osg::Image> osg_image = osgDB::readImageFile(filename);
@@ -78,7 +91,7 @@ vsg::ImageData readImageFile(vsg::Device* device, vsg::CommandPool* commandPool,
     if(osg_image->getPixelFormat()!=GL_RGBA || osg_image->getDataType()!=GL_UNSIGNED_BYTE)
     {
         std::cout<<"Reformating osg::Image to GL_RGBA, before = "<<osg_image->getPixelFormat()<<std::endl;
-        osg_image = osg2vsg::formatImage(osg_image, GL_RGBA);
+        osg_image = osg2vsg::formatImageToRGBA(osg_image);
         std::cout<<"Reformating osg::Image to GL_RGBA, after = "<<osg_image->getPixelFormat()<<", RGBA="<<GL_RGBA<<std::endl;
     }
 

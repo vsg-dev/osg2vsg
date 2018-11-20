@@ -15,6 +15,8 @@
 
 #include <vsg/nodes/Group.h>
 
+#include <osg2vsg/ImageUtils.h>
+
 
 class ReaderWriterVSG : public osgDB::ReaderWriter
 {
@@ -109,7 +111,8 @@ class ReaderWriterVSG : public osgDB::ReaderWriter
             std::string ext = osgDB::getFileExtension(filename);
             if (!acceptsExtension(ext)) return WriteResult::FILE_NOT_HANDLED;
 
-            vsg::ref_ptr<vsg::Data> data(new vsg::vec4Array2D(image.s(), image.t()));
+            //vsg::ref_ptr<vsg::Data> data(new vsg::vec4Array2D(image.s(), image.t()));
+            auto data = osg2vsg::convertToVsg(&image);
 
             if (data) return write(data, filename, options);
             else return WriteResult::FILE_NOT_HANDLED;

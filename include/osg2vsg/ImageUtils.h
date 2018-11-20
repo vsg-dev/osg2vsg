@@ -36,7 +36,9 @@ namespace osg2vsg
 
     extern OSG2VSG_DECLSPEC VkFormat convertGLImageFormatToVulkan(GLenum dataType, GLenum pixelFormat);
 
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<osg::Image> formatImage(osg::Image* image, GLenum pixelFormat);
+    extern OSG2VSG_DECLSPEC osg::ref_ptr<osg::Image> formatImageToRGBA(const osg::Image* image);
+
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Data> convertToVsg(const osg::Image* image);
 
     extern OSG2VSG_DECLSPEC vsg::ImageData readImageFile(vsg::Device* device, vsg::CommandPool* commandPool, VkQueue graphicsQueue, const std::string& filename);
 }
