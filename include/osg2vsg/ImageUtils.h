@@ -25,15 +25,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 namespace osg2vsg
 {
-    using GLtoVkFormatMap = std::map<std::pair<GLenum, GLenum>, VkFormat>;
-    static GLtoVkFormatMap s_GLtoVkFormatMap = {
-        {{GL_UNSIGNED_BYTE, GL_ALPHA}, VK_FORMAT_R8_UNORM},
-        {{GL_UNSIGNED_BYTE, GL_LUMINANCE}, VK_FORMAT_R8_UNORM},
-        {{GL_UNSIGNED_BYTE, GL_LUMINANCE_ALPHA}, VK_FORMAT_R8G8_UNORM},
-        {{GL_UNSIGNED_BYTE, GL_RGB}, VK_FORMAT_R8G8B8_UNORM},
-        {{GL_UNSIGNED_BYTE, GL_RGBA}, VK_FORMAT_R8G8B8A8_UNORM}
-    };
-
     extern OSG2VSG_DECLSPEC VkFormat convertGLImageFormatToVulkan(GLenum dataType, GLenum pixelFormat);
 
     extern OSG2VSG_DECLSPEC osg::ref_ptr<osg::Image> formatImageToRGBA(const osg::Image* image);

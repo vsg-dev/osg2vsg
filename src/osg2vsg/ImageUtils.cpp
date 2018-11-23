@@ -11,13 +11,27 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 </editor-fold> */
 
 #include <osg2vsg/ImageUtils.h>
+
 #include <vsg/vk/CommandBuffer.h>
+
+#include <vsg/core/Array2D.h>
+#include <vsg/core/Array3D.h>
 
 namespace osg2vsg
 {
 
+
 VkFormat convertGLImageFormatToVulkan(GLenum dataType, GLenum pixelFormat)
 {
+    using GLtoVkFormatMap = std::map<std::pair<GLenum, GLenum>, VkFormat>;
+    static GLtoVkFormatMap s_GLtoVkFormatMap = {
+        {{GL_UNSIGNED_BYTE, GL_ALPHA}, VK_FORMAT_R8_UNORM},
+        {{GL_UNSIGNED_BYTE, GL_LUMINANCE}, VK_FORMAT_R8_UNORM},
+        {{GL_UNSIGNED_BYTE, GL_LUMINANCE_ALPHA}, VK_FORMAT_R8G8_UNORM},
+        {{GL_UNSIGNED_BYTE, GL_RGB}, VK_FORMAT_R8G8B8_UNORM},
+        {{GL_UNSIGNED_BYTE, GL_RGBA}, VK_FORMAT_R8G8B8A8_UNORM}
+    };
+
     auto itr = s_GLtoVkFormatMap.find({dataType,pixelFormat});
     if (itr!=s_GLtoVkFormatMap.end())
     {
@@ -74,9 +88,20 @@ vsg::ref_ptr<vsg::Data> convertToVsg(const osg::Image* image)
     // we want to pass ownership of the new_image data onto th vsg_image so reset the allocation mode on the image to prevent deletetion.
     new_image->setAllocationMode(osg::Image::NO_DELETE);
 
-    vsg::ref_ptr<vsg::ubvec4Array2D> vsg_image(new vsg::ubvec4Array2D(new_image->s(), new_image->t(), reinterpret_cast<vsg::ubvec4*>(new_image->data())));
+    vsg::ref_ptr<vsg::Data> vsg_data;
 
-    return vsg_image;
+    if (new_image->r()==1)
+    {
+        vsg_data = new vsg::ubvec4Array2D(new_image->s(), new_image->t(), reinterpret_cast<vsg::ubvec4*>(new_image->data()));
+        vsg_data->setFormat(VK_FORMAT_R8G8B8A8_UNORM);
+    }
+    else
+    {
+        vsg_data = new vsg::ubvec4Array3D(new_image->s(), new_image->t(), new_image->r(), reinterpret_cast<vsg::ubvec4*>(new_image->data()));
+        vsg_data->setFormat(VK_FORMAT_R8G8B8A8_UNORM);
+    }
+
+    return vsg_data;
 }
 
 
