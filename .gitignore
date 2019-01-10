@@ -44,3 +44,22 @@ src/osg2vsg/osg2vsgConfigVersion.cmake
 *.exe
 *.out
 *.app
+
+
+# Visual Studio files
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.lastbuildstate
+*.tlog
+*.log
+*.pdb
+.vs/
+x64/
+src/vsg/vsg.dir/
+
+#xcode
+DerivedData/
+*.build
+*.xcodeproj
