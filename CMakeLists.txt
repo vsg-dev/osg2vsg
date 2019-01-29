@@ -80,3 +80,4 @@ add_custom_target(uninstall
 # src directory contains all the example applications etc.
 add_subdirectory(src/osg2vsg)
 add_subdirectory(src/osgPlugins/vsg)
+add_subdirectory(applications)
