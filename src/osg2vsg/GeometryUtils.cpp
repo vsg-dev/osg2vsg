@@ -127,6 +127,83 @@ namespace osg2vsg
 
         return geometry;
     }
+
+    vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGeometryGraphicsPipeline(const uint32_t& geometryAttributesMask, vsg::Paths& searchPaths)
+    {
+        //
+        // load shaders
+        //
+        vsg::ref_ptr<vsg::Shader> vertexShader = vsg::Shader::read(VK_SHADER_STAGE_VERTEX_BIT, "main", vsg::findFile("shaders/vert_PushConstants.spv", searchPaths));
+        vsg::ref_ptr<vsg::Shader> fragmentShader = vsg::Shader::read(VK_SHADER_STAGE_FRAGMENT_BIT, "main", vsg::findFile("shaders/frag_PushConstants.spv", searchPaths));
+        if (!vertexShader || !fragmentShader)
+        {
+            std::cout << "Could not create shaders." << std::endl;
+            return vsg::ref_ptr<vsg::GraphicsPipelineGroup>();
+        }
+
+        //
+        // set up graphics pipeline
+        //
+        vsg::ref_ptr<vsg::GraphicsPipelineGroup> gp = vsg::GraphicsPipelineGroup::create();
+
+        gp->shaders = vsg::GraphicsPipelineGroup::Shaders{ vertexShader, fragmentShader };
+        gp->maxSets = 1;
+        gp->descriptorPoolSizes = vsg::DescriptorPoolSizes
+        {
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1} // texture
+        };
+
+        gp->descriptorSetLayoutBindings = vsg::DescriptorSetLayoutBindings
+        {
+            {0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr} // { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
+        };
+
+        gp->pushConstantRanges = vsg::PushConstantRanges
+        {
+            {VK_SHADER_STAGE_VERTEX_BIT, 0, 196} // projection view, and model matrices
+        };
+
+        vsg::VertexInputState::Bindings vertexBindingsDescriptions = vsg::VertexInputState::Bindings
+        {
+            VkVertexInputBindingDescription{0, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX}, // vertex data
+        };
+
+        vsg::VertexInputState::Attributes vertexAttributeDescriptions = vsg::VertexInputState::Attributes
+        {
+            VkVertexInputAttributeDescription{0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0}, // vertex data
+        };
+
+        if (geometryAttributesMask & NORMAL)
+        {
+            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingsDescriptions.size(), sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX});
+            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ vertexAttributeDescriptions.size(), vertexAttributeDescriptions.size(), VK_FORMAT_R32G32B32_SFLOAT, 0 });
+        }
+        if (geometryAttributesMask & COLOR)
+        {
+            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingsDescriptions.size(), sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX });
+            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ vertexAttributeDescriptions.size(), vertexAttributeDescriptions.size(), VK_FORMAT_R32G32B32_SFLOAT, 0 });
+        }
+        if (geometryAttributesMask & TEXCOORD0)
+        {
+            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingsDescriptions.size(), sizeof(vsg::vec2), VK_VERTEX_INPUT_RATE_VERTEX });
+            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ vertexAttributeDescriptions.size(), vertexAttributeDescriptions.size(), VK_FORMAT_R32G32_SFLOAT, 0 });
+        }
+
+        gp->vertexBindingsDescriptions = vertexBindingsDescriptions;
+        gp->vertexAttributeDescriptions = vertexAttributeDescriptions;
+
+        
+        gp->pipelineStates = vsg::GraphicsPipelineStates
+        {
+            vsg::InputAssemblyState::create(),
+            vsg::RasterizationState::create(),
+            vsg::MultisampleState::create(),
+            vsg::ColorBlendState::create(),
+            vsg::DepthStencilState::create()
+        };
+
+        return gp;
+    }
 }
 
 
