@@ -5,6 +5,8 @@
 #include <vsg/vk/GraphicsPipeline.h>
 #include <vsg/vk/PushConstants.h>
 #include <vsg/vk/CommandPool.h>
+#include <vsg/vk/DescriptorSet.h>
+#include <vsg/vk/DescriptorPool.h>
 
 
 namespace vsg
@@ -58,7 +60,6 @@ namespace vsg
 
         void apply(vsg::BindPipeline& bindPipeline)
         {
-            std::cout<<"Found BindPipeline "<<std::endl;
             vsg::GraphicsPipeline* graphicsPipeline = dynamic_cast<vsg::GraphicsPipeline*>(bindPipeline.getPipeline());
             if (graphicsPipeline)
             {
@@ -79,8 +80,6 @@ namespace vsg
                                                                                                     graphicsPipeline->getPipelineStates());
 
                     bindPipeline.setPipeline(new_pipeline);
-
-                    std::cout<<"found matching viewport, replaced."<<std::endl;
                 }
             }
         }
