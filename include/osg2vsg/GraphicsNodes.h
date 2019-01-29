@@ -33,6 +33,9 @@ namespace vsg
         GraphicsNode(Allocator* allocator = nullptr):
             Inherit(allocator) {}
 
+        void read(Input& input) override;
+        void write(Output& output) const override;
+
         virtual void compile(Context& context) = 0;
     };
     VSG_type_name(vsg::GraphicsNode)
@@ -103,6 +106,10 @@ namespace vsg
         void accept(DispatchTraversal& dv) const override;
 
         void compile(Context& context) override;
+
+        void read(Input& input) override;
+        void write(Output& output) const override;
+
 
         using Shaders = std::vector<ref_ptr<Shader>>;
 

@@ -42,11 +42,47 @@ void CompileTraversal::apply(GraphicsNode& graphics)
 
 /////////////////////////////////////////////////////////////////////////////////////////
 //
+// GraphicsNode
+//
+void GraphicsNode::read(Input& input)
+{
+    Group::read(input);
+}
+
+void GraphicsNode::write(Output& output) const
+{
+    Group::write(output);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+//
 // GraphicsPipelineGroup
 //
 GraphicsPipelineGroup::GraphicsPipelineGroup(Allocator* allocator) :
     Inherit(allocator)
 {
+}
+
+void GraphicsPipelineGroup::read(Input& input)
+{
+    GraphicsNode::read(input);
+
+    shaders.resize(input.readValue<uint32_t>("NumShader"));
+    for (auto& shader : shaders)
+    {
+        shader = input.readObject<Shader>("Shader");
+    }
+}
+
+void GraphicsPipelineGroup::write(Output& output) const
+{
+    GraphicsNode::write(output);
+
+    output.writeValue<uint32_t>("NumShader", shaders.size());
+    for (auto& shader : shaders)
+    {
+        output.writeObject("Shader", shader.get());
+    }
 }
 
 void GraphicsPipelineGroup::accept(DispatchTraversal& dv) const

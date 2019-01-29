@@ -206,7 +206,13 @@ int main(int argc, char** argv)
         optimizer.optimize(osg_scene.get());
     }
 
+    vsg::Path outputFileExtension;
     if (!outputFilename.empty())
+    {
+        outputFileExtension = vsg::fileExtension(outputFilename);
+    }
+
+    if (osg_scene.valid() && !outputFilename.empty() && outputFileExtension.compare(0, 3,"osg")==0)
     {
         osg2vsg::SceneAnalysisVisitor sceneAnalysis;
         osg_scene->accept(sceneAnalysis);
@@ -231,7 +237,13 @@ int main(int argc, char** argv)
         return 1;
     }
 
-
+    if (commandGraph && !outputFilename.empty() && outputFileExtension.compare(0, 3,"vsg")==0)
+    {
+        std::ofstream fout(outputFilename);
+        vsg::AsciiOutput output(fout);
+        output.writeObject("Root", commandGraph);
+        return 1;
+    }
 
     // create the viewer and assign window(s) to it
     auto viewer = vsg::Viewer::create();
