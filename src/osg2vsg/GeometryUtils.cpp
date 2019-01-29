@@ -171,36 +171,42 @@ namespace osg2vsg
             {VK_SHADER_STAGE_VERTEX_BIT, 0, 196} // projection view, and model matrices
         };
 
+        uint32_t bindingindex = 0;
+
         vsg::VertexInputState::Bindings vertexBindingsDescriptions = vsg::VertexInputState::Bindings
         {
-            VkVertexInputBindingDescription{0, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX}, // vertex data
+            VkVertexInputBindingDescription{bindingindex, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX}, // vertex data
         };
 
         vsg::VertexInputState::Attributes vertexAttributeDescriptions = vsg::VertexInputState::Attributes
         {
-            VkVertexInputAttributeDescription{0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0}, // vertex data
+            VkVertexInputAttributeDescription{bindingindex, bindingindex, VK_FORMAT_R32G32B32_SFLOAT, 0}, // vertex data
         };
+
+        bindingindex++;
 
         if (geometryAttributesMask & NORMAL)
         {
-            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingsDescriptions.size(), sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX});
-            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ vertexAttributeDescriptions.size(), vertexAttributeDescriptions.size(), VK_FORMAT_R32G32B32_SFLOAT, 0 });
+            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ bindingindex, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX});
+            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ bindingindex, bindingindex, VK_FORMAT_R32G32B32_SFLOAT, 0 });
+            bindingindex++;
         }
         if (geometryAttributesMask & COLOR)
         {
-            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingsDescriptions.size(), sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX });
-            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ vertexAttributeDescriptions.size(), vertexAttributeDescriptions.size(), VK_FORMAT_R32G32B32_SFLOAT, 0 });
+            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ bindingindex, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX });
+            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ bindingindex, bindingindex, VK_FORMAT_R32G32B32_SFLOAT, 0 });
+            bindingindex++;
         }
         if (geometryAttributesMask & TEXCOORD0)
         {
-            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingsDescriptions.size(), sizeof(vsg::vec2), VK_VERTEX_INPUT_RATE_VERTEX });
-            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ vertexAttributeDescriptions.size(), vertexAttributeDescriptions.size(), VK_FORMAT_R32G32_SFLOAT, 0 });
+            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ bindingindex, sizeof(vsg::vec2), VK_VERTEX_INPUT_RATE_VERTEX });
+            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ bindingindex, bindingindex, VK_FORMAT_R32G32_SFLOAT, 0 });
+            bindingindex++;
         }
 
         gp->vertexBindingsDescriptions = vertexBindingsDescriptions;
         gp->vertexAttributeDescriptions = vertexAttributeDescriptions;
 
-        
         gp->pipelineStates = vsg::GraphicsPipelineStates
         {
             vsg::InputAssemblyState::create(),
