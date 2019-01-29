@@ -68,13 +68,13 @@ namespace osg2vsg
         vsg::ref_ptr<vsg::Data> vertices(osg2vsg::convertToVsg(ingeometry->getVertexArray()));
         if (vertices->valueCount() == 0) return vsg::ref_ptr<vsg::Geometry>();
 
-        size_t vertcount = vertices->valueCount();
+        unsigned int vertcount = vertices->valueCount();
 
         vsg::ref_ptr<vsg::Data> normals(osg2vsg::convertToVsg(ingeometry->getNormalArray()));
         if (normals->valueCount() == 0 && (requiredAttributesMask & NORMAL)) // if no normals but we've requested them, add them
         {
             vsg::ref_ptr<vsg::vec3Array> defaultnormals(new vsg::vec3Array(vertcount));
-            for (auto i = 0; i < vertcount; i++) defaultnormals->set(i, vsg::vec3(0.0f,1.0f,0.0f));
+            for (unsigned int i = 0; i < vertcount; i++) defaultnormals->set(i, vsg::vec3(0.0f,1.0f,0.0f));
             normals = defaultnormals;
         }
 
@@ -82,7 +82,7 @@ namespace osg2vsg
         if (colors->valueCount() == 0 && (requiredAttributesMask & COLOR)) // if no colors but we've requested them, add them
         {
             vsg::ref_ptr<vsg::vec3Array> defaultcolors(new vsg::vec3Array(vertcount));
-            for (auto i = 0; i < vertcount; i++) defaultcolors->set(i, vsg::vec3(1.0f, 1.0f, 1.0f));
+            for (unsigned int i = 0; i < vertcount; i++) defaultcolors->set(i, vsg::vec3(1.0f, 1.0f, 1.0f));
             colors = defaultcolors;
         }
 
@@ -90,7 +90,7 @@ namespace osg2vsg
         if (texcoord0->valueCount() == 0 && (requiredAttributesMask & TEXCOORD0)) // if no normals but we've requested them, add them
         {
             vsg::ref_ptr<vsg::vec2Array> defaulttex0(new vsg::vec2Array(vertcount));
-            for (auto i = 0; i < vertcount; i++) defaulttex0->set(i, vsg::vec2(0.0f, 0.0f));
+            for (unsigned int i = 0; i < vertcount; i++) defaulttex0->set(i, vsg::vec2(0.0f, 0.0f));
             texcoord0 = defaulttex0;
         }
 
