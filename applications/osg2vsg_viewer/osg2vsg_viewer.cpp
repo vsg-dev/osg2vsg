@@ -11,8 +11,8 @@
 #include <osg/MatrixTransform>
 
 #include "Trackball.h"
-#include "GraphicsNodes.h"
-#include "SceneAnalysisVisitor.h"
+#include <osg2vsg/GraphicsNodes.h>
+#include <osg2vsg/SceneAnalysisVisitor.h>
 
 
 vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGraphicsPipeline(vsg::Paths& searchPaths)
@@ -200,7 +200,7 @@ int main(int argc, char** argv)
     osg::ArgumentParser osg_arguments(&argc, argv);
     osg::ref_ptr<osg::Node> osg_scene = osgDB::readNodeFiles(osg_arguments);
 
-    if (optimize)
+    if (optimize && osg_scene.valid())
     {
         osgUtil::Optimizer optimizer;
         optimizer.optimize(osg_scene.get());
