@@ -200,7 +200,7 @@ int main(int argc, char** argv)
     osg::ArgumentParser osg_arguments(&argc, argv);
     osg::ref_ptr<osg::Node> osg_scene = osgDB::readNodeFiles(osg_arguments);
 
-    if (optimize)
+    if (optimize && osg_scene.valid())
     {
         osgUtil::Optimizer optimizer;
         optimizer.optimize(osg_scene.get());

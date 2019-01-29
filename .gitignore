@@ -53,10 +53,15 @@ src/osg2vsg/osg2vsgConfigVersion.cmake
 *.vcxproj
 *.vcxproj.filters
 *.vcxproj.user
+*.lastbuildstate
+*.tlog
+*.log
+*.pdb
 .vs/
 x64/
+src/vsg/vsg.dir/
 
-# Xcode
+#xcode
 DerivedData/
 *.build
 *.xcodeproj
