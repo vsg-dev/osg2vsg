@@ -3,54 +3,62 @@
 namespace osg2vsg
 {
 
-    vsg::ref_ptr<vsg::vec2Array> convertToVsg(osg::Vec2Array* inarray)
+    vsg::ref_ptr<vsg::vec2Array> convertToVsg(const osg::Vec2Array* inarray)
     {
+        if (!inarray) return vsg::ref_ptr<vsg::vec2Array>();
+
         vsg::ref_ptr<vsg::vec2Array> outarray(new vsg::vec2Array(inarray->size()));
         for (unsigned int i = 0; i < inarray->size(); i++)
         {
-            osg::Vec2 osg2 = inarray->at(i);
+            const osg::Vec2& osg2 = inarray->at(i);
             vsg::vec2 vsg2(osg2.x(), osg2.y());
             outarray->set(i, vsg2);
         }
         return outarray;
     }
 
-    vsg::ref_ptr<vsg::vec3Array> convertToVsg(osg::Vec3Array* inarray)
+    vsg::ref_ptr<vsg::vec3Array> convertToVsg(const osg::Vec3Array* inarray)
     {
+        if (!inarray) return vsg::ref_ptr<vsg::vec3Array>();
+
         vsg::ref_ptr<vsg::vec3Array> outarray(new vsg::vec3Array(inarray->size()));
         for (unsigned int i = 0; i < inarray->size(); i++)
         {
-            osg::Vec3 osg3 = inarray->at(i);
+            const osg::Vec3& osg3 = inarray->at(i);
             vsg::vec3 vsg3(osg3.x(), osg3.y(), osg3.z());
             outarray->set(i, vsg3);
         }
         return outarray;
     }
 
-    vsg::ref_ptr<vsg::vec4Array> convertToVsg(osg::Vec4Array* inarray)
+    vsg::ref_ptr<vsg::vec4Array> convertToVsg(const osg::Vec4Array* inarray)
     {
+        if (!inarray) return vsg::ref_ptr<vsg::vec4Array>();
+
         vsg::ref_ptr<vsg::vec4Array> outarray(new vsg::vec4Array(inarray->size()));
         for (unsigned int i = 0; i < inarray->size(); i++)
         {
-            osg::Vec4 osg4 = inarray->at(i);
+            const osg::Vec4& osg4 = inarray->at(i);
             vsg::vec4 vsg4(osg4.x(), osg4.y(), osg4.z(), osg4.w());
             outarray->set(i, vsg4);
         }
         return outarray;
     }
 
-    vsg::ref_ptr<vsg::Data> convertToVsg(osg::Array* inarray)
+    vsg::ref_ptr<vsg::Data> convertToVsg(const osg::Array* inarray)
     {
+        if (!inarray) return vsg::ref_ptr<vsg::Data>();
+
         switch (inarray->getType())
         {
-            case osg::Array::Type::Vec2ArrayType: return convertToVsg(dynamic_cast<osg::Vec2Array*>(inarray));
-            case osg::Array::Type::Vec3ArrayType: return convertToVsg(dynamic_cast<osg::Vec3Array*>(inarray));
-            case osg::Array::Type::Vec4ArrayType: return convertToVsg(dynamic_cast<osg::Vec4Array*>(inarray));
+            case osg::Array::Type::Vec2ArrayType: return convertToVsg(dynamic_cast<const osg::Vec2Array*>(inarray));
+            case osg::Array::Type::Vec3ArrayType: return convertToVsg(dynamic_cast<const osg::Vec3Array*>(inarray));
+            case osg::Array::Type::Vec4ArrayType: return convertToVsg(dynamic_cast<const osg::Vec4Array*>(inarray));
             default: return vsg::ref_ptr<vsg::Data>();
         }
     }
 
-    uint32_t calculateAttributesMask(osg::Geometry* geometry)
+    uint32_t calculateAttributesMask(const osg::Geometry* geometry)
     {
         uint32_t mask = 0;
         if (geometry->getVertexArray() != nullptr) mask |= VERTEX;
