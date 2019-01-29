@@ -1,0 +1,82 @@
+#pragma once
+
+#include <vsg/all.h>
+
+#include <iostream>
+#include <chrono>
+
+#include <osgDB/ReadFile>
+#include <osgDB/WriteFile>
+#include <osgUtil/Optimizer>
+#include <osg/Billboard>
+#include <osg/MatrixTransform>
+
+#include "GraphicsNodes.h"
+
+namespace osg2vsg
+{
+
+    class SceneAnalysisVisitor : public osg::NodeVisitor
+    {
+    public:
+        SceneAnalysisVisitor();
+
+        using Geometries = std::vector<osg::ref_ptr<osg::Geometry>>;
+        using StateGeometryMap = std::map<osg::ref_ptr<osg::StateSet>, Geometries>;
+        using TransformGeometryMap = std::map<osg::Matrix, Geometries>;
+
+        struct TransformStatePair
+        {
+            std::map<osg::Matrix, StateGeometryMap> matrixStateGeometryMap;
+            std::map<osg::ref_ptr<osg::StateSet>, TransformGeometryMap> stateTransformMap;
+        };
+
+        using ProgramTransformStateMap = std::map<osg::ref_ptr<osg::StateSet>, TransformStatePair>;
+
+        using StateStack = std::vector<osg::ref_ptr<osg::StateSet>>;
+        using StateSets = std::set<StateStack>;
+        using MatrixStack = std::vector<osg::Matrixd>;
+        using StatePair = std::pair<osg::ref_ptr<osg::StateSet>, osg::ref_ptr<osg::StateSet>>;
+        using StateMap = std::map<StateStack, StatePair>;
+
+        struct UniqueStateSet
+        {
+            bool operator() ( const osg::ref_ptr<osg::StateSet>& lhs, const osg::ref_ptr<osg::StateSet>& rhs) const
+            {
+                if (!lhs) return lhs;
+                if (!rhs) return rhs;
+                return lhs->compare(*rhs)<0;
+            }
+        };
+
+        using UniqueStats = std::set<osg::ref_ptr<osg::StateSet>, UniqueStateSet>;
+
+        StateStack statestack;
+        StateMap stateMap;
+        MatrixStack matrixstack;
+        UniqueStats uniqueStateSets;
+        ProgramTransformStateMap programTransformStateMap;
+
+        osg::ref_ptr<osg::StateSet> uniqueState(osg::ref_ptr<osg::StateSet> stateset);
+
+        StatePair computeStatePair(osg::StateSet* stateset);
+
+        void apply(osg::Node& node);
+        void apply(osg::Group& group);
+        void apply(osg::Transform& transform);
+        void apply(osg::Billboard& billboard);
+        void apply(osg::Geometry& geometry);
+
+        void pushStateSet(osg::StateSet& stateset);
+        void popStateSet();
+
+        void pushMatrix(const osg::Matrix& matrix);
+        void popMatrix();
+
+        void print();
+
+        osg::ref_ptr<osg::Node> createStateGeometryGraph(StateGeometryMap& stateGeometryMap);
+        osg::ref_ptr<osg::Node> createTransformGeometryGraph(TransformGeometryMap& transformGeometryMap);
+        osg::ref_ptr<osg::Node> createOSG();
+    };
+}
