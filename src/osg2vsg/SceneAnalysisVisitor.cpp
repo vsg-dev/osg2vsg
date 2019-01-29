@@ -1,4 +1,4 @@
-#include "SceneAnalysisVisitor.h"
+#include <osg2vsg/SceneAnalysisVisitor.h>
 
 using namespace osg2vsg;
 

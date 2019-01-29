@@ -10,11 +10,14 @@ endif()
 
 set(SOURCES
     Trackball.cpp
-    GraphicsNodes.cpp
-    SceneAnalysisVisitor.cpp
     osg2vsg_viewer.cpp)
 
 add_executable(osg2vsg_viewer ${SOURCES})
-target_include_directories(osg2vsg_viewer PRIVATE ${OSG_INCLUDE_DIR})
-target_link_libraries(osg2vsg_viewer vsg::vsg ${OSGDB_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSG_LIBRARIES} ${OPENTHREADS_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} OpenGL::OpenGL ${DL_LIBRARY})
+
+target_include_directories(osg2vsg_viewer PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+    ${OSG_INCLUDE_DIR}
+)
+
+target_link_libraries(osg2vsg_viewer vsg::vsg osg2vsg ${OSGDB_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSG_LIBRARIES} ${OPENTHREADS_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} OpenGL::OpenGL ${DL_LIBRARY})
 

@@ -11,8 +11,8 @@
 #include <osg/MatrixTransform>
 
 #include "Trackball.h"
-#include "GraphicsNodes.h"
-#include "SceneAnalysisVisitor.h"
+#include <osg2vsg/GraphicsNodes.h>
+#include <osg2vsg/SceneAnalysisVisitor.h>
 
 
 vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGraphicsPipeline(vsg::Paths& searchPaths)

@@ -12,7 +12,7 @@
 
 #include <iostream>
 
-#include "GraphicsNodes.h"
+#include <osg2vsg/GraphicsNodes.h>
 
 using namespace vsg;
 

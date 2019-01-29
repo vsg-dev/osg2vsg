@@ -4,10 +4,14 @@ SET(HEADER_PATH ${CMAKE_SOURCE_DIR}/include/osg2vsg)
 set(HEADERS
     ${HEADER_PATH}/Export.h
     ${HEADER_PATH}/ImageUtils.h
+    ${HEADER_PATH}/GraphicsNodes.h
+    ${HEADER_PATH}/SceneAnalysisVisitor.h
 )
 
 set(SOURCES
     ImageUtils.cpp
+    GraphicsNodes.cpp
+    SceneAnalysisVisitor.cpp
 )
 
 add_library(osg2vsg ${HEADERS} ${SOURCES})
