@@ -33,7 +33,7 @@ namespace vsg
 
         virtual void compile(Context& context) = 0;
     };
-    VSG_type_name(vsg::GraphicsNode);
+    VSG_type_name(vsg::GraphicsNode)
 
     class CompileTraversal : public Visitor
     {
@@ -122,7 +122,7 @@ namespace vsg
         ref_ptr<PushConstants> _projPushConstant;
         ref_ptr<PushConstants> _viewPushConstant;
     };
-    VSG_type_name(vsg::GraphicsPipelineGroup);
+    VSG_type_name(vsg::GraphicsPipelineGroup)
 
     class Texture : public Inherit<GraphicsNode, Texture>
     {
@@ -141,7 +141,7 @@ namespace vsg
         ref_ptr<Data> _textureData;
         ref_ptr<vsg::BindDescriptorSets> _bindDescriptorSets;
     };
-    VSG_type_name(vsg::Texture);
+    VSG_type_name(vsg::Texture)
 
     class MatrixTransform : public Inherit<GraphicsNode, MatrixTransform>
     {
@@ -156,7 +156,7 @@ namespace vsg
 
         ref_ptr<PushConstants> _pushConstant;
     };
-    VSG_type_name(vsg::MatrixTransform);
+    VSG_type_name(vsg::MatrixTransform)
 
     class Geometry : public Inherit<GraphicsNode, Geometry>
     {
@@ -175,5 +175,5 @@ namespace vsg
 
         ref_ptr<Group> _renderImplementation;
     };
-    VSG_type_name(vsg::Geometry);
+    VSG_type_name(vsg::Geometry)
 }

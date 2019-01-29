@@ -178,7 +178,7 @@ void MatrixTransform::accept(DispatchTraversal& dv) const
     // do we restore transforms in parental chain?
 }
 
-void MatrixTransform::compile(Context& context)
+void MatrixTransform::compile(Context& /*context*/)
 {
     _pushConstant = vsg::PushConstants::create(VK_SHADER_STAGE_VERTEX_BIT, 128, _matrix);
 }

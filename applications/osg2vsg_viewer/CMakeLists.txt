@@ -11,6 +11,7 @@ endif()
 set(SOURCES
     Trackball.cpp
     GraphicsNodes.cpp
+    SceneAnalysisVisitor.cpp
     osg2vsg_viewer.cpp)
 
 add_executable(osg2vsg_viewer ${SOURCES})
