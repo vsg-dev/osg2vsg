@@ -26,9 +26,11 @@ vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGraphicsPipeline(vsg::Paths& sear
 
     std::ifstream vertexin(vsg::findFile("shaders/shader_PushConstants.vert", searchPaths));
     std::string vertexSource((std::istreambuf_iterator<char>(vertexin)), std::istreambuf_iterator<char>());
+    vertexin.close();
 
     std::ifstream fragmentin(vsg::findFile("shaders/shader_PushConstants.frag", searchPaths));
     std::string fragmentSource((std::istreambuf_iterator<char>(fragmentin)), std::istreambuf_iterator<char>());
+    fragmentin.close();
 
     //std::cout << "Read this: " << std::endl << fragmentSource << std::endl;
 
