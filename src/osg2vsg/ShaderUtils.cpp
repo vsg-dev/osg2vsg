@@ -340,14 +340,14 @@ namespace osg2vsg
         size_t contentValueSize = sizeof(uint32_t);
         size_t contentBufferSize = compiledsource.size() / contentValueSize;
 
-        vsg::Shader::Contents shadercontents(compiledsource.begin(), compiledsource.end());//contentBufferSize);
+        vsg::Shader::Contents shadercontents(contentBufferSize);
         //shadercontents.assign(compiledsource.c_str(), compiledsource.c_str() + contentBufferSize);
-        //memcpy(shadercontents.data(), bytes, sizeof(byteslength));
+        memcpy(shadercontents.data(), compiledsource.c_str(), compiledsource.size());
 
         vsg::ref_ptr<vsg::Shader> shader = vsg::Shader::create(isvert ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT, "main", shadercontents);
 
         // release the result
-        shaderc_result_release(result);
+        //shaderc_result_release(result);
 
         return shader;
     }
