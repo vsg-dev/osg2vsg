@@ -14,6 +14,84 @@
 #include <osg2vsg/GraphicsNodes.h>
 #include <osg2vsg/SceneAnalysisVisitor.h>
 
+#include <limits>
+
+class ComputeBounds : public vsg::ConstVisitor
+{
+    public:
+        ComputeBounds() {}
+
+        vsg::dvec3 _min = vsg::dvec3(std::numeric_limits<double>::max(), std::numeric_limits<double>::max(), std::numeric_limits<double>::max());
+        vsg::dvec3 _max = vsg::dvec3(std::numeric_limits<double>::lowest(), std::numeric_limits<double>::lowest(), std::numeric_limits<double>::lowest());
+
+        using MatrixStack = std::vector<vsg::mat4>;
+        MatrixStack matrixStack;
+
+        void apply(const vsg::Node& node)
+        {
+            node.traverse(*this);
+        }
+
+        void apply(const vsg::Group& group)
+        {
+
+            if (auto transform = dynamic_cast<const vsg::MatrixTransform*>(&group); transform!=nullptr)
+            {
+                apply(*transform);
+            }
+            else if (auto geometry = dynamic_cast<const vsg::Geometry*>(&group); geometry!=nullptr)
+            {
+                apply(*geometry);
+            }
+            group.traverse(*this);
+        }
+
+        void apply(const vsg::MatrixTransform& transform)
+        {
+            std::cout<<"Transform matrix="<<transform._matrix->value()<<std::endl;
+
+            matrixStack.push_back(*transform._matrix);
+
+            transform.traverse(*this);
+
+            matrixStack.pop_back();
+        }
+
+        void apply(const vsg::Geometry& geometry)
+        {
+            std::cout<<"Have Geometry"<<std::endl;
+
+            if (!geometry._arrays.empty())
+            {
+                geometry._arrays[0]->accept(*this);
+            }
+        }
+
+        void apply(const vsg::vec3Array& vertices)
+        {
+            if (matrixStack.empty())
+            {
+                for(auto vertex : vertices) apply(vertex);
+            }
+            else
+            {
+                auto matrix = matrixStack.back();
+                for(auto vertex : vertices) apply(matrix * vertex);
+            }
+        }
+
+        void apply(const vsg::vec3& v)
+        {
+            std::cout<<"   ("<<v<<")"<<std::endl;
+            if (v.x < _min.x) _min.x = v.x;
+            if (v.y < _min.y) _min.y = v.y;
+            if (v.z < _min.z) _min.z = v.z;
+            if (v.x > _max.x) _max.x = v.x;
+            if (v.y > _max.y) _max.y = v.y;
+            if (v.z > _max.z) _max.z = v.z;
+        }
+};
+
 
 vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGraphicsPipeline(vsg::Paths& searchPaths)
 {
@@ -279,8 +357,15 @@ int main(int argc, char** argv)
     vsg::ref_ptr<vsg::mat4Value> viewMatrix(new vsg::mat4Value);
     auto viewport = vsg::ViewportState::create(VkExtent2D{width, height});
 
+    // compute the bounds of the scene graph to help position camera
+    ComputeBounds computeBounds;
+    commandGraph->accept(computeBounds);
+    vsg::dvec3 centre = (computeBounds._min+computeBounds._max)*0.5;
+    double radius = vsg::length(computeBounds._max-computeBounds._min)*0.75;
+
+    // set up the camera
     vsg::ref_ptr<vsg::Perspective> perspective(new vsg::Perspective(60.0, static_cast<double>(width) / static_cast<double>(height), 0.1, 10.0));
-    vsg::ref_ptr<vsg::LookAt> lookAt(new vsg::LookAt(vsg::dvec3(1.0, 1.0, 1.0), vsg::dvec3(0.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 1.0)));
+    vsg::ref_ptr<vsg::LookAt> lookAt(new vsg::LookAt(centre+vsg::dvec3(radius, radius, radius), centre, vsg::dvec3(0.0, 0.0, 1.0)));
     vsg::ref_ptr<vsg::Camera> camera(new vsg::Camera(perspective, lookAt, viewport));
 
 
