@@ -297,18 +297,8 @@ namespace osg2vsg
         return frag.str();
     }
 
-    vsg::ref_ptr<vsg::Shader> compileSourceToSPV(const std::string& insource, bool isvert)
+    vsg::ref_ptr<vsg::Shader> compileSourceToSPV(const std::string& source, bool isvert)
     {
-        std::string source = insource;
-
-        // Make sure source is a multiple of 4.
-        const int padding = 4 - (source.length() % 4);
-        if (padding < 4) {
-            for (int i = 0; i < padding; ++i) {
-                source += ' ';
-            }
-        }
-
         shaderc_compiler_t compiler = shaderc_compiler_initialize();
         shaderc_compile_options_t options = shaderc_compile_options_initialize();
 
@@ -333,15 +323,25 @@ namespace osg2vsg
         // get the binary info
         size_t byteslength = shaderc_result_get_length(result);
         const char* bytes = shaderc_result_get_bytes(result);
+
+        std::string compiledsource = std::string(bytes, byteslength);
+
+        // Make sure source is a multiple of 4.
+        const int padding = 4 - (compiledsource.length() % 4);
+        if (padding < 4) {
+            for (int i = 0; i < padding; ++i) {
+                compiledsource += ' ';
+            }
+        }
         
         std::cout << "Shader compilation succeeded, returned " << byteslength << " bytes." << std::endl;
 
-        // copy the binary into a shader content buufer and use it to create vsg shader
+        // copy the binary into a shader content buffer and use it to create vsg shader
         size_t contentValueSize = sizeof(uint32_t);
-        size_t contentBufferSize = (byteslength + contentValueSize - 1) / contentValueSize;
+        size_t contentBufferSize = compiledsource.size() / contentValueSize;
 
-        vsg::Shader::Contents shadercontents(contentBufferSize);
-        shadercontents.assign(bytes, bytes + contentBufferSize);
+        vsg::Shader::Contents shadercontents(compiledsource.begin(), compiledsource.end());//contentBufferSize);
+        //shadercontents.assign(compiledsource.c_str(), compiledsource.c_str() + contentBufferSize);
         //memcpy(shadercontents.data(), bytes, sizeof(byteslength));
 
         vsg::ref_ptr<vsg::Shader> shader = vsg::Shader::create(isvert ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT, "main", shadercontents);
