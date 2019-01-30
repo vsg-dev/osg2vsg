@@ -103,6 +103,11 @@ namespace osg2vsg
             uniforms << lightuniform.str();*/
         }
 
+        if (!osgCompatible)
+        {
+            outputs << "out gl_PerVertex{ vec4 gl_Position; };\n";
+        }
+
         // Vertex shader code
         std::string header = "#version 450\n" \
             "#extension GL_ARB_separate_shader_objects : enable\n";
@@ -326,7 +331,7 @@ namespace osg2vsg
 
         std::string compiledsource = std::string(bytes, byteslength);
 
-        // Make sure source is a multiple of 4.
+        // pad to multiple of 4
         const int padding = 4 - (compiledsource.length() % 4);
         if (padding < 4) {
             for (int i = 0; i < padding; ++i) {
@@ -341,13 +346,12 @@ namespace osg2vsg
         size_t contentBufferSize = compiledsource.size() / contentValueSize;
 
         vsg::Shader::Contents shadercontents(contentBufferSize);
-        //shadercontents.assign(compiledsource.c_str(), compiledsource.c_str() + contentBufferSize);
         memcpy(shadercontents.data(), compiledsource.c_str(), compiledsource.size());
 
         vsg::ref_ptr<vsg::Shader> shader = vsg::Shader::create(isvert ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT, "main", shadercontents);
 
         // release the result
-        //shaderc_result_release(result);
+        shaderc_result_release(result);
 
         return shader;
     }
