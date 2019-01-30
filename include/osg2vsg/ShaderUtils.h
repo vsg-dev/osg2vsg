@@ -30,6 +30,8 @@ namespace osg2vsg
         SHININESS_TEXTURE_UNIT
     };
 
+    extern OSG2VSG_DECLSPEC uint32_t calculateStateMask(osg::StateSet* stateSet);
+
     // create vertex shader source using statemask to determine type of shader to build and geometryattributes to determine attribute binding locations
     extern OSG2VSG_DECLSPEC std::string createVertexSource(const uint32_t& stateMask, const uint32_t& geometryAttrbutes, bool osgCompatible);
 

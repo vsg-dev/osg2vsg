@@ -5,6 +5,20 @@
 
 namespace osg2vsg
 {
+    uint32_t calculateStateMask(osg::StateSet* stateSet)
+    {
+        uint32_t stateMask = 0;
+        //if (stateSet->getMode(GL_BLEND) & osg::StateAttribute::ON)
+        //    stateMask |= ShaderGen::BLEND;
+        if (stateSet->getMode(GL_LIGHTING) & osg::StateAttribute::ON)
+            stateMask |= LIGHTING;
+        if (stateSet->getTextureAttribute(0, osg::StateAttribute::TEXTURE))
+            stateMask |= DIFFUSE_MAP;
+        if (stateSet->getTextureAttribute(1, osg::StateAttribute::TEXTURE) /*&& geometry != 0 && geometry->getVertexAttribArray(6)*/)
+            stateMask |= NORMAL_MAP;
+        return stateMask;
+    }
+
     // create vertex shader source using statemask to determine type of shader to build and geometryattributes to determine attribute binding locations
 
     std::string createVertexSource(const uint32_t& stateMask, const uint32_t& geometryAttrbutes, bool osgCompatible)
@@ -19,7 +33,7 @@ namespace osg2vsg
         uint32_t vertexindex = osgCompatible ? 0 : (inputindex++);
         uint32_t normalindex = osgCompatible ? 1 : (hasnormal ? inputindex++ : 0);
         uint32_t colorindex = osgCompatible ? 2 : (hascolor ? inputindex++ : 0);
-        uint32_t tex0index = osgCompatible ? 1 : (hastex0 ? inputindex++ : 0);
+        uint32_t tex0index = osgCompatible ? 3 : (hastex0 ? inputindex++ : 0);
 
         bool usenormal = hasnormal && (stateMask & (LIGHTING | NORMAL_MAP));
         bool usetex0 = hastex0 && (stateMask & (DIFFUSE_MAP | NORMAL_MAP));
@@ -53,7 +67,7 @@ namespace osg2vsg
                         "  mat4 projection;\n" \
                         "  mat4 view;\n" \
                         "  mat4 model;\n" \
-                        "  mat3 normal;\n" \
+                        "  //mat3 normal;\n" \
                         "} pc;\n";
 
             mvpmat = "(pc.projection * pc.view * pc.model)";

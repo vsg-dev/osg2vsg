@@ -75,8 +75,12 @@ namespace osg2vsg
 
         void print();
 
-        osg::ref_ptr<osg::Node> createStateGeometryGraph(StateGeometryMap& stateGeometryMap);
-        osg::ref_ptr<osg::Node> createTransformGeometryGraph(TransformGeometryMap& transformGeometryMap);
+        osg::ref_ptr<osg::Node> createStateGeometryGraphOSG(StateGeometryMap& stateGeometryMap);
+        osg::ref_ptr<osg::Node> createTransformGeometryGraphOSG(TransformGeometryMap& transformGeometryMap);
         osg::ref_ptr<osg::Node> createOSG();
+
+        vsg::ref_ptr<vsg::Node> createStateGeometryGraphVSG(StateGeometryMap& stateGeometryMap, vsg::Paths& searchPaths, uint32_t requiredGeomAttributesMask = 0);
+        vsg::ref_ptr<vsg::Node> createTransformGeometryGraphVSG(TransformGeometryMap& transformGeometryMap, vsg::Paths& searchPaths, uint32_t requiredGeomAttributesMask = 0);
+        vsg::ref_ptr<vsg::Node> createVSG(vsg::Paths& searchPaths);
     };
 }

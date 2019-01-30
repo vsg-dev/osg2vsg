@@ -17,28 +17,19 @@
 #include <osg2vsg/GeometryUtils.h>
 #include <osg2vsg/SceneAnalysisVisitor.h>
 
+#include <algorithm>
+using namespace std;
 
 vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGraphicsPipeline(vsg::Paths& searchPaths)
 {
     //
     // load shaders
     //
+    uint32_t stateMask = osg2vsg::DIFFUSE_MAP;
+    uint32_t geomAtts = osg2vsg::VERTEX | osg2vsg::TEXCOORD0; // osg2vsg::NORMAL | osg2vsg::COLOR
 
-    std::ifstream vertexin(vsg::findFile("shaders/shader_PushConstants.vert", searchPaths));
-    std::string vertexSource((std::istreambuf_iterator<char>(vertexin)), std::istreambuf_iterator<char>());
-    vertexin.close();
-
-    std::ifstream fragmentin(vsg::findFile("shaders/shader_PushConstants.frag", searchPaths));
-    std::string fragmentSource((std::istreambuf_iterator<char>(fragmentin)), std::istreambuf_iterator<char>());
-    fragmentin.close();
-
-    //std::cout << "Read this: " << std::endl << fragmentSource << std::endl;
-
-    vsg::ref_ptr<vsg::Shader> orivertexShader = vsg::Shader::read(VK_SHADER_STAGE_VERTEX_BIT, "main", vsg::findFile("shaders/vert_PushConstants.spv", searchPaths));
-    vsg::ref_ptr<vsg::Shader> orifragShader = vsg::Shader::read(VK_SHADER_STAGE_FRAGMENT_BIT, "main", vsg::findFile("shaders/frag_PushConstants.spv", searchPaths));
-
-    vsg::ref_ptr<vsg::Shader> vertexShader = osg2vsg::compileSourceToSPV(vertexSource, true); // vsg::Shader::read(VK_SHADER_STAGE_VERTEX_BIT, "main", vsg::findFile("shaders/vert_PushConstants.spv", searchPaths));
-    vsg::ref_ptr<vsg::Shader> fragmentShader = osg2vsg::compileSourceToSPV(fragmentSource, false); // vsg::Shader::read(VK_SHADER_STAGE_FRAGMENT_BIT, "main", vsg::findFile("shaders/frag_PushConstants.spv", searchPaths));
+    vsg::ref_ptr<vsg::Shader> vertexShader = osg2vsg::compileSourceToSPV(osg2vsg::createVertexSource(stateMask, geomAtts, false), true); // vsg::Shader::read(VK_SHADER_STAGE_VERTEX_BIT, "main", vsg::findFile("shaders/vert_PushConstants.spv", searchPaths));
+    vsg::ref_ptr<vsg::Shader> fragmentShader = osg2vsg::compileSourceToSPV(osg2vsg::createFragmentSource(stateMask, geomAtts, false), false); // vsg::Shader::read(VK_SHADER_STAGE_FRAGMENT_BIT, "main", vsg::findFile("shaders/frag_PushConstants.spv", searchPaths));
     if (!vertexShader || !fragmentShader)
     {
         std::cout<<"Could not create shaders."<<std::endl;
@@ -78,7 +69,7 @@ vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGraphicsPipeline(vsg::Paths& sear
     {
         VkVertexInputAttributeDescription{0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0}, // vertex data
         VkVertexInputAttributeDescription{1, 1, VK_FORMAT_R32G32B32_SFLOAT, 0}, // colour data
-        VkVertexInputAttributeDescription{2, 2, VK_FORMAT_R32G32_SFLOAT, 0},    // tex coord data
+        VkVertexInputAttributeDescription{3, 2, VK_FORMAT_R32G32_SFLOAT, 0},    // tex coord data (bind to 3 if normals and colors are used in shader gen above)
     };
 
     gp->pipelineStates = vsg::GraphicsPipelineStates
@@ -191,28 +182,18 @@ vsg::ref_ptr<vsg::Node> createSceneData(vsg::Paths& searchPaths)
     return gp;
 }
 
-vsg::ref_ptr<vsg::Node> convertToVsg(osg::ref_ptr<osg::Node> /*osg_scene*/)
+vsg::ref_ptr<vsg::Node> convertToVsg(osg::ref_ptr<osg::Node> osg_scene, vsg::Paths& searchPaths)
 {
-    return vsg::ref_ptr<vsg::Node>();
+    osg2vsg::SceneAnalysisVisitor sceneAnalysis;
+    osg_scene->accept(sceneAnalysis);
+
+
+
+    return sceneAnalysis.createVSG(searchPaths);
 }
 
 int main(int argc, char** argv)
 {
-    /*std::string vertsource = osg2vsg::createVertexSource(osg2vsg::LIGHTING | osg2vsg::DIFFUSE_MAP, osg2vsg::VERTEX | osg2vsg::NORMAL | osg2vsg::TEXCOORD0, false);
-    std::cout << "----VERTEX SOURCE----" << std::endl;
-    std::cout << vertsource << std::endl << std::endl;
-
-    osg2vsg::compileSourceToSPV(vertsource, true);
-
-    std::string fragsource = osg2vsg::createFragmentSource(osg2vsg::LIGHTING | osg2vsg::DIFFUSE_MAP, osg2vsg::VERTEX | osg2vsg::NORMAL | osg2vsg::TEXCOORD0, false);
-
-    std::cout << "----FRAGMENT SOURCE----" << std::endl;
-    std::cout << fragsource << std::endl << std::endl;
-
-    osg2vsg::compileSourceToSPV(fragsource, false);*/
-
-    //return 0;
-
     // set up defaults and read command line arguments to override them
     vsg::CommandLine arguments(&argc, argv);
     auto debugLayer = arguments.read({"--debug","-d"});
@@ -235,7 +216,7 @@ int main(int argc, char** argv)
     if (optimize && osg_scene.valid())
     {
         osgUtil::Optimizer optimizer;
-        optimizer.optimize(osg_scene.get());
+        optimizer.optimize(osg_scene.get(), osgUtil::Optimizer::DEFAULT_OPTIMIZATIONS | osgUtil::Optimizer::INDEX_MESH);
     }
 
     vsg::Path outputFileExtension;
@@ -261,7 +242,7 @@ int main(int argc, char** argv)
 
 
     // create the scene/command graph
-    vsg::ref_ptr<vsg::Node> commandGraph  = osg_scene.valid() ? convertToVsg(osg_scene) : createSceneData(searchPaths);
+    vsg::ref_ptr<vsg::Node> commandGraph  = osg_scene.valid() ? convertToVsg(osg_scene, searchPaths) : createSceneData(searchPaths);
 
     if (!commandGraph)
     {

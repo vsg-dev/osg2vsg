@@ -1,5 +1,8 @@
 #include <osg2vsg/SceneAnalysisVisitor.h>
 
+#include <osg2vsg/GeometryUtils.h>
+#include <osg2vsg/ShaderUtils.h>
+
 using namespace osg2vsg;
 
 SceneAnalysisVisitor::SceneAnalysisVisitor():
@@ -196,7 +199,7 @@ void SceneAnalysisVisitor::print()
     }
 }
 
-osg::ref_ptr<osg::Node> SceneAnalysisVisitor::createStateGeometryGraph(StateGeometryMap& stateGeometryMap)
+osg::ref_ptr<osg::Node> SceneAnalysisVisitor::createStateGeometryGraphOSG(StateGeometryMap& stateGeometryMap)
 {
     std::cout<<"createStateGeometryGraph()"<<stateGeometryMap.size()<<std::endl;
 
@@ -222,7 +225,7 @@ osg::ref_ptr<osg::Node> SceneAnalysisVisitor::createStateGeometryGraph(StateGeom
     return group;
 }
 
-osg::ref_ptr<osg::Node> SceneAnalysisVisitor::createTransformGeometryGraph(TransformGeometryMap& transformGeometryMap)
+osg::ref_ptr<osg::Node> SceneAnalysisVisitor::createTransformGeometryGraphOSG(TransformGeometryMap& transformGeometryMap)
 {
     std::cout<<"createStateGeometryGraph()"<<transformGeometryMap.size()<<std::endl;
 
@@ -263,7 +266,7 @@ osg::ref_ptr<osg::Node> SceneAnalysisVisitor::createOSG()
         {
             for(auto [matrix, stateGeometryMap] : transformStatePair.matrixStateGeometryMap)
             {
-                osg::ref_ptr<osg::Node> stateGeometryGraph = createStateGeometryGraph(stateGeometryMap);
+                osg::ref_ptr<osg::Node> stateGeometryGraph = createStateGeometryGraphOSG(stateGeometryMap);
                 if (!stateGeometryGraph) continue;
 
                 if (!matrix.isIdentity())
@@ -283,7 +286,7 @@ osg::ref_ptr<osg::Node> SceneAnalysisVisitor::createOSG()
         {
             for(auto [stateset, transformeGeometryMap] : transformStatePair.stateTransformMap)
             {
-                osg::ref_ptr<osg::Node> transformGeometryGraph = createTransformGeometryGraph(transformeGeometryMap);
+                osg::ref_ptr<osg::Node> transformGeometryGraph = createTransformGeometryGraphOSG(transformeGeometryMap);
                 if (!transformGeometryGraph) continue;
 
                 transformGeometryGraph->setStateSet(stateset);
@@ -294,6 +297,152 @@ osg::ref_ptr<osg::Node> SceneAnalysisVisitor::createOSG()
         std::cout<<"       programStateSet = "<<programStateSet.get()<<std::endl;
         std::cout<<"           transformStatePair.matrixStateGeometryMap.size() = "<<transformStatePair.matrixStateGeometryMap.size()<<std::endl;
         std::cout<<"           transformStatePair.stateTransformMap.size() = "<<transformStatePair.stateTransformMap.size()<<std::endl;
+    }
+    return group;
+}
+
+vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createStateGeometryGraphVSG(StateGeometryMap& stateGeometryMap, vsg::Paths& searchPaths, uint32_t requiredGeomAttributesMask)
+{
+    std::cout << "createStateGeometryGraph()" << stateGeometryMap.size() << std::endl;
+
+    if (stateGeometryMap.empty()) return vsg::ref_ptr<vsg::Node>();
+
+    vsg::ref_ptr<vsg::Group> group = vsg::Group::create();
+    for (auto[stateset, geometries] : stateGeometryMap)
+    {
+        uint32_t statemask = calculateStateMask(stateset);
+        statemask &= ~LIGHTING;
+
+        vsg::ref_ptr<vsg::GraphicsPipelineGroup> graphicsPipelineGroup = createGeometryGraphicsPipeline(requiredGeomAttributesMask, statemask);
+        group->addChild(graphicsPipelineGroup);
+
+        auto transform = vsg::MatrixTransform::create();
+        graphicsPipelineGroup->addChild(transform);
+
+        vsg::Group* attachpoint = transform;
+
+        // if we have a texture insert a texture node
+        if (stateset->getTextureAttribute(0, osg::StateAttribute::TEXTURE))
+        {
+            std::string textureFile("textures/lz.vsgb");
+            vsg::vsgReaderWriter vsgReader;
+            auto textureData = vsgReader.read<vsg::Data>(vsg::findFile(textureFile, searchPaths));
+            if (!textureData)
+            {
+                std::cout << "Could not read texture file : " << textureFile << std::endl;
+                return vsg::ref_ptr<vsg::Node>();
+            }
+            vsg::ref_ptr<vsg::Texture> texture = vsg::Texture::create();
+            texture->_textureData = textureData;
+
+            attachpoint->addChild(texture);
+            attachpoint = texture;
+        }
+        
+        for (auto& geometry : geometries)
+        {
+            vsg::ref_ptr<vsg::Geometry> new_geometry = convertToVsg(geometry, requiredGeomAttributesMask);
+            attachpoint->addChild(new_geometry);
+        }
+    }
+
+    if (group->getNumChildren() == 1) return vsg::ref_ptr<vsg::Node>(group->getChild(0));
+
+    return group;
+}
+
+vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createTransformGeometryGraphVSG(TransformGeometryMap& transformGeometryMap, vsg::Paths& searchPaths, uint32_t requiredGeomAttributesMask)
+{
+    std::cout << "createStateGeometryGraph()" << transformGeometryMap.size() << std::endl;
+
+    if (transformGeometryMap.empty()) return vsg::ref_ptr<vsg::Node>();
+
+    vsg::ref_ptr<vsg::Group> group = vsg::Group::create();
+    for (auto[matrix, geometries] : transformGeometryMap)
+    {
+        vsg::ref_ptr<vsg::MatrixTransform> transform = vsg::MatrixTransform::create();
+        
+        //transform->setMatrix(matrix);
+        vsg::mat4 vsgmatrix = vsg::mat4(matrix(0, 0), matrix(0, 1), matrix(0, 2), matrix(0, 3),
+                                        matrix(1, 0), matrix(1, 1), matrix(1, 2), matrix(1, 3),
+                                        matrix(2, 0), matrix(2, 1), matrix(2, 2), matrix(2, 3),
+                                        matrix(3, 0), matrix(3, 1), matrix(3, 2), matrix(3, 3));
+        transform->_matrix = new vsg::mat4Value(vsgmatrix);
+
+        group->addChild(transform);
+
+        for (auto& geometry : geometries)
+        {
+            vsg::ref_ptr<vsg::Geometry> new_geometry = convertToVsg(geometry, requiredGeomAttributesMask); // new osg::Geometry(*geometry); 
+            //new_geometry->setStateSet(nullptr);
+            transform->addChild(new_geometry);
+        }
+    }
+
+    if (group->getNumChildren() == 1) return vsg::ref_ptr<vsg::Node>(group->getChild(0));
+
+    return group;
+}
+
+vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createVSG(vsg::Paths& searchPaths)
+{
+    uint32_t forceGeomAttributes = GeometryAttributes::STANDARD_ATTS;
+
+    vsg::ref_ptr<vsg::Group> group = vsg::Group::create();
+
+    for (auto[programStateSet, transformStatePair] : programTransformStateMap)
+    {
+        vsg::ref_ptr<vsg::Group> programGroup = vsg::Group::create();
+        group->addChild(programGroup);
+        
+        // figure out what the osg stateset consists of
+        //uint32_t statemask = calculateStateMask(programStateSet);
+        //programGroup->setStateSet(programStateSet.get());
+
+        bool transformAtTop = true;//transformStatePair.matrixStateGeometryMap.size() < transformStatePair.stateTransformMap.size();
+        if (transformAtTop)
+        {
+            for (auto[matrix, stateGeometryMap] : transformStatePair.matrixStateGeometryMap)
+            {
+                vsg::ref_ptr<vsg::Node> stateGeometryGraph = createStateGeometryGraphVSG(stateGeometryMap, searchPaths, forceGeomAttributes);
+                if (!stateGeometryGraph) continue;
+
+                if (!matrix.isIdentity())
+                {
+                    vsg::ref_ptr<vsg::MatrixTransform> transform = vsg::MatrixTransform::create();
+
+                    vsg::mat4 vsgmatrix = vsg::mat4(matrix(0,0), matrix(0, 1), matrix(0, 2), matrix(0, 3),
+                                                    matrix(1, 0), matrix(1, 1), matrix(1, 2), matrix(1, 3),
+                                                    matrix(2, 0), matrix(2, 1), matrix(2, 2), matrix(2, 3),
+                                                    matrix(3, 0), matrix(3, 1), matrix(3, 2), matrix(3, 3));
+
+                    transform->_matrix = new vsg::mat4Value(vsgmatrix);
+
+                    programGroup->addChild(transform);
+                    transform->addChild(stateGeometryGraph);
+                }
+                else
+                {
+                    programGroup->addChild(stateGeometryGraph);
+                }
+            }
+        }
+        else
+        {
+            for (auto[stateset, transformeGeometryMap] : transformStatePair.stateTransformMap)
+            {
+                vsg::ref_ptr<vsg::Node> transformGeometryGraph = createTransformGeometryGraphVSG(transformeGeometryMap, searchPaths, forceGeomAttributes);
+                if (!transformGeometryGraph) continue;
+
+                //transformGeometryGraph->setStateSet(stateset);
+
+                programGroup->addChild(transformGeometryGraph);
+            }
+        }
+
+        std::cout << "       programStateSet = " << programStateSet.get() << std::endl;
+        std::cout << "           transformStatePair.matrixStateGeometryMap.size() = " << transformStatePair.matrixStateGeometryMap.size() << std::endl;
+        std::cout << "           transformStatePair.stateTransformMap.size() = " << transformStatePair.stateTransformMap.size() << std::endl;
     }
     return group;
 }
