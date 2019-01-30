@@ -1,6 +1,7 @@
 #include <osg2vsg/ShaderUtils.h>
 
 #include <osg2vsg/GeometryUtils.h>
+#include <shaderc/shaderc.h>
 
 namespace osg2vsg
 {
@@ -182,6 +183,8 @@ namespace osg2vsg
         std::ostringstream inputs;
         std::ostringstream outputs;
 
+        // inputs
+
         if (usetex0)
         {
             inputs << "layout(location = 0) in vec2 texCoord0;\n";
@@ -207,8 +210,7 @@ namespace osg2vsg
             uniforms << lightuniform.str();*/
         }
 
-
-        // frag uniforms
+        // uniforms
 
         if (uselighting || usenormalmap)
         {
@@ -231,7 +233,8 @@ namespace osg2vsg
             uniforms << "layout(binding = 1) uniform sampler2D normalMap;\n";
         }
 
-        // frag outputs
+        // outputs
+
         outputs << "layout(location = 0) out vec4 outColor;\n";
 
 
@@ -292,6 +295,61 @@ namespace osg2vsg
         frag << "}\n";
 
         return frag.str();
+    }
+
+    vsg::ref_ptr<vsg::Shader> compileSourceToSPV(const std::string& insource, bool isvert)
+    {
+        std::string source = insource;
+
+        // Make sure source is a multiple of 4.
+        const int padding = 4 - (source.length() % 4);
+        if (padding < 4) {
+            for (int i = 0; i < padding; ++i) {
+                source += ' ';
+            }
+        }
+
+        shaderc_compiler_t compiler = shaderc_compiler_initialize();
+        shaderc_compile_options_t options = shaderc_compile_options_initialize();
+
+        shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, source.c_str(), source.length(),
+                                                                        (isvert ? shaderc_glsl_vertex_shader : shaderc_glsl_fragment_shader),
+                                                                        (isvert ? "vert shader" : "frag shader"), "main", options);
+
+        // check the status
+        shaderc_compilation_status status = shaderc_result_get_compilation_status(result);
+
+        if (status != shaderc_compilation_status_success)
+        {
+            // failed, print errors
+            const char* errorstr = shaderc_result_get_error_message(result);
+
+            std::cout << "Error compiling shader source:" << std::endl;
+            std::cout << source << std::endl << std::endl;
+            std::cout << "Returned status " << status << " and the following errors..." << std::endl << errorstr << std::endl;
+            return vsg::ref_ptr<vsg::Shader>();
+        }
+
+        // get the binary info
+        size_t byteslength = shaderc_result_get_length(result);
+        const char* bytes = shaderc_result_get_bytes(result);
+        
+        std::cout << "Shader compilation succeeded, returned " << byteslength << " bytes." << std::endl;
+
+        // copy the binary into a shader content buufer and use it to create vsg shader
+        size_t contentValueSize = sizeof(uint32_t);
+        size_t contentBufferSize = (byteslength + contentValueSize - 1) / contentValueSize;
+
+        vsg::Shader::Contents shadercontents(contentBufferSize);
+        shadercontents.assign(bytes, bytes + contentBufferSize);
+        //memcpy(shadercontents.data(), bytes, sizeof(byteslength));
+
+        vsg::ref_ptr<vsg::Shader> shader = vsg::Shader::create(isvert ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT, "main", shadercontents);
+
+        // release the result
+        shaderc_result_release(result);
+
+        return shader;
     }
 }
 

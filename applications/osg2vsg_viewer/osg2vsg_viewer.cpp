@@ -2,6 +2,7 @@
 
 
 #include <iostream>
+#include <ostream>
 #include <chrono>
 
 #include <osgDB/ReadFile>
@@ -12,6 +13,8 @@
 
 #include "Trackball.h"
 #include <osg2vsg/GraphicsNodes.h>
+#include <osg2vsg/ShaderUtils.h>
+#include <osg2vsg/GeometryUtils.h>
 #include <osg2vsg/SceneAnalysisVisitor.h>
 
 
@@ -20,8 +23,20 @@ vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGraphicsPipeline(vsg::Paths& sear
     //
     // load shaders
     //
-    vsg::ref_ptr<vsg::Shader> vertexShader = vsg::Shader::read(VK_SHADER_STAGE_VERTEX_BIT, "main", vsg::findFile("shaders/vert_PushConstants.spv", searchPaths));
-    vsg::ref_ptr<vsg::Shader> fragmentShader = vsg::Shader::read(VK_SHADER_STAGE_FRAGMENT_BIT, "main", vsg::findFile("shaders/frag_PushConstants.spv", searchPaths));
+
+    std::ifstream vertexin(vsg::findFile("shaders/shader_PushConstants.vert", searchPaths));
+    std::string vertexSource((std::istreambuf_iterator<char>(vertexin)), std::istreambuf_iterator<char>());
+
+    std::ifstream fragmentin(vsg::findFile("shaders/shader_PushConstants.frag", searchPaths));
+    std::string fragmentSource((std::istreambuf_iterator<char>(fragmentin)), std::istreambuf_iterator<char>());
+
+    //std::cout << "Read this: " << std::endl << fragmentSource << std::endl;
+
+    vsg::ref_ptr<vsg::Shader> orivertexShader = vsg::Shader::read(VK_SHADER_STAGE_VERTEX_BIT, "main", vsg::findFile("shaders/vert_PushConstants.spv", searchPaths));
+    vsg::ref_ptr<vsg::Shader> orifragShader = vsg::Shader::read(VK_SHADER_STAGE_FRAGMENT_BIT, "main", vsg::findFile("shaders/frag_PushConstants.spv", searchPaths));
+
+    vsg::ref_ptr<vsg::Shader> vertexShader = osg2vsg::compileSourceToSPV(vertexSource, true); // vsg::Shader::read(VK_SHADER_STAGE_VERTEX_BIT, "main", vsg::findFile("shaders/vert_PushConstants.spv", searchPaths));
+    vsg::ref_ptr<vsg::Shader> fragmentShader = osg2vsg::compileSourceToSPV(fragmentSource, false); // vsg::Shader::read(VK_SHADER_STAGE_FRAGMENT_BIT, "main", vsg::findFile("shaders/frag_PushConstants.spv", searchPaths));
     if (!vertexShader || !fragmentShader)
     {
         std::cout<<"Could not create shaders."<<std::endl;
@@ -181,6 +196,21 @@ vsg::ref_ptr<vsg::Node> convertToVsg(osg::ref_ptr<osg::Node> /*osg_scene*/)
 
 int main(int argc, char** argv)
 {
+    /*std::string vertsource = osg2vsg::createVertexSource(osg2vsg::LIGHTING | osg2vsg::DIFFUSE_MAP, osg2vsg::VERTEX | osg2vsg::NORMAL | osg2vsg::TEXCOORD0, false);
+    std::cout << "----VERTEX SOURCE----" << std::endl;
+    std::cout << vertsource << std::endl << std::endl;
+
+    osg2vsg::compileSourceToSPV(vertsource, true);
+
+    std::string fragsource = osg2vsg::createFragmentSource(osg2vsg::LIGHTING | osg2vsg::DIFFUSE_MAP, osg2vsg::VERTEX | osg2vsg::NORMAL | osg2vsg::TEXCOORD0, false);
+
+    std::cout << "----FRAGMENT SOURCE----" << std::endl;
+    std::cout << fragsource << std::endl << std::endl;
+
+    osg2vsg::compileSourceToSPV(fragsource, false);*/
+
+    //return 0;
+
     // set up defaults and read command line arguments to override them
     vsg::CommandLine arguments(&argc, argv);
     auto debugLayer = arguments.read({"--debug","-d"});
