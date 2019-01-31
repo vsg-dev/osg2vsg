@@ -1,6 +1,7 @@
 #include <osg2vsg/GeometryUtils.h>
 
 #include <osg2vsg/ShaderUtils.h>
+#include <osgUtil/MeshOptimizers>
 
 namespace osg2vsg
 {
@@ -73,6 +74,11 @@ namespace osg2vsg
     vsg::ref_ptr<vsg::Geometry> convertToVsg(osg::Geometry* ingeometry, uint32_t requiredAttributesMask)
     {
         bool hasrequirements = requiredAttributesMask != 0;
+        
+        //osgUtil::optimizeMesh(ingeometry);
+        //osgUtil::IndexMeshVisitor indexmesh; // this is causing a crash in the computebounds visitor???
+        //indexmesh.setGenerateNewIndicesOnAllGeometries(true);
+        //ingeometry->accept(indexmesh);
 
         // convert attribute arrays, create defaults for any requested that don't exist for now to ensure pipline gets required data
         vsg::ref_ptr<vsg::Data> vertices(osg2vsg::convertToVsg(ingeometry->getVertexArray()));

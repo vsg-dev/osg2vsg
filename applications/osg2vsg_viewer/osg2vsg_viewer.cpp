@@ -30,8 +30,8 @@ vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGraphicsPipeline(vsg::Paths& sear
     uint32_t stateMask = osg2vsg::DIFFUSE_MAP;
     uint32_t geomAtts = osg2vsg::VERTEX | osg2vsg::TEXCOORD0; // osg2vsg::NORMAL | osg2vsg::COLOR
 
-    vsg::ref_ptr<vsg::Shader> vertexShader = osg2vsg::compileSourceToSPV(osg2vsg::createVertexSource(stateMask, geomAtts, false), true); // vsg::Shader::read(VK_SHADER_STAGE_VERTEX_BIT, "main", vsg::findFile("shaders/vert_PushConstants.spv", searchPaths));
-    vsg::ref_ptr<vsg::Shader> fragmentShader = osg2vsg::compileSourceToSPV(osg2vsg::createFragmentSource(stateMask, geomAtts, false), false); // vsg::Shader::read(VK_SHADER_STAGE_FRAGMENT_BIT, "main", vsg::findFile("shaders/frag_PushConstants.spv", searchPaths));
+    vsg::ref_ptr<vsg::Shader> vertexShader =  vsg::Shader::read(VK_SHADER_STAGE_VERTEX_BIT, "main", vsg::findFile("shaders/vert_PushConstants.spv", searchPaths)); //osg2vsg::compileSourceToSPV(osg2vsg::createVertexSource(stateMask, geomAtts, false), true);
+    vsg::ref_ptr<vsg::Shader> fragmentShader = vsg::Shader::read(VK_SHADER_STAGE_FRAGMENT_BIT, "main", vsg::findFile("shaders/frag_PushConstants.spv", searchPaths)); // osg2vsg::compileSourceToSPV(osg2vsg::createFragmentSource(stateMask, geomAtts, false), false);
     if (!vertexShader || !fragmentShader)
     {
         std::cout<<"Could not create shaders."<<std::endl;
@@ -71,7 +71,7 @@ vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGraphicsPipeline(vsg::Paths& sear
     {
         VkVertexInputAttributeDescription{0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0}, // vertex data
         VkVertexInputAttributeDescription{1, 1, VK_FORMAT_R32G32B32_SFLOAT, 0}, // colour data
-        VkVertexInputAttributeDescription{3, 2, VK_FORMAT_R32G32_SFLOAT, 0},    // tex coord data (bind to 3 if normals and colors are used in shader gen above)
+        VkVertexInputAttributeDescription{2, 2, VK_FORMAT_R32G32_SFLOAT, 0},    // tex coord data (bind to 3 if normals and colors are not used in shader gen above)
     };
 
     gp->pipelineStates = vsg::GraphicsPipelineStates
@@ -127,14 +127,15 @@ vsg::ref_ptr<vsg::Node> createSceneData(vsg::Paths& searchPaths)
     //
     vsg::ref_ptr<vsg::vec3Array> vertices(new vsg::vec3Array
     {
+        {-0.5f, -0.5f, -0.5f}, // reversed quad draw order
+        {0.5f,  -0.5f, -0.5f},
+        {0.5f , 0.5f, -0.5},
+        {-0.5f, 0.5f, -0.5},
+
         {-0.5f, -0.5f, 0.0f},
         {0.5f,  -0.5f, 0.05f},
         {0.5f , 0.5f, 0.0f},
-        {-0.5f, 0.5f, 0.0f},
-        {-0.5f, -0.5f, -0.5f},
-        {0.5f,  -0.5f, -0.5f},
-        {0.5f , 0.5f, -0.5},
-        {-0.5f, 0.5f, -0.5}
+        {-0.5f, 0.5f, 0.0f}
     }); // VK_FORMAT_R32G32B32_SFLOAT, VK_VERTEX_INPUT_RATE_INSTANCE, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE
 
     vsg::ref_ptr<vsg::vec3Array> colors(new vsg::vec3Array
@@ -296,10 +297,10 @@ int main(int argc, char** argv)
     vsg::ComputeBounds computeBounds;
     commandGraph->accept(computeBounds);
     vsg::dvec3 centre = (computeBounds.bounds.min+computeBounds.bounds.max)*0.5;
-    double radius = vsg::length(computeBounds.bounds.max-computeBounds.bounds.min)*0.75;
+    double radius = vsg::length(computeBounds.bounds.max-computeBounds.bounds.min)*0.6;
 
     // set up the camera
-    vsg::ref_ptr<vsg::Perspective> perspective(new vsg::Perspective(60.0, static_cast<double>(width) / static_cast<double>(height), 0.1, radius * 2.0));
+    vsg::ref_ptr<vsg::Perspective> perspective(new vsg::Perspective(60.0, static_cast<double>(width) / static_cast<double>(height), 0.1, radius * 3.0));
     vsg::ref_ptr<vsg::LookAt> lookAt(new vsg::LookAt(centre+vsg::dvec3(radius, radius, radius), centre, vsg::dvec3(0.0, 0.0, 1.0)));
     vsg::ref_ptr<vsg::Camera> camera(new vsg::Camera(perspective, lookAt, viewport));
 
