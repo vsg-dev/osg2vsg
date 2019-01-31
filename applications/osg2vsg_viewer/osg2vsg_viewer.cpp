@@ -189,8 +189,6 @@ vsg::ref_ptr<vsg::Node> convertToVsg(osg::ref_ptr<osg::Node> osg_scene, vsg::Pat
     osg2vsg::SceneAnalysisVisitor sceneAnalysis;
     osg_scene->accept(sceneAnalysis);
 
-
-
     return sceneAnalysis.createVSG(searchPaths);
 }
 
