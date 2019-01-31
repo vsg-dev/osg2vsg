@@ -69,7 +69,8 @@ find_package(Vulkan)
 find_package(vsg)
 
 SET(CMAKE_MODULE_PATH "${OSG2VSG_SOURCE_DIR}/CMakeModules;${CMAKE_MODULE_PATH}")
-find_package(Shaderc)
+find_package(glslang)
+# find_package(Shaderc)
 
 add_custom_target(clobber
     COMMAND git clean -d -f -x

@@ -25,5 +25,14 @@ target_include_directories(osg2vsg_viewer PRIVATE
     ${OSG_INCLUDE_DIR}
 )
 
-target_link_libraries(osg2vsg_viewer vsg::vsg osg2vsg ${OSGDB_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSG_LIBRARIES} ${OPENTHREADS_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${OPENGL_LIBRARY} ${DL_LIBRARY})
+target_link_libraries(osg2vsg_viewer
+    osg2vsg
+    vsg::vsg
+    glslang::glslang
+    glslang::OSDependent
+    glslang::SPIRV
+    glslang::OGLCompiler
+    glslang::HLSL
+    Vulkan::Vulkan
+    ${OSGDB_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSG_LIBRARIES} ${OPENTHREADS_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${OPENGL_LIBRARY} ${DL_LIBRARY})
 
