@@ -133,8 +133,8 @@ int main(int argc, char** argv)
     double radius = vsg::length(computeBounds.bounds.max-computeBounds.bounds.min)*0.6;
 
     // set up the camera
-    vsg::ref_ptr<vsg::Perspective> perspective(new vsg::Perspective(60.0, static_cast<double>(width) / static_cast<double>(height), 0.1, radius * 3.0));
-    vsg::ref_ptr<vsg::LookAt> lookAt(new vsg::LookAt(centre+vsg::dvec3(radius, radius, radius), centre, vsg::dvec3(0.0, 0.0, 1.0)));
+    vsg::ref_ptr<vsg::Perspective> perspective(new vsg::Perspective(60.0, static_cast<double>(width) / static_cast<double>(height), 0.1, radius * 2.0));
+    vsg::ref_ptr<vsg::LookAt> lookAt(new vsg::LookAt(centre+vsg::dvec3(0.0, radius, 0.0), centre, vsg::dvec3(0.0, 0.0, 1.0)));
     vsg::ref_ptr<vsg::Camera> camera(new vsg::Camera(perspective, lookAt, viewport));
 
 
