@@ -239,12 +239,7 @@ Geometry::Geometry(Allocator* allocator) :
 
 void Geometry::accept(DispatchTraversal& dv) const
 {
-    std::cout<<"Geometry::accept(DisptatchTraversal& dv) enter"<<std::endl;
-    std::cout<<"    _arrays.size() = "<<_arrays.size() <<std::endl;
-    std::cout<<"    _indices.get() = "<<_indices.get() <<std::endl;
-    std::cout<<"    _commands.size() = "<<_commands.size() <<std::endl;
     if (_renderImplementation) _renderImplementation->accept(dv);
-    std::cout<<"Geometry::accept(DisptatchTraversal& dv) leave"<<std::endl;
 }
 
 void Geometry::compile(Context& context)
