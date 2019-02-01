@@ -19,179 +19,6 @@
 #include <osg2vsg/ComputeBounds.h>
 
 
-#include <algorithm>
-using namespace std;
-
-vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGraphicsPipeline(vsg::Paths& searchPaths)
-{
-    //
-    // load shaders
-    //
-    uint32_t stateMask = osg2vsg::DIFFUSE_MAP;
-    uint32_t geomAtts = osg2vsg::VERTEX | osg2vsg::TEXCOORD0; // osg2vsg::NORMAL | osg2vsg::COLOR
-
-    vsg::ref_ptr<vsg::Shader> vertexShader =  vsg::Shader::read(VK_SHADER_STAGE_VERTEX_BIT, "main", vsg::findFile("shaders/vert_PushConstants.spv", searchPaths)); //osg2vsg::compileSourceToSPV(osg2vsg::createVertexSource(stateMask, geomAtts, false), true);
-    vsg::ref_ptr<vsg::Shader> fragmentShader = vsg::Shader::read(VK_SHADER_STAGE_FRAGMENT_BIT, "main", vsg::findFile("shaders/frag_PushConstants.spv", searchPaths)); // osg2vsg::compileSourceToSPV(osg2vsg::createFragmentSource(stateMask, geomAtts, false), false);
-    if (!vertexShader || !fragmentShader)
-    {
-        std::cout<<"Could not create shaders."<<std::endl;
-        return vsg::ref_ptr<vsg::GraphicsPipelineGroup>();
-    }
-
-    //
-    // set up graphics pipeline
-    //
-    vsg::ref_ptr<vsg::GraphicsPipelineGroup> gp = vsg::GraphicsPipelineGroup::create();
-
-    gp->shaders = vsg::GraphicsPipelineGroup::Shaders{vertexShader, fragmentShader};
-    gp->maxSets = 1;
-    gp->descriptorPoolSizes = vsg::DescriptorPoolSizes
-    {
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1} // texture
-    };
-
-    gp->descriptorSetLayoutBindings = vsg::DescriptorSetLayoutBindings
-    {
-        {0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr} // { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
-    };
-
-    gp->pushConstantRanges = vsg::PushConstantRanges
-    {
-        {VK_SHADER_STAGE_VERTEX_BIT, 0, 196} // projection view, and model matrices
-    };
-
-    gp->vertexBindingsDescriptions = vsg::VertexInputState::Bindings
-    {
-        VkVertexInputBindingDescription{0, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX}, // vertex data
-        VkVertexInputBindingDescription{1, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX}, // colour data
-        VkVertexInputBindingDescription{2, sizeof(vsg::vec2), VK_VERTEX_INPUT_RATE_VERTEX}  // tex coord data
-    };
-
-    gp->vertexAttributeDescriptions = vsg::VertexInputState::Attributes
-    {
-        VkVertexInputAttributeDescription{0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0}, // vertex data
-        VkVertexInputAttributeDescription{1, 1, VK_FORMAT_R32G32B32_SFLOAT, 0}, // colour data
-        VkVertexInputAttributeDescription{2, 2, VK_FORMAT_R32G32_SFLOAT, 0},    // tex coord data (bind to 3 if normals and colors are not used in shader gen above)
-    };
-
-    gp->pipelineStates = vsg::GraphicsPipelineStates
-    {
-        vsg::InputAssemblyState::create(),
-        vsg::RasterizationState::create(),
-        vsg::MultisampleState::create(),
-        vsg::ColorBlendState::create(),
-        vsg::DepthStencilState::create()
-    };
-
-    return gp;
-}
-
-vsg::ref_ptr<vsg::Node> createSceneData(vsg::Paths& searchPaths)
-{
-    //
-    // set up graphics pipeline
-    //
-    vsg::ref_ptr<vsg::GraphicsPipelineGroup> gp = createGraphicsPipeline(searchPaths);
-
-
-    //
-    // set up model transformation node
-    //
-    auto transform = vsg::MatrixTransform::create(); // VK_SHADER_STAGE_VERTEX_BIT, 128
-
-    // add transform to graphics pipeline group
-    gp->addChild(transform);
-
-
-    //
-    // create texture node
-    //
-    //
-    std::string textureFile("textures/lz.vsgb");
-    vsg::vsgReaderWriter vsgReader;
-    auto textureData = vsgReader.read<vsg::Data>(vsg::findFile(textureFile, searchPaths));
-    if (!textureData)
-    {
-        std::cout<<"Could not read texture file : "<<textureFile<<std::endl;
-        return vsg::ref_ptr<vsg::Node>();
-    }
-    vsg::ref_ptr<vsg::Texture> texture = vsg::Texture::create();
-    texture->_textureData = textureData;
-
-    // add texture node to transform node
-    transform->addChild(texture);
-
-
-    //
-    // set up vertex and index arrays
-    //
-    vsg::ref_ptr<vsg::vec3Array> vertices(new vsg::vec3Array
-    {
-        {-0.5f, -0.5f, -0.5f}, // reversed quad draw order
-        {0.5f,  -0.5f, -0.5f},
-        {0.5f , 0.5f, -0.5},
-        {-0.5f, 0.5f, -0.5},
-
-        {-0.5f, -0.5f, 0.0f},
-        {0.5f,  -0.5f, 0.05f},
-        {0.5f , 0.5f, 0.0f},
-        {-0.5f, 0.5f, 0.0f}
-    }); // VK_FORMAT_R32G32B32_SFLOAT, VK_VERTEX_INPUT_RATE_INSTANCE, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE
-
-    vsg::ref_ptr<vsg::vec3Array> colors(new vsg::vec3Array
-    {
-        {1.0f, 0.0f, 0.0f},
-        {0.0f, 1.0f, 0.0f},
-        {0.0f, 0.0f, 1.0f},
-        {1.0f, 1.0f, 1.0f},
-        {1.0f, 0.0f, 0.0f},
-        {0.0f, 1.0f, 0.0f},
-        {0.0f, 0.0f, 1.0f},
-        {1.0f, 1.0f, 1.0f},
-    }); // VK_FORMAT_R32G32B32_SFLOAT, VK_VERTEX_INPUT_RATE_VERTEX, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE
-
-    vsg::ref_ptr<vsg::vec2Array> texcoords(new vsg::vec2Array
-    {
-        {0.0f, 0.0f},
-        {1.0f, 0.0f},
-        {1.0f, 1.0f},
-        {0.0f, 1.0f},
-        {0.0f, 0.0f},
-        {1.0f, 0.0f},
-        {1.0f, 1.0f},
-        {0.0f, 1.0f}
-    }); // VK_FORMAT_R32G32_SFLOAT, VK_VERTEX_INPUT_RATE_VERTEX, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE
-
-    vsg::ref_ptr<vsg::ushortArray> indices(new vsg::ushortArray
-    {
-        0, 1, 2,
-        2, 3, 0,
-        4, 5, 6,
-        6, 7, 4
-    }); // VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE
-
-    auto geometry = vsg::Geometry::create();
-
-    // setup geometry
-    geometry->_arrays = vsg::DataList{vertices, colors, texcoords};
-    geometry->_indices = indices;
-
-    vsg::ref_ptr<vsg::DrawIndexed> drawIndexed = vsg::DrawIndexed::create(12, 1, 0, 0, 0);
-    geometry->_commands = vsg::Geometry::Commands{drawIndexed};
-
-    // add geometry to texture group
-    texture->addChild(geometry);
-
-    return gp;
-}
-
-vsg::ref_ptr<vsg::Node> convertToVsg(osg::ref_ptr<osg::Node> osg_scene, vsg::Paths& searchPaths)
-{
-    osg2vsg::SceneAnalysisVisitor sceneAnalysis;
-    osg_scene->accept(sceneAnalysis);
-
-    return sceneAnalysis.createVSG(searchPaths);
-}
 
 int main(int argc, char** argv)
 {
@@ -214,50 +41,56 @@ int main(int argc, char** argv)
     osg::ArgumentParser osg_arguments(&argc, argv);
     osg::ref_ptr<osg::Node> osg_scene = osgDB::readNodeFiles(osg_arguments);
 
-    if (optimize && osg_scene.valid())
+    if (!osg_scene)
+    {
+        std::cout<<"No moderl loaded."<<std::endl;
+        return 1;
+    }
+
+    if (optimize)
     {
         osgUtil::Optimizer optimizer;
         optimizer.optimize(osg_scene.get(), osgUtil::Optimizer::DEFAULT_OPTIMIZATIONS | osgUtil::Optimizer::INDEX_MESH);
     }
 
-    vsg::Path outputFileExtension;
+
+    // Collect stats about the loaded scene
+    osg2vsg::SceneAnalysisVisitor sceneAnalysis;
+    osg_scene->accept(sceneAnalysis);
+
+    // build VSG scene
+    auto vsg_scene = sceneAnalysis.createVSG(searchPaths);
+
     if (!outputFilename.empty())
     {
-        outputFileExtension = vsg::fileExtension(outputFilename);
-    }
+        vsg::Path outputFileExtension = vsg::fileExtension(outputFilename);
 
-    if (osg_scene.valid() && !outputFilename.empty() && outputFileExtension.compare(0, 3,"osg")==0)
-    {
-        osg2vsg::SceneAnalysisVisitor sceneAnalysis;
-        osg_scene->accept(sceneAnalysis);
+        if (osg_scene.valid() && outputFileExtension.compare(0, 3,"osg")==0)
+        {
+            auto scene = sceneAnalysis.createOSG();
+            if (scene.valid())
+            {
+                osgDB::writeNodeFile(*scene, outputFilename);
+            }
 
-        auto scene = sceneAnalysis.createOSG();
-        if (scene.valid())
+            return 1;
+        }
+        else if (vsg_scene.valid() && outputFileExtension.compare(0, 3,"vsg")==0)
         {
             std::cout<<"Writing file to "<<outputFilename<<std::endl;
-            osgDB::writeNodeFile(*scene, outputFilename);
+            std::ofstream fout(outputFilename);
+            vsg::AsciiOutput output(fout);
+            output.writeObject("Root", vsg_scene);
+            return 1;
         }
-
-        return 1;
     }
 
-
-    // create the scene/command graph
-    vsg::ref_ptr<vsg::Node> commandGraph  = osg_scene.valid() ? convertToVsg(osg_scene, searchPaths) : createSceneData(searchPaths);
-
-    if (!commandGraph)
+    if (!vsg_scene)
     {
         std::cout<<"No command graph created."<<std::endl;
         return 1;
     }
 
-    if (commandGraph && !outputFilename.empty() && outputFileExtension.compare(0, 3,"vsg")==0)
-    {
-        std::ofstream fout(outputFilename);
-        vsg::AsciiOutput output(fout);
-        output.writeObject("Root", commandGraph);
-        return 1;
-    }
 
     // create the viewer and assign window(s) to it
     auto viewer = vsg::Viewer::create();
@@ -295,7 +128,7 @@ int main(int argc, char** argv)
 
     // compute the bounds of the scene graph to help position camera
     vsg::ComputeBounds computeBounds;
-    commandGraph->accept(computeBounds);
+    vsg_scene->accept(computeBounds);
     vsg::dvec3 centre = (computeBounds.bounds.min+computeBounds.bounds.max)*0.5;
     double radius = vsg::length(computeBounds.bounds.max-computeBounds.bounds.min)*0.6;
 
@@ -315,7 +148,7 @@ int main(int argc, char** argv)
     compile.context.projMatrix = projMatrix;
     compile.context.viewMatrix = viewMatrix;
 
-    commandGraph->accept(compile);
+    vsg_scene->accept(compile);
 
     //
     // end of initialize vulkan
@@ -325,7 +158,7 @@ int main(int argc, char** argv)
     for (auto& win : viewer->windows())
     {
         // add a GraphicsStage tp the Window to do dispatch of the command graph to the commnad buffer(s)
-        win->addStage(vsg::GraphicsStage::create(commandGraph));
+        win->addStage(vsg::GraphicsStage::create(vsg_scene));
         win->populateCommandBuffers();
     }
 
@@ -374,7 +207,7 @@ int main(int argc, char** argv)
             viewport->getViewport().height = static_cast<float>(windowExtent.height);
             viewport->getScissor().extent = windowExtent;
 
-            commandGraph->accept(updatePipeline);
+            vsg_scene->accept(updatePipeline);
 
             perspective->aspectRatio = static_cast<double>(windowExtent.width) / static_cast<double>(windowExtent.height);
 
