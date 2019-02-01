@@ -54,6 +54,29 @@ find_library(HLSL_LIBRARY
     NAMES HLSL
 )
 
+if(WIN32)
+
+  find_library(glslang_LIBRARY_debug
+      NAMES glslangd
+  )
+
+  find_library(OSDependent_LIBRARY_debug
+      NAMES OSDependentd
+  )
+
+  find_library(SPIRV_LIBRARY_debug
+      NAMES SPIRVd
+  )
+
+  find_library(OGLCompiler_LIBRARY_debug
+      NAMES OGLCompilerd
+  )
+
+  find_library(HLSL_LIBRARY_debug
+      NAMES HLSLd
+  )
+endif()
+
 
 set(glslang_LIBRARIES ${glslang_LIBRARY})
 set(glslang_INCLUDE_DIRS ${glslang_INCLUDE_DIR})
@@ -83,6 +106,14 @@ if(glslang_FOUND AND NOT TARGET glslang::glslang)
 
   add_library(glslang::HLSL UNKNOWN IMPORTED)
   set_target_properties(glslang::HLSL PROPERTIES IMPORTED_LOCATION "${HLSL_LIBRARY}" INTERFACE_INCLUDE_DIRECTORIES "${glslang_INCLUDE_DIRS}")
+
+  if(WIN32)
+    set_target_properties(glslang::glslang PROPERTIES IMPORTED_LOCATION_DEBUG "${glslang_LIBRARY_debug}")
+    set_target_properties(glslang::OSDependent PROPERTIES IMPORTED_LOCATION_DEBUG "${OSDependent_LIBRARY_debug}")
+    set_target_properties(glslang::SPIRV PROPERTIES IMPORTED_LOCATION_DEBUG "${SPIRV_LIBRARY_debug}")
+    set_target_properties(glslang::OGLCompiler PROPERTIES IMPORTED_LOCATION_DEBUG "${OGLCompiler_LIBRARY_debug}")
+    set_target_properties(glslang::HLSL PROPERTIES IMPORTED_LOCATION_DEBUG "${HLSL_LIBRARY_debug}")
+  endif()
 
 endif()
 
