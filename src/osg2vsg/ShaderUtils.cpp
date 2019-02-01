@@ -390,7 +390,7 @@ vsg::ref_ptr<vsg::Shader> osg2vsg::compileSourceToSPV(const std::string& source,
 
     shader->setEnvInput(glslang::EShSourceGlsl, envStage, glslang::EShClientVulkan, 150);
     shader->setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_1);
-    shader->setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_4);
+    shader->setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_0);
 
     const char* str = source.c_str();
     shader->setStrings(&str, 1);
