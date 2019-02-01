@@ -8,6 +8,7 @@ set(HEADERS
     ${HEADER_PATH}/ShaderUtils.h
     ${HEADER_PATH}/GraphicsNodes.h
     ${HEADER_PATH}/SceneAnalysisVisitor.h
+    ${HEADER_PATH}/glsllang/ResourceLimits.h
 )
 
 set(SOURCES
@@ -16,6 +17,7 @@ set(SOURCES
     ShaderUtils.cpp
     GraphicsNodes.cpp
     SceneAnalysisVisitor.cpp
+    glsllang/ResourceLimits.cpp
 )
 
 add_library(osg2vsg ${HEADERS} ${SOURCES})
