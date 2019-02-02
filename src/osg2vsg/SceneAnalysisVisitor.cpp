@@ -346,11 +346,11 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createStateGeometryGraphVSG(StateG
                 attachpoint = texture;
             }
         }
-        
+
         for (auto& geometry : geometries)
         {
             vsg::ref_ptr<vsg::Geometry> new_geometry = convertToVsg(geometry, requiredGeomAttributesMask);
-            attachpoint->addChild(new_geometry);
+            if (new_geometry) attachpoint->addChild(new_geometry);
         }
     }
 
@@ -369,7 +369,7 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createTransformGeometryGraphVSG(Tr
     for (auto[matrix, geometries] : transformGeometryMap)
     {
         vsg::ref_ptr<vsg::MatrixTransform> transform = vsg::MatrixTransform::create();
-        
+
         /*vsg::mat4 vsgmatrix = vsg::mat4(matrix(0, 0), matrix(0, 1), matrix(0, 2), matrix(0, 3),
                                         matrix(1, 0), matrix(1, 1), matrix(1, 2), matrix(1, 3),
                                         matrix(2, 0), matrix(2, 1), matrix(2, 2), matrix(2, 3),
@@ -386,9 +386,8 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createTransformGeometryGraphVSG(Tr
 
         for (auto& geometry : geometries)
         {
-            vsg::ref_ptr<vsg::Geometry> new_geometry = convertToVsg(geometry, requiredGeomAttributesMask); // new osg::Geometry(*geometry); 
-            //new_geometry->setStateSet(nullptr);
-            transform->addChild(new_geometry);
+            vsg::ref_ptr<vsg::Geometry> new_geometry = convertToVsg(geometry, requiredGeomAttributesMask); // new osg::Geometry(*geometry);
+            if (new_geometry) transform->addChild(new_geometry);
         }
     }
 
@@ -405,7 +404,7 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createVSG(vsg::Paths& searchPaths)
     vsg::ref_ptr<vsg::Group> group = vsg::Group::create();
 
     for (auto[programStateSet, transformStatePair] : programTransformStateMap)
-    {        
+    {
         bool transformAtTop = transformStatePair.matrixStateGeometryMap.size() < transformStatePair.stateTransformMap.size();
         if (transformAtTop)
         {
