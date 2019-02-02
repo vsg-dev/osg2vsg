@@ -9,7 +9,7 @@ using namespace osg2vsg;
 SceneAnalysisVisitor::SceneAnalysisVisitor():
     osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN) {}
 
-osg::ref_ptr<osg::StateSet> SceneAnalysisVisitor::uniqueState(osg::ref_ptr<osg::StateSet> stateset)
+osg::ref_ptr<osg::StateSet> SceneAnalysisVisitor::uniqueState(osg::ref_ptr<osg::StateSet> stateset, bool programStateSet)
 {
     if (auto itr = uniqueStateSets.find(stateset); itr != uniqueStateSets.end())
     {
@@ -18,6 +18,13 @@ osg::ref_ptr<osg::StateSet> SceneAnalysisVisitor::uniqueState(osg::ref_ptr<osg::
     }
 
     std::cout<<"    uniqueState() inserting state"<<std::endl;
+
+
+    if (stateset.valid())
+    {
+        if (programStateSet) osgDB::writeObjectFile(*(stateset), vsg::make_string("programState_", stateMap.size(),".osgt"));
+        else osgDB::writeObjectFile(*(stateset), vsg::make_string("dataState_", stateMap.size(),".osgt"));
+    }
 
     uniqueStateSets.insert(stateset);
     return stateset;
@@ -49,7 +56,7 @@ SceneAnalysisVisitor::StatePair SceneAnalysisVisitor::computeStatePair(osg::Stat
         }
     }
 
-    return StatePair(uniqueState(programState), uniqueState(dataState));
+    return StatePair(uniqueState(programState, true), uniqueState(dataState, false));
 }
 
 void SceneAnalysisVisitor::apply(osg::Node& node)
@@ -140,9 +147,6 @@ void SceneAnalysisVisitor::apply(osg::Geometry& geometry)
         }
 
         itr = stateMap.find(statestack);
-
-        if (itr->second.first.valid()) osgDB::writeObjectFile(*(itr->second.first), vsg::make_string("programState_", stateMap.size(),".osgt"));
-        if (itr->second.second.valid()) osgDB::writeObjectFile(*(itr->second.second), vsg::make_string("dataState_", stateMap.size(),".osgt"));
 
         std::cout<<"Need to create StateSet"<<std::endl;
     }

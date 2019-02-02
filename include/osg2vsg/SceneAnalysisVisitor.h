@@ -43,8 +43,8 @@ namespace osg2vsg
         {
             bool operator() ( const osg::ref_ptr<osg::StateSet>& lhs, const osg::ref_ptr<osg::StateSet>& rhs) const
             {
-                if (!lhs) return lhs;
-                if (!rhs) return rhs;
+                if (!lhs) return true;
+                if (!rhs) return false;
                 return lhs->compare(*rhs)<0;
             }
         };
@@ -57,7 +57,7 @@ namespace osg2vsg
         UniqueStats uniqueStateSets;
         ProgramTransformStateMap programTransformStateMap;
 
-        osg::ref_ptr<osg::StateSet> uniqueState(osg::ref_ptr<osg::StateSet> stateset);
+        osg::ref_ptr<osg::StateSet> uniqueState(osg::ref_ptr<osg::StateSet> stateset, bool programStateSet);
 
         StatePair computeStatePair(osg::StateSet* stateset);
 
