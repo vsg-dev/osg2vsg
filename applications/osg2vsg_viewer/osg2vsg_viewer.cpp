@@ -8,6 +8,8 @@
 #include <osgDB/ReadFile>
 #include <osgDB/WriteFile>
 #include <osgUtil/Optimizer>
+#include <osgUtil/MeshOptimizers>
+#include <osg/Version>
 #include <osg/Billboard>
 #include <osg/MatrixTransform>
 
@@ -49,8 +51,24 @@ int main(int argc, char** argv)
 
     if (optimize)
     {
+        osgUtil::IndexMeshVisitor imv;
+        #if OSG_MIN_VERSION_REQUIRED(3,6,4)
+        imv.setGenerateNewIndicesOnAllGeometries(true);
+        #endif
+        osg_scene->accept(imv);
+        imv.makeMesh();
+
+        osgUtil::VertexCacheVisitor vcv;
+        osg_scene->accept(vcv);
+        vcv.optimizeVertices();
+
+        osgUtil::VertexAccessOrderVisitor vaov;
+        osg_scene->accept(vaov);
+        vaov.optimizeOrder();
+
+
         osgUtil::Optimizer optimizer;
-        optimizer.optimize(osg_scene.get(), osgUtil::Optimizer::DEFAULT_OPTIMIZATIONS | osgUtil::Optimizer::INDEX_MESH);
+        optimizer.optimize(osg_scene.get(), osgUtil::Optimizer::DEFAULT_OPTIMIZATIONS);
     }
 
 
