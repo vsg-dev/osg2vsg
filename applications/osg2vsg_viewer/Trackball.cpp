@@ -57,11 +57,6 @@ void Trackball::apply(KeyPressEvent& keyPress)
     }
 }
 
-void Trackball::apply(ExposeWindowEvent& exposeWindow)
-{
-    std::cout<<"Trackball::apply(ExposeWindowEvent& "<<window_width<<", "<<window_height<<")"<<std::endl;
-}
-
 void Trackball::apply(ConfigureWindowEvent& configureWindow)
 {
     window_width = static_cast<double>(configureWindow.width);
@@ -83,18 +78,16 @@ void Trackball::apply(ButtonPressEvent& buttonPress)
     {
         zoom(0.1);
     }
-};
+}
 
 void Trackball::apply(ButtonReleaseEvent& buttonRelease)
 {
     prev_ndc = ndc(buttonRelease);
     prev_tbc = tbc(buttonRelease);
-};
+}
 
 void Trackball::apply(MoveEvent& moveEvent)
 {
-    LookAt* lookAt = dynamic_cast<LookAt*>(_camera->getViewMatrix());
-
     dvec2 new_ndc = ndc(moveEvent);
     dvec3 new_tbc = tbc(moveEvent);
 
@@ -122,9 +115,9 @@ void Trackball::apply(MoveEvent& moveEvent)
 
     prev_ndc = new_ndc;
     prev_tbc = new_tbc;
-};
+}
 
-void Trackball::apply(FrameEvent& frame)
+void Trackball::apply(FrameEvent& /*frame*/)
 {
 //    std::cout<<"Frame "<<frame.frameStamp->frameCount<<std::endl;
 }

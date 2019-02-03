@@ -36,7 +36,6 @@ namespace vsg
         dvec3 tbc(PointerEvent& event);
 
         void apply(KeyPressEvent& keyPress) override;
-        void apply(ExposeWindowEvent& exposeWindow) override;
         void apply(ConfigureWindowEvent& exposeWindow) override;
         void apply(ButtonPressEvent& buttonPress) override;
         void apply(ButtonReleaseEvent& buttonRelease) override;
