@@ -119,6 +119,33 @@ void SceneAnalysisVisitor::apply(osg::Billboard& billboard)
 
 void SceneAnalysisVisitor::apply(osg::Geometry& geometry)
 {
+    if (!geometry.getVertexArray())
+    {
+        std::cout<<"SceneAnalysisVisitor::apply(osg::Geometry& geometry), ignoring geometry with null geometry.getVertexArray()"<<std::endl;
+        return;
+    }
+
+    if (geometry.getVertexArray()->getNumElements()==0)
+    {
+        std::cout<<"SceneAnalysisVisitor::apply(osg::Geometry& geometry), ignoring geometry with empty geometry.getVertexArray()"<<std::endl;
+        return;
+    }
+
+    if (geometry.getNumPrimitiveSets()==0)
+    {
+        std::cout<<"SceneAnalysisVisitor::apply(osg::Geometry& geometry), ignoring geometry with empty PrimitiveSetList."<<std::endl;
+        return;
+    }
+
+    for(auto& primitive : geometry.getPrimitiveSetList())
+    {
+        if (primitive->getNumPrimitives()==0)
+        {
+            std::cout<<"SceneAnalysisVisitor::apply(osg::Geometry& geometry), ignoring geometry with as it contains an empty PrimitiveSet : "<<primitive->className()<<std::endl;
+            return;
+        }
+    }
+
     if (geometry.getStateSet()) pushStateSet(*geometry.getStateSet());
 
     auto itr = stateMap.find(statestack);
