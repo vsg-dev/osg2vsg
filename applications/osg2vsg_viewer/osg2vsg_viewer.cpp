@@ -1,6 +1,5 @@
 #include <vsg/all.h>
 
-
 #include <iostream>
 #include <ostream>
 #include <chrono>
@@ -13,7 +12,6 @@
 #include <osg/Billboard>
 #include <osg/MatrixTransform>
 
-#include "Trackball.h"
 #include <osg2vsg/GraphicsNodes.h>
 #include <osg2vsg/ShaderUtils.h>
 #include <osg2vsg/GeometryUtils.h>

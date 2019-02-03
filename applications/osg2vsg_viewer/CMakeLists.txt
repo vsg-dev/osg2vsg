@@ -15,7 +15,6 @@ if (UNIX)
 endif()
 
 set(SOURCES
-    Trackball.cpp
     osg2vsg_viewer.cpp)
 
 add_executable(osg2vsg_viewer ${SOURCES})
