@@ -28,6 +28,7 @@ int main(int argc, char** argv)
     auto apiDumpLayer = arguments.read({"--api","-a"});
     auto numFrames = arguments.value(-1, "-f");
     auto printFrameRate = arguments.read("--fr");
+    auto writeToFileProgramAndDataSetSets = arguments.read({"--write-stateset", "--ws"});
     auto optimize = !arguments.read("--no-optimize");
     auto outputFilename = arguments.value(std::string(), "-o");
     auto [width, height] = arguments.value(std::pair<uint32_t, uint32_t>(800, 600), {"--window", "-w"});
@@ -72,6 +73,7 @@ int main(int argc, char** argv)
 
     // Collect stats about the loaded scene
     osg2vsg::SceneAnalysisVisitor sceneAnalysis;
+    sceneAnalysis.writeToFileProgramAndDataSetSets = writeToFileProgramAndDataSetSets;
     osg_scene->accept(sceneAnalysis);
 
     // build VSG scene

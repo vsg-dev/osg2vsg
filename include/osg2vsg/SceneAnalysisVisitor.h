@@ -56,6 +56,7 @@ namespace osg2vsg
         MatrixStack matrixstack;
         UniqueStats uniqueStateSets;
         ProgramTransformStateMap programTransformStateMap;
+        bool writeToFileProgramAndDataSetSets = false;
 
         osg::ref_ptr<osg::StateSet> uniqueState(osg::ref_ptr<osg::StateSet> stateset, bool programStateSet);
 
