@@ -20,7 +20,7 @@ osg::ref_ptr<osg::StateSet> SceneAnalysisVisitor::uniqueState(osg::ref_ptr<osg::
     std::cout<<"    uniqueState() inserting state"<<std::endl;
 
 
-    if (stateset.valid())
+    if (writeToFileProgramAndDataSetSets && stateset.valid())
     {
         if (programStateSet) osgDB::writeObjectFile(*(stateset), vsg::make_string("programState_", stateMap.size(),".osgt"));
         else osgDB::writeObjectFile(*(stateset), vsg::make_string("dataState_", stateMap.size(),".osgt"));
