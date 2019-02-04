@@ -8,7 +8,6 @@ set(HEADERS
     ${HEADER_PATH}/ShaderUtils.h
     ${HEADER_PATH}/GraphicsNodes.h
     ${HEADER_PATH}/SceneAnalysisVisitor.h
-    ${HEADER_PATH}/glsllang/ResourceLimits.h
 )
 
 set(SOURCES

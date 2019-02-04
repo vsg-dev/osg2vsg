@@ -375,7 +375,7 @@ vsg::ref_ptr<vsg::Shader> osg2vsg::compileSourceToSPV(const std::string& source,
 
 #include <glslang/Public/ShaderLang.h>
 #include <SPIRV/GlslangToSpv.h>
-#include <osg2vsg/glsllang/ResourceLimits.h>
+#include "glsllang/ResourceLimits.h"
 
 vsg::ref_ptr<vsg::Shader> osg2vsg::compileSourceToSPV(const std::string& source, bool isvert)
 {
