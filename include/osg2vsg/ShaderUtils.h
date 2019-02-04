@@ -38,4 +38,13 @@ namespace osg2vsg
     extern OSG2VSG_DECLSPEC std::string createFragmentSource(const uint32_t& stateMask, const uint32_t& geometryAttrbutes, bool osgCompatible);
 
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Shader> compileSourceToSPV(const std::string& source, bool isvert);
+
+    class OSG2VSG_DECLSPEC ShaderCompiler : public vsg::Object
+    {
+    public:
+        ShaderCompiler(vsg::Allocator* allocator=nullptr);
+        virtual ~ShaderCompiler();
+
+        vsg::ref_ptr<vsg::Shader> compile(VkShaderStageFlagBits stage, const std::string& entryPointName, const std::string& source);
+    };
 }

@@ -364,7 +364,7 @@ vsg::ref_ptr<vsg::Shader> osg2vsg::compileSourceToSPV(const std::string& source,
     vsg::Shader::Contents shadercontents(contentBufferSize);
     memcpy(shadercontents.data(), compiledsource.c_str(), compiledsource.size());
 
-    vsg::ref_ptr<vsg::Shader> shader = vsg::Shader::create(isvert ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT, "main", shadercontents);
+    vsg::ref_ptr<vsg::Shader> shader = vsg::Shader::create(isvert ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT, "main", source, shadercontents);
 
     // release the result
     shaderc_result_release(result);
@@ -376,6 +376,86 @@ vsg::ref_ptr<vsg::Shader> osg2vsg::compileSourceToSPV(const std::string& source,
 #include <glslang/Public/ShaderLang.h>
 #include <SPIRV/GlslangToSpv.h>
 #include "glsllang/ResourceLimits.h"
+
+ShaderCompiler::ShaderCompiler(vsg::Allocator* allocator):
+    vsg::Object(allocator)
+{
+    glslang::InitializeProcess();
+}
+
+ShaderCompiler::~ShaderCompiler()
+{
+    glslang::FinalizeProcess();
+}
+
+vsg::ref_ptr<vsg::Shader> ShaderCompiler::compile(VkShaderStageFlagBits stage, const std::string& entryPointName, const std::string& source)
+{
+    EShLanguage envStage = EShLangCount;
+    switch(stage)
+    {
+        case(VK_SHADER_STAGE_VERTEX_BIT): envStage = EShLangVertex; break;
+        case(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT): envStage = EShLangTessControl; break;
+        case(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT): envStage = EShLangTessEvaluation; break;
+        case(VK_SHADER_STAGE_GEOMETRY_BIT): envStage = EShLangGeometry; break;
+        case(VK_SHADER_STAGE_FRAGMENT_BIT) : envStage = EShLangFragment; break;
+        case(VK_SHADER_STAGE_COMPUTE_BIT): envStage = EShLangCompute; break;
+#ifdef VK_SHADER_STAGE_RAYGEN_BIT_NV
+        case(VK_SHADER_STAGE_RAYGEN_BIT_NV): envStage = EShLangRayGenNV; break;
+        case(VK_SHADER_STAGE_ANY_HIT_BIT_NV): envStage = EShLangAnyHitNV; break;
+        case(VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV): envStage = EShLangClosestHitNV; break;
+        case(VK_SHADER_STAGE_MISS_BIT_NV): envStage = EShLangMissNV; break;
+        case(VK_SHADER_STAGE_INTERSECTION_BIT_NV): envStage = EShLangIntersectNV; break;
+        case(VK_SHADER_STAGE_CALLABLE_BIT_NV): envStage = EShLangCallableNV; break;
+        case(VK_SHADER_STAGE_TASK_BIT_NV): envStage = EShLangTaskNV; ;
+        case(VK_SHADER_STAGE_MESH_BIT_NV): envStage = EShLangMeshNV; break;
+#endif
+        default: break;
+    }
+
+    if (envStage==EShLangCount) return vsg::ref_ptr<vsg::Shader>();
+
+    std::unique_ptr<glslang::TShader> shader(new glslang::TShader(envStage));
+
+    shader->setEnvInput(glslang::EShSourceGlsl, envStage, glslang::EShClientVulkan, 150);
+    shader->setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_1);
+    shader->setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_0);
+
+    const char* str = source.c_str();
+    shader->setStrings(&str, 1);
+
+    TBuiltInResource builtInResources = glslang::DefaultTBuiltInResource;
+    int defaultVersion = 110; // 110 desktop, 100 non desktop
+    bool forwardCompatible = false;
+    EShMessages messages = EShMsgDefault;
+    bool parseResult = shader->parse(&builtInResources, defaultVersion, forwardCompatible,  messages);
+
+    if (parseResult)
+    {
+        std::unique_ptr<glslang::TProgram> program(new glslang::TProgram);
+
+        program->addShader(shader.get());
+
+        if (!program->link(messages))
+        {
+            return vsg::ref_ptr<vsg::Shader>();
+        }
+
+        for (int eshl_stage = 0; eshl_stage < EShLangCount; ++eshl_stage)
+        {
+            if (program->getIntermediate((EShLanguage)eshl_stage))
+            {
+                vsg::Shader::SPIRV spirv;
+                std::string warningsErrors;
+                spv::SpvBuildLogger logger;
+                glslang::SpvOptions spvOptions;
+                glslang::GlslangToSpv(*(program->getIntermediate((EShLanguage)eshl_stage)), spirv, &logger, &spvOptions);
+
+                return vsg::Shader::create(stage, "main", source, spirv);
+            }
+        }
+    }
+    return vsg::ref_ptr<vsg::Shader>();
+}
 
 vsg::ref_ptr<vsg::Shader> osg2vsg::compileSourceToSPV(const std::string& source, bool isvert)
 {
@@ -418,13 +498,13 @@ vsg::ref_ptr<vsg::Shader> osg2vsg::compileSourceToSPV(const std::string& source,
         {
             if (program->getIntermediate((EShLanguage)stage))
             {
-                vsg::Shader::Contents spirv;
+                vsg::Shader::SPIRV spirv;
                 std::string warningsErrors;
                 spv::SpvBuildLogger logger;
                 glslang::SpvOptions spvOptions;
                 glslang::GlslangToSpv(*(program->getIntermediate((EShLanguage)stage)), spirv, &logger, &spvOptions);
 
-                auto vsg_shader = vsg::Shader::create(isvert ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT, "main", spirv);
+                auto vsg_shader = vsg::Shader::create(isvert ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT, "main", source, spirv);
 
                 glslang::FinalizeProcess();
 
