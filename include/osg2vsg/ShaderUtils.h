@@ -1,6 +1,7 @@
 #pragma once
 
 #include <osg2vsg/Export.h>
+#include <osg2vsg/GraphicsNodes.h>
 
 #include <vsg/all.h>
 
@@ -45,6 +46,9 @@ namespace osg2vsg
         ShaderCompiler(vsg::Allocator* allocator=nullptr);
         virtual ~ShaderCompiler();
 
-        vsg::ref_ptr<vsg::Shader> compile(VkShaderStageFlagBits stage, const std::string& entryPointName, const std::string& source);
+        using Shaders = vsg::GraphicsPipelineGroup::Shaders;
+
+        bool compile(vsg::Shader* shader);
+        bool compile(Shaders& shaders);
     };
 }

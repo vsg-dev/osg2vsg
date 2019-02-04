@@ -74,7 +74,7 @@ namespace osg2vsg
     vsg::ref_ptr<vsg::Geometry> convertToVsg(osg::Geometry* ingeometry, uint32_t requiredAttributesMask)
     {
         bool hasrequirements = requiredAttributesMask != 0;
-        
+
         //osgUtil::optimizeMesh(ingeometry);
         //osgUtil::IndexMeshVisitor indexmesh; // this is causing a crash in the computebounds visitor???
         //indexmesh.setGenerateNewIndicesOnAllGeometries(true);
@@ -149,21 +149,20 @@ namespace osg2vsg
         //
         // load shaders
         //
+        ShaderCompiler shaderCompiler;
 
-        vsg::ref_ptr<vsg::Shader> vertexShader = compileSourceToSPV(createVertexSource(stateMask, geometryAttributesMask, false), true);
-        vsg::ref_ptr<vsg::Shader> fragmentShader = compileSourceToSPV(createFragmentSource(stateMask, geometryAttributesMask, false), false);
-        if (!vertexShader || !fragmentShader)
-        {
-            std::cout << "Could not create shaders." << std::endl;
-            return vsg::ref_ptr<vsg::GraphicsPipelineGroup>();
-        }
+        vsg::GraphicsPipelineGroup::Shaders shaders{
+            vsg::Shader::create(VK_SHADER_STAGE_VERTEX_BIT, "main", createVertexSource(stateMask, geometryAttributesMask, false)),
+            vsg::Shader::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", createFragmentSource(stateMask, geometryAttributesMask, false)),
+        };
+
+        if (!shaderCompiler.compile(shaders)) return vsg::ref_ptr<vsg::GraphicsPipelineGroup>();
 
         //
         // set up graphics pipeline
         //
         vsg::ref_ptr<vsg::GraphicsPipelineGroup> gp = vsg::GraphicsPipelineGroup::create();
-
-        gp->shaders = vsg::GraphicsPipelineGroup::Shaders{ vertexShader, fragmentShader };
+        gp->shaders = shaders;
         gp->maxSets = 1;
         gp->descriptorPoolSizes = vsg::DescriptorPoolSizes
         {
