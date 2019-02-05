@@ -144,7 +144,7 @@ namespace osg2vsg
         return geometry;
     }
 
-    vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGeometryGraphicsPipeline(const uint32_t& geometryAttributesMask, const uint32_t& stateMask)
+    vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGeometryGraphicsPipeline(const uint32_t& geometryAttributesMask, const uint32_t& stateMask, unsigned int maxNumDescriptors)
     {
         //
         // load shaders
@@ -163,10 +163,10 @@ namespace osg2vsg
         //
         vsg::ref_ptr<vsg::GraphicsPipelineGroup> gp = vsg::GraphicsPipelineGroup::create();
         gp->shaders = shaders;
-        gp->maxSets = 1;
+        gp->maxSets = maxNumDescriptors;
         gp->descriptorPoolSizes = vsg::DescriptorPoolSizes
         {
-            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1} // texture
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxNumDescriptors} // type, descriptorCount
         };
 
         gp->descriptorSetLayoutBindings = vsg::DescriptorSetLayoutBindings

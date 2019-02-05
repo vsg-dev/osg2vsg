@@ -363,7 +363,7 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createStateGeometryGraphVSG(StateG
         uint32_t statemask = calculateStateMask(stateset);
         statemask |= LIGHTING; // force lighting on/off
 
-        vsg::ref_ptr<vsg::GraphicsPipelineGroup> graphicsPipelineGroup = createGeometryGraphicsPipeline(requiredGeomAttributesMask, statemask);
+        vsg::ref_ptr<vsg::GraphicsPipelineGroup> graphicsPipelineGroup = createGeometryGraphicsPipeline(requiredGeomAttributesMask, statemask, 1);
         group->addChild(graphicsPipelineGroup);
 
         auto stateGroup = vsg::Group::create();
@@ -498,7 +498,7 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createVSG(vsg::Paths& searchPaths)
                 uint32_t statemask = calculateStateMask(stateset);
                 statemask |= LIGHTING; // force lighting on/off
 
-                vsg::ref_ptr<vsg::GraphicsPipelineGroup> graphicsPipelineGroup = createGeometryGraphicsPipeline(forceGeomAttributes, statemask);
+                vsg::ref_ptr<vsg::GraphicsPipelineGroup> graphicsPipelineGroup = createGeometryGraphicsPipeline(forceGeomAttributes, statemask, 1);
                 group->addChild(graphicsPipelineGroup);
 
                 auto stateGroup = vsg::Group::create();
@@ -558,9 +558,12 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createNewVSG(vsg::Paths& searchPat
 
         // override masks
         geometrymask = forceGeomAttributes;
-        statemask &= ~LIGHTING; // force lighting off until normal matrix is working
+        //statemask &= ~LIGHTING; // force lighting off until normal matrix is working
+        //statemask |= LIGHTING; // force lighting on/off
 
-        auto graphicsPipelineGroup = createGeometryGraphicsPipeline(geometrymask, statemask);
+        unsigned int maxNumDescriptors = transformStatePair.stateTransformMap.size();
+
+        auto graphicsPipelineGroup = createGeometryGraphicsPipeline(geometrymask, statemask, maxNumDescriptors);
 
         group->addChild(graphicsPipelineGroup);
 
