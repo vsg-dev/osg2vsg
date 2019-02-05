@@ -11,7 +11,8 @@
 #include <osg/Billboard>
 #include <osg/MatrixTransform>
 
-#include "GraphicsNodes.h"
+#include <osg2vsg/GraphicsNodes.h>
+#include <osg2vsg/ShaderUtils.h>
 
 namespace osg2vsg
 {
@@ -51,12 +52,17 @@ namespace osg2vsg
 
         using UniqueStats = std::set<osg::ref_ptr<osg::StateSet>, UniqueStateSet>;
 
+        using Masks = std::pair<uint32_t, uint32_t>;
+        using MasksTransformStateMap = std::map<Masks, TransformStatePair>;
+
         StateStack statestack;
         StateMap stateMap;
         MatrixStack matrixstack;
         UniqueStats uniqueStateSets;
         ProgramTransformStateMap programTransformStateMap;
+        MasksTransformStateMap masksTransformStateMap;
         bool writeToFileProgramAndDataSetSets = false;
+        ShaderCompiler shaderCompiler;
 
         osg::ref_ptr<osg::StateSet> uniqueState(osg::ref_ptr<osg::StateSet> stateset, bool programStateSet);
 
@@ -83,5 +89,7 @@ namespace osg2vsg
         vsg::ref_ptr<vsg::Node> createStateGeometryGraphVSG(StateGeometryMap& stateGeometryMap, vsg::Paths& searchPaths, uint32_t requiredGeomAttributesMask);
         vsg::ref_ptr<vsg::Node> createTransformGeometryGraphVSG(TransformGeometryMap& transformGeometryMap, vsg::Paths& searchPaths, uint32_t requiredGeomAttributesMask);
         vsg::ref_ptr<vsg::Node> createVSG(vsg::Paths& searchPaths);
+
+        vsg::ref_ptr<vsg::Node> createNewVSG(vsg::Paths& searchPaths);
     };
 }

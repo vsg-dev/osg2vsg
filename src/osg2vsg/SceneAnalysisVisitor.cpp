@@ -185,14 +185,32 @@ void SceneAnalysisVisitor::apply(osg::Geometry& geometry)
     osg::Matrix matrix;
     if (!matrixstack.empty()) matrix = matrixstack.back();
 
-    StatePair& statePair = itr->second;
+    // Build programTransformStateMap
+    {
+        StatePair& statePair = itr->second;
 
-    TransformStatePair& transformStatePair = programTransformStateMap[statePair.first];
-    StateGeometryMap& stateGeometryMap = transformStatePair.matrixStateGeometryMap[matrix];
-    stateGeometryMap[statePair.second].push_back(&geometry);
+        TransformStatePair& transformStatePair = programTransformStateMap[statePair.first];
+        StateGeometryMap& stateGeometryMap = transformStatePair.matrixStateGeometryMap[matrix];
+        stateGeometryMap[statePair.second].push_back(&geometry);
 
-    TransformGeometryMap& transformGeometryMap = transformStatePair.stateTransformMap[statePair.second];
-    transformGeometryMap[matrix].push_back(&geometry);
+        TransformGeometryMap& transformGeometryMap = transformStatePair.stateTransformMap[statePair.second];
+        transformGeometryMap[matrix].push_back(&geometry);
+    }
+
+    // Build new masksTransformStateMap
+    {
+        StatePair& statePair = itr->second;
+        Masks masks(calculateStateMask(statePair.first.get()) | calculateStateMask(statePair.second.get()), calculateAttributesMask(&geometry));
+
+        std::cout<<"populating masks ("<<masks.first<<", "<<masks.second<<")"<<std::endl;
+
+        TransformStatePair& transformStatePair = masksTransformStateMap[masks];
+        StateGeometryMap& stateGeometryMap = transformStatePair.matrixStateGeometryMap[matrix];
+        stateGeometryMap[statePair.second].push_back(&geometry);
+
+        TransformGeometryMap& transformGeometryMap = transformStatePair.stateTransformMap[statePair.second];
+        transformGeometryMap[matrix].push_back(&geometry);
+    }
 
     std::cout<<"   Geometry "<<geometry.className()<<" ss="<<statestack.size()<<" ms="<<matrixstack.size()<<std::endl;
 
@@ -520,6 +538,66 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createVSG(vsg::Paths& searchPaths)
         std::cout << "       programStateSet = " << programStateSet.get() << std::endl;
         std::cout << "           transformStatePair.matrixStateGeometryMap.size() = " << transformStatePair.matrixStateGeometryMap.size() << std::endl;
         std::cout << "           transformStatePair.stateTransformMap.size() = " << transformStatePair.stateTransformMap.size() << std::endl;
+    }
+    return group;
+}
+
+vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createNewVSG(vsg::Paths& searchPaths)
+{
+    std::cout<<"SceneAnalysisVisitor::createNewVSG(vsg::Paths& searchPaths)"<<std::endl;
+
+    uint32_t forceGeomAttributes = GeometryAttributes::STANDARD_ATTS;
+    //uint32_t forceStateMask = StateMask::DIFFUSE_MAP;
+
+    vsg::ref_ptr<vsg::Group> group = vsg::Group::create();
+
+    for (auto[masks, transformStatePair] : masksTransformStateMap)
+    {
+        uint32_t geometrymask = masks.second;
+        uint32_t statemask = masks.first;
+
+        // override masks
+        geometrymask = forceGeomAttributes;
+        statemask &= ~LIGHTING; // force lighting off until normal matrix is working
+
+        auto graphicsPipelineGroup = createGeometryGraphicsPipeline(geometrymask, statemask);
+
+        group->addChild(graphicsPipelineGroup);
+
+        for (auto[stateset, transformeGeometryMap] : transformStatePair.stateTransformMap)
+        {
+            vsg::ref_ptr<vsg::Node> transformGeometryGraph = createTransformGeometryGraphVSG(transformeGeometryMap, searchPaths, forceGeomAttributes);
+            if (!transformGeometryGraph) continue;
+
+            vsg::Group* attachpoint = graphicsPipelineGroup;
+
+            // if we have a texture insert a texture node
+            if (stateset->getTextureAttribute(0, osg::StateAttribute::TEXTURE))
+            {
+                osg::Texture2D* osgtex = dynamic_cast<osg::Texture2D*>(stateset->getTextureAttribute(0, osg::StateAttribute::TEXTURE));
+
+                if (osgtex && osgtex->getImage())
+                {
+                    auto textureData = convertToVsg(osgtex->getImage());
+                    if (!textureData)
+                    {
+                        std::cout << "Could not convert osg image data" << std::endl;
+                        return vsg::ref_ptr<vsg::Node>();
+                    }
+                    vsg::ref_ptr<vsg::Texture> texture = vsg::Texture::create();
+                    texture->_textureData = textureData;
+
+                    attachpoint->addChild(texture);
+                    attachpoint = texture;
+                }
+            }
+            else
+            {
+                std::cout<<"No texture assigned for geometry"<<std::endl;
+            }
+
+            attachpoint->addChild(transformGeometryGraph);
+        }
     }
     return group;
 }
