@@ -28,12 +28,33 @@ vsg::ImageData imageData = osg2vsg::readImageFile(device, commandPool, graphicsQ
 
 An example of osg2vsg::readImageFile(..) being used be be found in the [vsgExamples](https://github.com/vsg-dev/vsgExamples) repository's [vsgdraw](https://github.com/vsg-dev/vsgExamples/tree/master/examples_osg2vsg/vsgdraw).
 
-## Building and installing osg2vsg
+## Quick build instructions for Unix from the command line
 
-To build and install in source, with all dependencies installed in standard system directories:
+To build and install in source
 
     git clone https://github.com/vsg-dev/osg2vsg.git
     cd osg2vsg
     cmake .
     make -j 8
     sudo make install
+
+
+## Quick build instructions for Windows using Visual Studio 2017
+
+You'll need a build of OpenSceneGraph to use osg2vsg, if you don't have one go ahead and download and build the source.
+
+    https://github.com/openscenegraph/OpenSceneGraph
+
+You'll also need glslLang inorder to compile GLSL shaders to Vulkan compatible SPIR-V shaders at runtime. glslLang can be downloaded and built using the following.
+
+    git clone https://github.com/KhronosGroup/glslang.git
+    cd ./glsllang
+    cmake . -G "Visual Studio 15 2017 Win64"
+    
+Open the generated Visual Studio solution file (Ensure you start Visual Studi as Admin if installing to the default location). Build install target for debug and release and finally add the install location (default C:\Program Files\glslang) to CMAKE_PREFIX_PATH environment variable.
+
+Now you have OpenSceneGraph and glslLang installed you can go ahead and generate the osg2vsg Visual Studio project.
+
+    git clone https://github.com/tomhog/osg2vsg.git
+    cd osg2vsg
+    cmake ./ -G "Visual Studio 15 2017 Win64" -DOSG_DIR:PATH="path/to/your/osg/install"

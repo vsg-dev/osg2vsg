@@ -150,7 +150,7 @@ std::string osg2vsg::createVertexSource(const uint32_t& stateMask, const uint32_
     }
 
     // for now hard code the light position
-    if(uselighting || usenormalmap) vert << "  vec4 lpos = /*osg_LightSource.position*/ vec4(0.0,100.0,0.0,0.0);\n";
+    if(uselighting || usenormalmap) vert << "  vec4 lpos = /*osg_LightSource.position*/ vec4(0.0,0.25,1.0,0.0);\n";
 
     if (usenormalmap)
     {
@@ -174,11 +174,20 @@ std::string osg2vsg::createVertexSource(const uint32_t& stateMask, const uint32_
     }
     else if (uselighting)
     {
-        vert <<
-            "  normalDir = " << nmat << " * osg_Normal;\n"\
-            "  vec3 dir = -vec3(" << mvmat << " * vec4(osg_Vertex, 1.0));\n"\
-            "  viewDir = dir;\n";
-
+        if(osgCompatible)
+        {
+            vert <<
+                "  normalDir = " << nmat << " * osg_Normal;\n"\
+                "  vec3 dir = -vec3(" << mvmat << " * vec4(osg_Vertex, 1.0));\n"\
+                "  viewDir = dir;\n";
+        }
+        else
+        {
+            vert <<
+                "  normalDir = (" << mvmat << " * vec4(osg_Normal, 0.0)).xyz;\n"\
+                "  vec3 dir = -vec3(" << mvmat << " * vec4(osg_Vertex, 1.0));\n"\
+                "  viewDir = dir;\n";
+        }
         vert <<
             "  if (lpos.w == 0.0)\n"\
             "    lightDir = lpos.xyz;\n"\
@@ -389,6 +398,10 @@ bool ShaderCompiler::compile(Shaders& shaders)
             program->addShader(shader);
 
             stageShaderMap[envStage] = vsg_shader;
+        }
+        else
+        {
+            std::cout << "glslLang: Error parsing shader: " << shader->getInfoLog() << std::endl;
         }
     }
 
