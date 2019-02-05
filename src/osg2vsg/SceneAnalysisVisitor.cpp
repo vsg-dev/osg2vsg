@@ -343,7 +343,7 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createStateGeometryGraphVSG(StateG
     for (auto[stateset, geometries] : stateGeometryMap)
     {
         uint32_t statemask = calculateStateMask(stateset);
-        statemask &= ~LIGHTING; // force lighting off until normal matrix is working
+        statemask |= LIGHTING; // force lighting on/off
 
         vsg::ref_ptr<vsg::GraphicsPipelineGroup> graphicsPipelineGroup = createGeometryGraphicsPipeline(requiredGeomAttributesMask, statemask);
         group->addChild(graphicsPipelineGroup);
@@ -478,7 +478,7 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createVSG(vsg::Paths& searchPaths)
                 if (!transformGeometryGraph) continue;
 
                 uint32_t statemask = calculateStateMask(stateset);
-                statemask &= ~LIGHTING; // force lighting off until normal matrix is working
+                statemask |= LIGHTING; // force lighting on/off
 
                 vsg::ref_ptr<vsg::GraphicsPipelineGroup> graphicsPipelineGroup = createGeometryGraphicsPipeline(forceGeomAttributes, statemask);
                 group->addChild(graphicsPipelineGroup);
