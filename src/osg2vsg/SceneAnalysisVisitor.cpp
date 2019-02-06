@@ -7,7 +7,7 @@
 using namespace osg2vsg;
 
 SceneAnalysisVisitor::SceneAnalysisVisitor():
-    osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN) {}
+    osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN) {}
 
 osg::ref_ptr<osg::StateSet> SceneAnalysisVisitor::uniqueState(osg::ref_ptr<osg::StateSet> stateset, bool programStateSet)
 {
