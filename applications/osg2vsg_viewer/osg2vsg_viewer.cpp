@@ -3,6 +3,7 @@
 #include <iostream>
 #include <ostream>
 #include <chrono>
+#include <thread>
 
 #include <osgDB/ReadFile>
 #include <osgDB/WriteFile>
@@ -19,7 +20,6 @@
 #include <osg2vsg/ComputeBounds.h>
 
 
-
 int main(int argc, char** argv)
 {
     // set up defaults and read command line arguments to override them
@@ -28,6 +28,7 @@ int main(int argc, char** argv)
     auto apiDumpLayer = arguments.read({"--api","-a"});
     auto numFrames = arguments.value(-1, "-f");
     auto printFrameRate = arguments.read("--fr");
+    auto sleepTime = arguments.value(0.0, "--sleep");
     auto writeToFileProgramAndDataSetSets = arguments.read({"--write-stateset", "--ws"});
     auto optimize = !arguments.read("--no-optimize");
     auto newGenerator = arguments.read({"--new-generator", "--ng"});
@@ -187,7 +188,7 @@ int main(int argc, char** argv)
     viewer->addEventHandlers({trackball, vsg::CloseHandler::create(viewer)});
 
     bool windowResized = false;
-    float time = 0.0f;
+    double time = 0.0f;
 
     while (viewer->active() && (numFrames<0 || (numFrames--)>0))
     {
@@ -197,8 +198,8 @@ int main(int argc, char** argv)
         // pass any events into EventHandlers assigned to the Viewer
         viewer->handleEvents();
 
-        float previousTime = time;
-        time = std::chrono::duration<float, std::chrono::seconds::period>(std::chrono::steady_clock::now()-viewer->start_point()).count();
+        double previousTime = time;
+        time = std::chrono::duration<double, std::chrono::seconds::period>(std::chrono::steady_clock::now()-viewer->start_point()).count();
         if (printFrameRate) std::cout<<"time = "<<time<<" fps="<<1.0/(time-previousTime)<<std::endl;
 
         camera->getProjectionMatrix()->get((*projMatrix));
@@ -231,6 +232,8 @@ int main(int argc, char** argv)
 
             viewer->submitNextFrame();
         }
+
+        std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(sleepTime));
     }
 
 
