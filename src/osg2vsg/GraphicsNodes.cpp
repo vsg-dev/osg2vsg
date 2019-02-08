@@ -116,12 +116,19 @@ void GraphicsPipelineGroup::traverse(ConstVisitor& visitor) const
 
 void GraphicsPipelineGroup::compile(Context& context)
 {
+    std::cout<<"\nGraphicsPipelineGroup::compile(Context& context) "<<this<<std::endl;
+
     //
     // set up descriptor layout and descriptor set and pipeline layout for uniforms
     //
     context.descriptorPool = DescriptorPool::create(context.device, maxSets, descriptorPoolSizes);
+    std::cout<<"  context.descriptorPool = "<<context.descriptorPool.get()<<std::endl;
+
     context.descriptorSetLayout = DescriptorSetLayout::create(context.device, descriptorSetLayoutBindings);
+    std::cout<<"  context.descriptorSetLayout = "<<context.descriptorSetLayout.get()<<std::endl;
+
     context.pipelineLayout = PipelineLayout::create(context.device, {context.descriptorSetLayout}, pushConstantRanges);
+    std::cout<<"  context.pipelineLayout = "<<context.pipelineLayout.get()<<std::endl;
 
 
     ShaderModules shaderModules;
@@ -133,6 +140,8 @@ void GraphicsPipelineGroup::compile(Context& context)
 
     auto shaderStages = ShaderStages::create(shaderModules);
 
+    std::cout<<"  shaderStages = "<<shaderStages.get()<<std::endl;
+
     GraphicsPipelineStates full_pipelineStates = pipelineStates;
     full_pipelineStates.emplace_back(context.viewport);
     full_pipelineStates.emplace_back(shaderStages);
@@ -141,10 +150,15 @@ void GraphicsPipelineGroup::compile(Context& context)
 
     ref_ptr<GraphicsPipeline> pipeline = GraphicsPipeline::create(context.device, context.renderPass, context.pipelineLayout, full_pipelineStates);
 
+    std::cout<<"  pipeline = "<<pipeline.get()<<std::endl;
+
     _bindPipeline = BindPipeline::create(pipeline);
+
+    std::cout<<"  _bindPipeline = "<<_bindPipeline.get()<<std::endl;
 
     if (context.projMatrix) _projPushConstant = PushConstants::create(VK_SHADER_STAGE_VERTEX_BIT, 0, context.projMatrix);
     if (context.viewMatrix) _viewPushConstant = PushConstants::create(VK_SHADER_STAGE_VERTEX_BIT, 64, context.viewMatrix);
+    std::cout<<"GraphicsPipelineGroup::compile(Context& context) finished "<<this<<"\n"<<std::endl;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -191,8 +205,24 @@ void Texture::compile(Context& context)
         vsg::DescriptorImage::create(0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, vsg::ImageDataList{imageData})
     });
 
-    // setup binding of descriptors
-    _bindDescriptorSets = vsg::BindDescriptorSets::create(VK_PIPELINE_BIND_POINT_GRAPHICS, context.pipelineLayout, vsg::DescriptorSets{descriptorSet}); // device dependent
+    if (descriptorSet)
+    {
+        // setup binding of descriptors
+        _bindDescriptorSets = vsg::BindDescriptorSets::create(VK_PIPELINE_BIND_POINT_GRAPHICS, context.pipelineLayout, vsg::DescriptorSets{descriptorSet}); // device dependent
+
+        std::cout<<"Texture::compile(() succeeded."<<std::endl;
+        std::cout<<"   imageData._sampler = "<<imageData._sampler.get()<<std::endl;
+        std::cout<<"   imageData._imageView = "<<imageData._imageView.get()<<std::endl;
+        std::cout<<"   imageData._imageLayout = "<<imageData._imageLayout<<std::endl;
+    }
+    else
+    {
+        std::cout<<"Texture::compile(() failed, descriptorSet not created."<<std::endl;
+        std::cout<<"   imageData._sampler = "<<imageData._sampler.get()<<std::endl;
+        std::cout<<"   imageData._imageView = "<<imageData._imageView.get()<<std::endl;
+        std::cout<<"   imageData._imageLayout = "<<imageData._imageLayout<<std::endl;
+        std::cout<<"   _textureData = "<<_textureData->width()<<", "<<_textureData->height()<<", "<<_textureData->depth()<<", "<<std::endl;
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -239,12 +269,7 @@ Geometry::Geometry(Allocator* allocator) :
 
 void Geometry::accept(DispatchTraversal& dv) const
 {
-    std::cout<<"Geometry::accept(DisptatchTraversal& dv) enter"<<std::endl;
-    std::cout<<"    _arrays.size() = "<<_arrays.size() <<std::endl;
-    std::cout<<"    _indices.get() = "<<_indices.get() <<std::endl;
-    std::cout<<"    _commands.size() = "<<_commands.size() <<std::endl;
     if (_renderImplementation) _renderImplementation->accept(dv);
-    std::cout<<"Geometry::accept(DisptatchTraversal& dv) leave"<<std::endl;
 }
 
 void Geometry::compile(Context& context)

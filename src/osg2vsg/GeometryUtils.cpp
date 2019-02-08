@@ -1,5 +1,8 @@
 #include <osg2vsg/GeometryUtils.h>
 
+#include <osg2vsg/ShaderUtils.h>
+#include <osgUtil/MeshOptimizers>
+
 namespace osg2vsg
 {
 
@@ -72,14 +75,19 @@ namespace osg2vsg
     {
         bool hasrequirements = requiredAttributesMask != 0;
 
+        //osgUtil::optimizeMesh(ingeometry);
+        //osgUtil::IndexMeshVisitor indexmesh; // this is causing a crash in the computebounds visitor???
+        //indexmesh.setGenerateNewIndicesOnAllGeometries(true);
+        //ingeometry->accept(indexmesh);
+
         // convert attribute arrays, create defaults for any requested that don't exist for now to ensure pipline gets required data
         vsg::ref_ptr<vsg::Data> vertices(osg2vsg::convertToVsg(ingeometry->getVertexArray()));
-        if (vertices->valueCount() == 0) return vsg::ref_ptr<vsg::Geometry>();
+        if (!vertices.valid() || vertices->valueCount() == 0) return vsg::ref_ptr<vsg::Geometry>();
 
         unsigned int vertcount = vertices->valueCount();
 
         vsg::ref_ptr<vsg::Data> normals(osg2vsg::convertToVsg(ingeometry->getNormalArray()));
-        if (normals->valueCount() == 0 && (requiredAttributesMask & NORMAL)) // if no normals but we've requested them, add them
+        if ((!normals.valid() || normals->valueCount() == 0) && (requiredAttributesMask & NORMAL)) // if no normals but we've requested them, add them
         {
             vsg::ref_ptr<vsg::vec3Array> defaultnormals(new vsg::vec3Array(vertcount));
             for (unsigned int i = 0; i < vertcount; i++) defaultnormals->set(i, vsg::vec3(0.0f,1.0f,0.0f));
@@ -87,7 +95,7 @@ namespace osg2vsg
         }
 
         vsg::ref_ptr<vsg::Data> colors(osg2vsg::convertToVsg(ingeometry->getColorArray()));
-        if (colors->valueCount() == 0 && (requiredAttributesMask & COLOR)) // if no colors but we've requested them, add them
+        if ((!colors.valid() || colors->valueCount() == 0) && (requiredAttributesMask & COLOR)) // if no colors but we've requested them, add them
         {
             vsg::ref_ptr<vsg::vec3Array> defaultcolors(new vsg::vec3Array(vertcount));
             for (unsigned int i = 0; i < vertcount; i++) defaultcolors->set(i, vsg::vec3(1.0f, 1.0f, 1.0f));
@@ -95,7 +103,7 @@ namespace osg2vsg
         }
 
         vsg::ref_ptr<vsg::Data> texcoord0(osg2vsg::convertToVsg(ingeometry->getTexCoordArray(0)));
-        if (texcoord0->valueCount() == 0 && (requiredAttributesMask & TEXCOORD0)) // if no normals but we've requested them, add them
+        if ((!texcoord0.valid() || texcoord0->valueCount() == 0) && (requiredAttributesMask & TEXCOORD0)) // if no normals but we've requested them, add them
         {
             vsg::ref_ptr<vsg::vec2Array> defaulttex0(new vsg::vec2Array(vertcount));
             for (unsigned int i = 0; i < vertcount; i++) defaulttex0->set(i, vsg::vec2(0.0f, 0.0f));
@@ -104,9 +112,9 @@ namespace osg2vsg
 
         // fill arrays data list
         auto attributeArrays = vsg::DataList{ vertices }; // always have verticies
-        if (normals->valueCount() > 0 && (!hasrequirements || (requiredAttributesMask & NORMAL))) attributeArrays.push_back(normals);
-        if (colors->valueCount() > 0 && (!hasrequirements || (requiredAttributesMask & COLOR))) attributeArrays.push_back(colors);
-        if (texcoord0->valueCount() > 0 && (!hasrequirements || (requiredAttributesMask & TEXCOORD0))) attributeArrays.push_back(texcoord0);
+        if ((normals.valid() && normals->valueCount() > 0) && (!hasrequirements || (requiredAttributesMask & NORMAL))) attributeArrays.push_back(normals);
+        if ((colors.valid() && colors->valueCount() > 0) && (!hasrequirements || (requiredAttributesMask & COLOR))) attributeArrays.push_back(colors);
+        if ((texcoord0.valid() && texcoord0->valueCount() > 0) && (!hasrequirements || (requiredAttributesMask & TEXCOORD0))) attributeArrays.push_back(texcoord0);
 
         // convert indicies
         osg::Geometry::DrawElementsList drawElementsList;
@@ -134,6 +142,89 @@ namespace osg2vsg
         geometry->_commands = vsg::Geometry::Commands{ drawIndexed };
 
         return geometry;
+    }
+
+    vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGeometryGraphicsPipeline(const uint32_t& geometryAttributesMask, const uint32_t& stateMask, unsigned int maxNumDescriptors)
+    {
+        //
+        // load shaders
+        //
+        ShaderCompiler shaderCompiler;
+
+        vsg::GraphicsPipelineGroup::Shaders shaders{
+            vsg::Shader::create(VK_SHADER_STAGE_VERTEX_BIT, "main", createVertexSource(stateMask, geometryAttributesMask, false)),
+            vsg::Shader::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", createFragmentSource(stateMask, geometryAttributesMask, false)),
+        };
+
+        if (!shaderCompiler.compile(shaders)) return vsg::ref_ptr<vsg::GraphicsPipelineGroup>();
+
+        //
+        // set up graphics pipeline
+        //
+        vsg::ref_ptr<vsg::GraphicsPipelineGroup> gp = vsg::GraphicsPipelineGroup::create();
+        gp->shaders = shaders;
+        gp->maxSets = maxNumDescriptors;
+        gp->descriptorPoolSizes = vsg::DescriptorPoolSizes
+        {
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxNumDescriptors} // type, descriptorCount
+        };
+
+        gp->descriptorSetLayoutBindings = vsg::DescriptorSetLayoutBindings
+        {
+            {0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr} // { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
+        };
+
+        gp->pushConstantRanges = vsg::PushConstantRanges
+        {
+            {VK_SHADER_STAGE_VERTEX_BIT, 0, 196} // projection view, and model matrices
+        };
+
+        uint32_t bindingindex = 0;
+
+        vsg::VertexInputState::Bindings vertexBindingsDescriptions = vsg::VertexInputState::Bindings
+        {
+            VkVertexInputBindingDescription{bindingindex, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX}, // vertex data
+        };
+
+        vsg::VertexInputState::Attributes vertexAttributeDescriptions = vsg::VertexInputState::Attributes
+        {
+            VkVertexInputAttributeDescription{bindingindex, bindingindex, VK_FORMAT_R32G32B32_SFLOAT, 0}, // vertex data
+        };
+
+        bindingindex++;
+
+        if (geometryAttributesMask & NORMAL)
+        {
+            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ bindingindex, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX});
+            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ bindingindex, bindingindex, VK_FORMAT_R32G32B32_SFLOAT, 0 });
+            bindingindex++;
+        }
+        if (geometryAttributesMask & COLOR)
+        {
+            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ bindingindex, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX });
+            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ bindingindex, bindingindex, VK_FORMAT_R32G32B32_SFLOAT, 0 });
+            bindingindex++;
+        }
+        if (geometryAttributesMask & TEXCOORD0)
+        {
+            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ bindingindex, sizeof(vsg::vec2), VK_VERTEX_INPUT_RATE_VERTEX });
+            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ bindingindex, bindingindex, VK_FORMAT_R32G32_SFLOAT, 0 });
+            bindingindex++;
+        }
+
+        gp->vertexBindingsDescriptions = vertexBindingsDescriptions;
+        gp->vertexAttributeDescriptions = vertexAttributeDescriptions;
+
+        gp->pipelineStates = vsg::GraphicsPipelineStates
+        {
+            vsg::InputAssemblyState::create(),
+            vsg::RasterizationState::create(),
+            vsg::MultisampleState::create(),
+            vsg::ColorBlendState::create(),
+            vsg::DepthStencilState::create()
+        };
+
+        return gp;
     }
 }
 

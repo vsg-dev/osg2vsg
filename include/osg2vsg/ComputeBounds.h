@@ -25,7 +25,6 @@ namespace vsg
 
         void apply(const vsg::Group& group)
         {
-
             if (auto transform = dynamic_cast<const vsg::MatrixTransform*>(&group); transform!=nullptr)
             {
                 apply(*transform);
@@ -34,7 +33,10 @@ namespace vsg
             {
                 apply(*geometry);
             }
-            group.traverse(*this);
+            else
+            {
+                group.traverse(*this);
+            }
         }
 
         void apply(const vsg::MatrixTransform& transform)

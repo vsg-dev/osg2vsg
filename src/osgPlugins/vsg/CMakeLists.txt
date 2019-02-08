@@ -17,8 +17,13 @@ target_include_directories(osgdb_vsg PUBLIC
 )
 
 target_link_libraries(osgdb_vsg PUBLIC
-    vsg::vsg
     osg2vsg
+    vsg::vsg
+    glslang::glslang
+    glslang::OSDependent
+    glslang::SPIRV
+    glslang::OGLCompiler
+    glslang::HLSL
     Vulkan::Vulkan
     ${OPENTHREADS_LIBRARIES} ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES}
 )

@@ -11,7 +11,8 @@
 #include <osg/Billboard>
 #include <osg/MatrixTransform>
 
-#include "GraphicsNodes.h"
+#include <osg2vsg/GraphicsNodes.h>
+#include <osg2vsg/ShaderUtils.h>
 
 namespace osg2vsg
 {
@@ -43,21 +44,27 @@ namespace osg2vsg
         {
             bool operator() ( const osg::ref_ptr<osg::StateSet>& lhs, const osg::ref_ptr<osg::StateSet>& rhs) const
             {
-                if (!lhs) return lhs;
-                if (!rhs) return rhs;
+                if (!lhs) return true;
+                if (!rhs) return false;
                 return lhs->compare(*rhs)<0;
             }
         };
 
         using UniqueStats = std::set<osg::ref_ptr<osg::StateSet>, UniqueStateSet>;
 
+        using Masks = std::pair<uint32_t, uint32_t>;
+        using MasksTransformStateMap = std::map<Masks, TransformStatePair>;
+
         StateStack statestack;
         StateMap stateMap;
         MatrixStack matrixstack;
         UniqueStats uniqueStateSets;
         ProgramTransformStateMap programTransformStateMap;
+        MasksTransformStateMap masksTransformStateMap;
+        bool writeToFileProgramAndDataSetSets = false;
+        ShaderCompiler shaderCompiler;
 
-        osg::ref_ptr<osg::StateSet> uniqueState(osg::ref_ptr<osg::StateSet> stateset);
+        osg::ref_ptr<osg::StateSet> uniqueState(osg::ref_ptr<osg::StateSet> stateset, bool programStateSet);
 
         StatePair computeStatePair(osg::StateSet* stateset);
 
@@ -75,8 +82,14 @@ namespace osg2vsg
 
         void print();
 
-        osg::ref_ptr<osg::Node> createStateGeometryGraph(StateGeometryMap& stateGeometryMap);
-        osg::ref_ptr<osg::Node> createTransformGeometryGraph(TransformGeometryMap& transformGeometryMap);
+        osg::ref_ptr<osg::Node> createStateGeometryGraphOSG(StateGeometryMap& stateGeometryMap);
+        osg::ref_ptr<osg::Node> createTransformGeometryGraphOSG(TransformGeometryMap& transformGeometryMap);
         osg::ref_ptr<osg::Node> createOSG();
+
+        vsg::ref_ptr<vsg::Node> createStateGeometryGraphVSG(StateGeometryMap& stateGeometryMap, vsg::Paths& searchPaths, uint32_t requiredGeomAttributesMask);
+        vsg::ref_ptr<vsg::Node> createTransformGeometryGraphVSG(TransformGeometryMap& transformGeometryMap, vsg::Paths& searchPaths, uint32_t requiredGeomAttributesMask);
+        vsg::ref_ptr<vsg::Node> createVSG(vsg::Paths& searchPaths);
+
+        vsg::ref_ptr<vsg::Node> createNewVSG(vsg::Paths& searchPaths);
     };
 }

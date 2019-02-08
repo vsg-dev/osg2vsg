@@ -5,6 +5,7 @@ set(HEADERS
     ${HEADER_PATH}/Export.h
     ${HEADER_PATH}/ImageUtils.h
     ${HEADER_PATH}/GeometryUtils.h
+    ${HEADER_PATH}/ShaderUtils.h
     ${HEADER_PATH}/GraphicsNodes.h
     ${HEADER_PATH}/SceneAnalysisVisitor.h
 )
@@ -12,8 +13,10 @@ set(HEADERS
 set(SOURCES
     ImageUtils.cpp
     GeometryUtils.cpp
+    ShaderUtils.cpp
     GraphicsNodes.cpp
     SceneAnalysisVisitor.cpp
+    glsllang/ResourceLimits.cpp
 )
 
 add_library(osg2vsg ${HEADERS} ${SOURCES})
@@ -31,6 +34,11 @@ target_include_directories(osg2vsg PUBLIC
 
 target_link_libraries(osg2vsg PUBLIC
     vsg::vsg
+    glslang::glslang
+    glslang::OSDependent
+    glslang::SPIRV
+    glslang::OGLCompiler
+    glslang::HLSL
     Vulkan::Vulkan
     ${OPENTHREADS_LIBRARIES} ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES}
 )
