@@ -19,13 +19,20 @@
 #include <osg2vsg/SceneAnalysisVisitor.h>
 #include <osg2vsg/ComputeBounds.h>
 
-
 int main(int argc, char** argv)
 {
+    auto windowTraits = vsg::Window::Traits::create();
+    windowTraits->windowTitle = "osg2vsg";
+
     // set up defaults and read command line arguments to override them
     vsg::CommandLine arguments(&argc, argv);
-    auto debugLayer = arguments.read({"--debug","-d"});
-    auto apiDumpLayer = arguments.read({"--api","-a"});
+    windowTraits->debugLayer = arguments.read({"--debug","-d"});
+    windowTraits->apiDumpLayer = arguments.read({"--api","-a"});
+    if (arguments.read("--IMMEDIATE")) windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+    if (arguments.read("--FIFO")) windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+    if (arguments.read("--FIFO_RELAXED")) windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_FIFO_RELAXED_KHR;
+    if (arguments.read("--MAILBOX")) windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+    if (arguments.read({"--fullscreen", "--fs"})) windowTraits->fullscreen = true;
     auto numFrames = arguments.value(-1, "-f");
     auto printFrameRate = arguments.read("--fr");
     auto sleepTime = arguments.value(0.0, "--sleep");
@@ -33,7 +40,7 @@ int main(int argc, char** argv)
     auto optimize = !arguments.read("--no-optimize");
     auto newGenerator = arguments.read({"--new-generator", "--ng"});
     auto outputFilename = arguments.value(std::string(), "-o");
-    auto [width, height] = arguments.value(std::pair<uint32_t, uint32_t>(800, 600), {"--window", "-w"});
+    arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height);
     if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
 
     // read shaders
@@ -66,7 +73,6 @@ int main(int argc, char** argv)
         osgUtil::VertexAccessOrderVisitor vaov;
         osg_scene->accept(vaov);
         vaov.optimizeOrder();
-
 
         osgUtil::Optimizer optimizer;
         optimizer.optimize(osg_scene.get(), osgUtil::Optimizer::DEFAULT_OPTIMIZATIONS);
@@ -112,10 +118,14 @@ int main(int argc, char** argv)
     }
 
 
+    std::cerr<<"Initial windowTraits->swapchainPreferences.imageCount = "<<windowTraits->swapchainPreferences.imageCount<<std::endl;
+    std::cerr<<"Initial windowTraits->swapchainPreferences.surfaceFormat = "<<windowTraits->swapchainPreferences.surfaceFormat.format<<", "<<windowTraits->swapchainPreferences.surfaceFormat.colorSpace<<std::endl;
+    std::cerr<<"Initial windowTraits->swapchainPreferences.presentMode = "<<windowTraits->swapchainPreferences.presentMode<<std::endl;
+
     // create the viewer and assign window(s) to it
     auto viewer = vsg::Viewer::create();
 
-    vsg::ref_ptr<vsg::Window> window(vsg::Window::create(width, height, debugLayer, apiDumpLayer));
+    vsg::ref_ptr<vsg::Window> window(vsg::Window::create(windowTraits));
     if (!window)
     {
         std::cout<<"Could not create windows."<<std::endl;
@@ -144,7 +154,7 @@ int main(int argc, char** argv)
     // camera related state
     vsg::ref_ptr<vsg::mat4Value> projMatrix(new vsg::mat4Value);
     vsg::ref_ptr<vsg::mat4Value> viewMatrix(new vsg::mat4Value);
-    auto viewport = vsg::ViewportState::create(VkExtent2D{width, height});
+    auto viewport = vsg::ViewportState::create(window->extent2D());
 
     // compute the bounds of the scene graph to help position camera
     vsg::ComputeBounds computeBounds;
@@ -153,10 +163,13 @@ int main(int argc, char** argv)
     double radius = vsg::length(computeBounds.bounds.max-computeBounds.bounds.min)*0.6;
 
     // set up the camera
-    vsg::ref_ptr<vsg::Perspective> perspective(new vsg::Perspective(60.0, static_cast<double>(width) / static_cast<double>(height), 0.1, radius * 2.0));
+    vsg::ref_ptr<vsg::Perspective> perspective(new vsg::Perspective(60.0, static_cast<double>(window->extent2D().width) / static_cast<double>(window->extent2D().height), 0.1, radius * 2.0));
     vsg::ref_ptr<vsg::LookAt> lookAt(new vsg::LookAt(centre+vsg::dvec3(0.0, -radius, 0.0), centre, vsg::dvec3(0.0, 0.0, 1.0)));
     vsg::ref_ptr<vsg::Camera> camera(new vsg::Camera(perspective, lookAt, viewport));
 
+    std::cerr<<"After windowTraits->swapchainPreferences.imageCount = "<<windowTraits->swapchainPreferences.imageCount<<std::endl;
+    std::cerr<<"After windowTraits->swapchainPreferences.surfaceFormat = "<<windowTraits->swapchainPreferences.surfaceFormat.format<<", "<<windowTraits->swapchainPreferences.surfaceFormat.colorSpace<<std::endl;
+    std::cerr<<"After windowTraits->swapchainPreferences.presentMode = "<<windowTraits->swapchainPreferences.presentMode<<std::endl;
 
     // compile the Vulkan objects
     vsg::CompileTraversal compile;
