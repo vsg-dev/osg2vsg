@@ -53,7 +53,7 @@ int main(int argc, char** argv)
 
     if (!osg_scene)
     {
-        std::cout<<"No moderl loaded."<<std::endl;
+        std::cout<<"No model loaded."<<std::endl;
         return 1;
     }
 
