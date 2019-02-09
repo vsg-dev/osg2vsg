@@ -37,6 +37,8 @@ target_link_libraries(osg2vsg PUBLIC
     glslang::glslang
     glslang::OSDependent
     glslang::SPIRV
+    glslang::SPIRV-Tools
+    glslang::SPIRV-Tools-opt
     glslang::OGLCompiler
     glslang::HLSL
     Vulkan::Vulkan
