@@ -41,10 +41,10 @@ std::string osg2vsg::createVertexSource(const uint32_t& stateMask, const uint32_
     // regardless of if we use the attribute figure out what it's index should be
     uint32_t inputindex = 0;
 
-    uint32_t vertexindex = osgCompatible ? 0 : (inputindex++);
-    uint32_t normalindex = osgCompatible ? 1 : (hasnormal ? inputindex++ : 0);
-    uint32_t colorindex = osgCompatible ? 2 : (hascolor ? inputindex++ : 0);
-    uint32_t tex0index = osgCompatible ? 3 : (hastex0 ? inputindex++ : 0);
+    uint32_t vertexindex = osgCompatible ? 0 : VERTEX_CHANNEL;
+    uint32_t normalindex = osgCompatible ? 1 : (hasnormal ? NORMAL_CHANNEL : 0);
+    uint32_t colorindex = osgCompatible ? 2 : (hascolor ? COLOR_CHANNEL : 0);
+    uint32_t tex0index = osgCompatible ? 3 : (hastex0 ? TEXCOORD0_CHANNEL : 0);
 
     bool usenormal = hasnormal && (stateMask & (LIGHTING | NORMAL_MAP));
     bool usetex0 = hastex0 && (stateMask & (DIFFUSE_MAP | NORMAL_MAP));
@@ -160,15 +160,28 @@ std::string osg2vsg::createVertexSource(const uint32_t& stateMask, const uint32_
 
     if (usenormalmap)
     {
-        vert <<
-            "  vec3 n = " << nmat << " * osg_Normal;\n"\
-            "  vec3 t = " << nmat << " * tangent;\n"\
-            "  vec3 b = cross(n, t);\n"\
-            "  vec3 dir = -vec3(" << mvmat << " * vec4(osg_Vertex, 1.0));\n"\
-            "  viewDir.x = dot(dir, t);\n"\
-            "  viewDir.y = dot(dir, b);\n"\
-            "  viewDir.z = dot(dir, n);\n";
-
+        if(osgCompatible)
+        {
+            vert <<
+                "  vec3 n = " << nmat << " * osg_Normal;\n"\
+                "  vec3 t = " << nmat << " * tangent;\n"\
+                "  vec3 b = cross(n, t);\n"\
+                "  vec3 dir = -vec3(" << mvmat << " * vec4(osg_Vertex, 1.0));\n"\
+                "  viewDir.x = dot(dir, t);\n"\
+                "  viewDir.y = dot(dir, b);\n"\
+                "  viewDir.z = dot(dir, n);\n";
+        }
+        else
+        {
+            vert <<
+                "  vec3 n = (" << mvmat << " * vec4(osg_Normal, 0.0)).xyz;\n"\
+                "  vec3 t = (" << mvmat << " * vec4(tangent, 0.0)).xyz;\n"\
+                "  vec3 b = cross(n, t);\n"\
+                "  vec3 dir = -vec3(" << mvmat << " * vec4(osg_Vertex, 1.0));\n"\
+                "  viewDir.x = dot(dir, t);\n"\
+                "  viewDir.y = dot(dir, b);\n"\
+                "  viewDir.z = dot(dir, n);\n";
+        }
         vert <<
             "  if (lpos.w == 0.0)\n"\
             "    dir = lpos.xyz;\n"\
