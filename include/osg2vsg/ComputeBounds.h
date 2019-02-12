@@ -41,8 +41,6 @@ namespace vsg
 
         void apply(const vsg::MatrixTransform& transform)
         {
-            std::cout<<"Transform matrix="<<transform._matrix->value()<<std::endl;
-
             matrixStack.push_back(*transform._matrix);
 
             transform.traverse(*this);
@@ -52,8 +50,6 @@ namespace vsg
 
         void apply(const vsg::Geometry& geometry)
         {
-            std::cout<<"Have Geometry"<<std::endl;
-
             if (!geometry._arrays.empty())
             {
                 geometry._arrays[0]->accept(*this);

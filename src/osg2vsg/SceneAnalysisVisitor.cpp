@@ -6,6 +6,12 @@
 
 using namespace osg2vsg;
 
+#if 0
+#define DEBUG_OUTPUT std::cout
+#else
+#define DEBUG_OUTPUT if (false) std::cout
+#endif
+
 SceneAnalysisVisitor::SceneAnalysisVisitor():
     osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN) {}
 
@@ -13,11 +19,11 @@ osg::ref_ptr<osg::StateSet> SceneAnalysisVisitor::uniqueState(osg::ref_ptr<osg::
 {
     if (auto itr = uniqueStateSets.find(stateset); itr != uniqueStateSets.end())
     {
-        std::cout<<"    uniqueState() found state"<<std::endl;
+        DEBUG_OUTPUT<<"    uniqueState() found state"<<std::endl;
         return *itr;
     }
 
-    std::cout<<"    uniqueState() inserting state"<<std::endl;
+    DEBUG_OUTPUT<<"    uniqueState() inserting state"<<std::endl;
 
 
     if (writeToFileProgramAndDataSetSets && stateset.valid())
@@ -50,7 +56,7 @@ SceneAnalysisVisitor::StatePair SceneAnalysisVisitor::computeStatePair(osg::Stat
         osg::Program* program = dynamic_cast<osg::Program*>(attribute.second.first.get());
         if (program)
         {
-            std::cout<<"Found program removing from dataState"<<program<<" inserting into programState"<<std::endl;
+            DEBUG_OUTPUT<<"Found program removing from dataState"<<program<<" inserting into programState"<<std::endl;
             dataState->removeAttribute(program);
             programState->setAttribute(program, attribute.second.second);
         }
@@ -61,7 +67,7 @@ SceneAnalysisVisitor::StatePair SceneAnalysisVisitor::computeStatePair(osg::Stat
 
 void SceneAnalysisVisitor::apply(osg::Node& node)
 {
-    std::cout<<"Visiting "<<node.className()<<" "<<node.getStateSet()<<std::endl;
+    DEBUG_OUTPUT<<"Visiting "<<node.className()<<" "<<node.getStateSet()<<std::endl;
 
     if (node.getStateSet()) pushStateSet(*node.getStateSet());
 
@@ -72,7 +78,7 @@ void SceneAnalysisVisitor::apply(osg::Node& node)
 
 void SceneAnalysisVisitor::apply(osg::Group& group)
 {
-    std::cout<<"Group "<<group.className()<<" "<<group.getStateSet()<<std::endl;
+    DEBUG_OUTPUT<<"Group "<<group.className()<<" "<<group.getStateSet()<<std::endl;
 
     if (group.getStateSet()) pushStateSet(*group.getStateSet());
 
@@ -83,7 +89,7 @@ void SceneAnalysisVisitor::apply(osg::Group& group)
 
 void SceneAnalysisVisitor::apply(osg::Transform& transform)
 {
-    std::cout<<"Transform "<<transform.className()<<" "<<transform.getStateSet()<<std::endl;
+    DEBUG_OUTPUT<<"Transform "<<transform.className()<<" "<<transform.getStateSet()<<std::endl;
 
     if (transform.getStateSet()) pushStateSet(*transform.getStateSet());
 
@@ -102,7 +108,7 @@ void SceneAnalysisVisitor::apply(osg::Transform& transform)
 
 void SceneAnalysisVisitor::apply(osg::Billboard& billboard)
 {
-    std::cout<<"apply(osg::Billboard& billboard)"<<std::endl;
+    DEBUG_OUTPUT<<"apply(osg::Billboard& billboard)"<<std::endl;
 
     for(unsigned int i=0; i<billboard.getNumDrawables(); ++i)
     {
@@ -121,19 +127,19 @@ void SceneAnalysisVisitor::apply(osg::Geometry& geometry)
 {
     if (!geometry.getVertexArray())
     {
-        std::cout<<"SceneAnalysisVisitor::apply(osg::Geometry& geometry), ignoring geometry with null geometry.getVertexArray()"<<std::endl;
+        DEBUG_OUTPUT<<"SceneAnalysisVisitor::apply(osg::Geometry& geometry), ignoring geometry with null geometry.getVertexArray()"<<std::endl;
         return;
     }
 
     if (geometry.getVertexArray()->getNumElements()==0)
     {
-        std::cout<<"SceneAnalysisVisitor::apply(osg::Geometry& geometry), ignoring geometry with empty geometry.getVertexArray()"<<std::endl;
+        DEBUG_OUTPUT<<"SceneAnalysisVisitor::apply(osg::Geometry& geometry), ignoring geometry with empty geometry.getVertexArray()"<<std::endl;
         return;
     }
 
     if (geometry.getNumPrimitiveSets()==0)
     {
-        std::cout<<"SceneAnalysisVisitor::apply(osg::Geometry& geometry), ignoring geometry with empty PrimitiveSetList."<<std::endl;
+        DEBUG_OUTPUT<<"SceneAnalysisVisitor::apply(osg::Geometry& geometry), ignoring geometry with empty PrimitiveSetList."<<std::endl;
         return;
     }
 
@@ -141,7 +147,7 @@ void SceneAnalysisVisitor::apply(osg::Geometry& geometry)
     {
         if (primitive->getNumPrimitives()==0)
         {
-            std::cout<<"SceneAnalysisVisitor::apply(osg::Geometry& geometry), ignoring geometry with as it contains an empty PrimitiveSet : "<<primitive->className()<<std::endl;
+            DEBUG_OUTPUT<<"SceneAnalysisVisitor::apply(osg::Geometry& geometry), ignoring geometry with as it contains an empty PrimitiveSet : "<<primitive->className()<<std::endl;
             return;
         }
     }
@@ -154,17 +160,17 @@ void SceneAnalysisVisitor::apply(osg::Geometry& geometry)
     {
         if (statestack.empty())
         {
-            std::cout<<"New Empty StateSet's"<<std::endl;
+            DEBUG_OUTPUT<<"New Empty StateSet's"<<std::endl;
             stateMap[statestack] = computeStatePair(0);
         }
         else if (statestack.size()==1)
         {
-            std::cout<<"New Single  StateSet's"<<std::endl;
+            DEBUG_OUTPUT<<"New Single  StateSet's"<<std::endl;
             stateMap[statestack] = computeStatePair(statestack.back());
         }
         else // multiple stateset's need to merge
         {
-            std::cout<<"New Merging StateSet's "<<statestack.size()<<std::endl;
+            DEBUG_OUTPUT<<"New Merging StateSet's "<<statestack.size()<<std::endl;
             osg::ref_ptr<osg::StateSet> new_stateset = new osg::StateSet;
             for(auto& stateset : statestack)
             {
@@ -175,11 +181,11 @@ void SceneAnalysisVisitor::apply(osg::Geometry& geometry)
 
         itr = stateMap.find(statestack);
 
-        std::cout<<"Need to create StateSet"<<std::endl;
+        DEBUG_OUTPUT<<"Need to create StateSet"<<std::endl;
     }
     else
     {
-        std::cout<<"Already have StateSet"<<std::endl;
+        DEBUG_OUTPUT<<"Already have StateSet"<<std::endl;
     }
 
     osg::Matrix matrix;
@@ -202,7 +208,7 @@ void SceneAnalysisVisitor::apply(osg::Geometry& geometry)
         StatePair& statePair = itr->second;
         Masks masks(calculateStateMask(statePair.first.get()) | calculateStateMask(statePair.second.get()), calculateAttributesMask(&geometry));
 
-        std::cout<<"populating masks ("<<masks.first<<", "<<masks.second<<")"<<std::endl;
+        DEBUG_OUTPUT<<"populating masks ("<<masks.first<<", "<<masks.second<<")"<<std::endl;
 
         TransformStatePair& transformStatePair = masksTransformStateMap[masks];
         StateGeometryMap& stateGeometryMap = transformStatePair.matrixStateGeometryMap[matrix];
@@ -212,7 +218,7 @@ void SceneAnalysisVisitor::apply(osg::Geometry& geometry)
         transformGeometryMap[matrix].push_back(&geometry);
     }
 
-    std::cout<<"   Geometry "<<geometry.className()<<" ss="<<statestack.size()<<" ms="<<matrixstack.size()<<std::endl;
+    DEBUG_OUTPUT<<"   Geometry "<<geometry.className()<<" ss="<<statestack.size()<<" ms="<<matrixstack.size()<<std::endl;
 
     if (geometry.getStateSet()) popStateSet();
 }
@@ -239,19 +245,19 @@ void SceneAnalysisVisitor::popMatrix()
 
 void SceneAnalysisVisitor::print()
 {
-    std::cout<<"\nprint()\n";
-    std::cout<<"   programTransformStateMap.size() = "<<programTransformStateMap.size()<<std::endl;
+    DEBUG_OUTPUT<<"\nprint()\n";
+    DEBUG_OUTPUT<<"   programTransformStateMap.size() = "<<programTransformStateMap.size()<<std::endl;
     for(auto [programStateSet, transformStatePair] : programTransformStateMap)
     {
-        std::cout<<"       programStateSet = "<<programStateSet.get()<<std::endl;
-        std::cout<<"           transformStatePair.matrixStateGeometryMap.size() = "<<transformStatePair.matrixStateGeometryMap.size()<<std::endl;
-        std::cout<<"           transformStatePair.stateTransformMap.size() = "<<transformStatePair.stateTransformMap.size()<<std::endl;
+        DEBUG_OUTPUT<<"       programStateSet = "<<programStateSet.get()<<std::endl;
+        DEBUG_OUTPUT<<"           transformStatePair.matrixStateGeometryMap.size() = "<<transformStatePair.matrixStateGeometryMap.size()<<std::endl;
+        DEBUG_OUTPUT<<"           transformStatePair.stateTransformMap.size() = "<<transformStatePair.stateTransformMap.size()<<std::endl;
     }
 }
 
 osg::ref_ptr<osg::Node> SceneAnalysisVisitor::createStateGeometryGraphOSG(StateGeometryMap& stateGeometryMap)
 {
-    std::cout<<"createStateGeometryGraph()"<<stateGeometryMap.size()<<std::endl;
+    DEBUG_OUTPUT<<"createStateGeometryGraph()"<<stateGeometryMap.size()<<std::endl;
 
     if (stateGeometryMap.empty()) return nullptr;
 
@@ -277,7 +283,7 @@ osg::ref_ptr<osg::Node> SceneAnalysisVisitor::createStateGeometryGraphOSG(StateG
 
 osg::ref_ptr<osg::Node> SceneAnalysisVisitor::createTransformGeometryGraphOSG(TransformGeometryMap& transformGeometryMap)
 {
-    std::cout<<"createStateGeometryGraph()"<<transformGeometryMap.size()<<std::endl;
+    DEBUG_OUTPUT<<"createStateGeometryGraph()"<<transformGeometryMap.size()<<std::endl;
 
     if (transformGeometryMap.empty()) return nullptr;
 
@@ -344,16 +350,16 @@ osg::ref_ptr<osg::Node> SceneAnalysisVisitor::createOSG()
             }
         }
 
-        std::cout<<"       programStateSet = "<<programStateSet.get()<<std::endl;
-        std::cout<<"           transformStatePair.matrixStateGeometryMap.size() = "<<transformStatePair.matrixStateGeometryMap.size()<<std::endl;
-        std::cout<<"           transformStatePair.stateTransformMap.size() = "<<transformStatePair.stateTransformMap.size()<<std::endl;
+        DEBUG_OUTPUT<<"       programStateSet = "<<programStateSet.get()<<std::endl;
+        DEBUG_OUTPUT<<"           transformStatePair.matrixStateGeometryMap.size() = "<<transformStatePair.matrixStateGeometryMap.size()<<std::endl;
+        DEBUG_OUTPUT<<"           transformStatePair.stateTransformMap.size() = "<<transformStatePair.stateTransformMap.size()<<std::endl;
     }
     return group;
 }
 
 vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createStateGeometryGraphVSG(StateGeometryMap& stateGeometryMap, vsg::Paths& searchPaths, uint32_t requiredGeomAttributesMask)
 {
-    std::cout << "createStateGeometryGraph()" << stateGeometryMap.size() << std::endl;
+    DEBUG_OUTPUT << "createStateGeometryGraph()" << stateGeometryMap.size() << std::endl;
 
     if (stateGeometryMap.empty()) return vsg::ref_ptr<vsg::Node>();
 
@@ -385,7 +391,7 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createStateGeometryGraphVSG(StateG
                 auto textureData = convertToVsg(osgtex->getImage());
                 if (!textureData)
                 {
-                    std::cout << "Could not convert osg image data" << std::endl;
+                    DEBUG_OUTPUT << "Could not convert osg image data" << std::endl;
                     return vsg::ref_ptr<vsg::Node>();
                 }
                 vsg::ref_ptr<vsg::Texture> texture = vsg::Texture::create();
@@ -410,7 +416,7 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createStateGeometryGraphVSG(StateG
 
 vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createTransformGeometryGraphVSG(TransformGeometryMap& transformGeometryMap, vsg::Paths& searchPaths, uint32_t requiredGeomAttributesMask)
 {
-    std::cout << "createStateGeometryGraph()" << transformGeometryMap.size() << std::endl;
+    DEBUG_OUTPUT << "createStateGeometryGraph()" << transformGeometryMap.size() << std::endl;
 
     if (transformGeometryMap.empty()) return vsg::ref_ptr<vsg::Node>();
 
@@ -520,7 +526,7 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createVSG(vsg::Paths& searchPaths)
                         auto textureData = convertToVsg(osgtex->getImage());
                         if (!textureData)
                         {
-                            std::cout << "Could not convert osg image data" << std::endl;
+                            DEBUG_OUTPUT << "Could not convert osg image data" << std::endl;
                             return vsg::ref_ptr<vsg::Node>();
                         }
                         vsg::ref_ptr<vsg::Texture> texture = vsg::Texture::create();
@@ -535,16 +541,16 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createVSG(vsg::Paths& searchPaths)
             }
         }
 
-        std::cout << "       programStateSet = " << programStateSet.get() << std::endl;
-        std::cout << "           transformStatePair.matrixStateGeometryMap.size() = " << transformStatePair.matrixStateGeometryMap.size() << std::endl;
-        std::cout << "           transformStatePair.stateTransformMap.size() = " << transformStatePair.stateTransformMap.size() << std::endl;
+        DEBUG_OUTPUT << "       programStateSet = " << programStateSet.get() << std::endl;
+        DEBUG_OUTPUT << "           transformStatePair.matrixStateGeometryMap.size() = " << transformStatePair.matrixStateGeometryMap.size() << std::endl;
+        DEBUG_OUTPUT << "           transformStatePair.stateTransformMap.size() = " << transformStatePair.stateTransformMap.size() << std::endl;
     }
     return group;
 }
 
 vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createNewVSG(vsg::Paths& searchPaths)
 {
-    std::cout<<"SceneAnalysisVisitor::createNewVSG(vsg::Paths& searchPaths)"<<std::endl;
+    DEBUG_OUTPUT<<"SceneAnalysisVisitor::createNewVSG(vsg::Paths& searchPaths)"<<std::endl;
 
     uint32_t forceGeomAttributes = GeometryAttributes::STANDARD_ATTS;
     //uint32_t forceStateMask = StateMask::DIFFUSE_MAP;
@@ -584,7 +590,7 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createNewVSG(vsg::Paths& searchPat
                     auto textureData = convertToVsg(osgtex->getImage());
                     if (!textureData)
                     {
-                        std::cout << "Could not convert osg image data" << std::endl;
+                        DEBUG_OUTPUT << "Could not convert osg image data" << std::endl;
                         return vsg::ref_ptr<vsg::Node>();
                     }
                     vsg::ref_ptr<vsg::Texture> texture = vsg::Texture::create();
@@ -596,7 +602,7 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createNewVSG(vsg::Paths& searchPat
             }
             else
             {
-                std::cout<<"No texture assigned for geometry"<<std::endl;
+                DEBUG_OUTPUT<<"No texture assigned for geometry"<<std::endl;
             }
 
             attachpoint->addChild(transformGeometryGraph);

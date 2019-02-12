@@ -117,11 +117,6 @@ int main(int argc, char** argv)
         return 1;
     }
 
-
-    std::cerr<<"Initial windowTraits->swapchainPreferences.imageCount = "<<windowTraits->swapchainPreferences.imageCount<<std::endl;
-    std::cerr<<"Initial windowTraits->swapchainPreferences.surfaceFormat = "<<windowTraits->swapchainPreferences.surfaceFormat.format<<", "<<windowTraits->swapchainPreferences.surfaceFormat.colorSpace<<std::endl;
-    std::cerr<<"Initial windowTraits->swapchainPreferences.presentMode = "<<windowTraits->swapchainPreferences.presentMode<<std::endl;
-
     // create the viewer and assign window(s) to it
     auto viewer = vsg::Viewer::create();
 
@@ -166,10 +161,6 @@ int main(int argc, char** argv)
     vsg::ref_ptr<vsg::Perspective> perspective(new vsg::Perspective(60.0, static_cast<double>(window->extent2D().width) / static_cast<double>(window->extent2D().height), 0.1, radius * 2.0));
     vsg::ref_ptr<vsg::LookAt> lookAt(new vsg::LookAt(centre+vsg::dvec3(0.0, -radius, 0.0), centre, vsg::dvec3(0.0, 0.0, 1.0)));
     vsg::ref_ptr<vsg::Camera> camera(new vsg::Camera(perspective, lookAt, viewport));
-
-    std::cerr<<"After windowTraits->swapchainPreferences.imageCount = "<<windowTraits->swapchainPreferences.imageCount<<std::endl;
-    std::cerr<<"After windowTraits->swapchainPreferences.surfaceFormat = "<<windowTraits->swapchainPreferences.surfaceFormat.format<<", "<<windowTraits->swapchainPreferences.surfaceFormat.colorSpace<<std::endl;
-    std::cerr<<"After windowTraits->swapchainPreferences.presentMode = "<<windowTraits->swapchainPreferences.presentMode<<std::endl;
 
     // compile the Vulkan objects
     vsg::CompileTraversal compile;
@@ -236,8 +227,6 @@ int main(int argc, char** argv)
                 vsg_scene->accept(updatePipeline);
 
                 perspective->aspectRatio = static_cast<double>(windowExtent.width) / static_cast<double>(windowExtent.height);
-
-                std::cout<<"window aspect ratio = "<<perspective->aspectRatio<<std::endl;
             }
 
             viewer->populateNextFrame();

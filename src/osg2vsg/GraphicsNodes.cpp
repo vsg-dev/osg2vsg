@@ -16,6 +16,12 @@
 
 using namespace vsg;
 
+#if 0
+#define DEBUG_OUTPUT std::cout
+#else
+#define DEBUG_OUTPUT if (false) std::cout
+#endif
+
 
 /////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -116,19 +122,19 @@ void GraphicsPipelineGroup::traverse(ConstVisitor& visitor) const
 
 void GraphicsPipelineGroup::compile(Context& context)
 {
-    std::cout<<"\nGraphicsPipelineGroup::compile(Context& context) "<<this<<std::endl;
+    DEBUG_OUTPUT<<"\nGraphicsPipelineGroup::compile(Context& context) "<<this<<std::endl;
 
     //
     // set up descriptor layout and descriptor set and pipeline layout for uniforms
     //
     context.descriptorPool = DescriptorPool::create(context.device, maxSets, descriptorPoolSizes);
-    std::cout<<"  context.descriptorPool = "<<context.descriptorPool.get()<<std::endl;
+    DEBUG_OUTPUT<<"  context.descriptorPool = "<<context.descriptorPool.get()<<std::endl;
 
     context.descriptorSetLayout = DescriptorSetLayout::create(context.device, descriptorSetLayoutBindings);
-    std::cout<<"  context.descriptorSetLayout = "<<context.descriptorSetLayout.get()<<std::endl;
+    DEBUG_OUTPUT<<"  context.descriptorSetLayout = "<<context.descriptorSetLayout.get()<<std::endl;
 
     context.pipelineLayout = PipelineLayout::create(context.device, {context.descriptorSetLayout}, pushConstantRanges);
-    std::cout<<"  context.pipelineLayout = "<<context.pipelineLayout.get()<<std::endl;
+    DEBUG_OUTPUT<<"  context.pipelineLayout = "<<context.pipelineLayout.get()<<std::endl;
 
 
     ShaderModules shaderModules;
@@ -140,7 +146,7 @@ void GraphicsPipelineGroup::compile(Context& context)
 
     auto shaderStages = ShaderStages::create(shaderModules);
 
-    std::cout<<"  shaderStages = "<<shaderStages.get()<<std::endl;
+    DEBUG_OUTPUT<<"  shaderStages = "<<shaderStages.get()<<std::endl;
 
     GraphicsPipelineStates full_pipelineStates = pipelineStates;
     full_pipelineStates.emplace_back(context.viewport);
@@ -150,15 +156,15 @@ void GraphicsPipelineGroup::compile(Context& context)
 
     ref_ptr<GraphicsPipeline> pipeline = GraphicsPipeline::create(context.device, context.renderPass, context.pipelineLayout, full_pipelineStates);
 
-    std::cout<<"  pipeline = "<<pipeline.get()<<std::endl;
+    DEBUG_OUTPUT<<"  pipeline = "<<pipeline.get()<<std::endl;
 
     _bindPipeline = BindPipeline::create(pipeline);
 
-    std::cout<<"  _bindPipeline = "<<_bindPipeline.get()<<std::endl;
+    DEBUG_OUTPUT<<"  _bindPipeline = "<<_bindPipeline.get()<<std::endl;
 
     if (context.projMatrix) _projPushConstant = PushConstants::create(VK_SHADER_STAGE_VERTEX_BIT, 0, context.projMatrix);
     if (context.viewMatrix) _viewPushConstant = PushConstants::create(VK_SHADER_STAGE_VERTEX_BIT, 64, context.viewMatrix);
-    std::cout<<"GraphicsPipelineGroup::compile(Context& context) finished "<<this<<"\n"<<std::endl;
+    DEBUG_OUTPUT<<"GraphicsPipelineGroup::compile(Context& context) finished "<<this<<"\n"<<std::endl;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -195,7 +201,7 @@ void Texture::compile(Context& context)
     vsg::ImageData imageData = vsg::transferImageData(context.device, context.commandPool, context.graphicsQueue, _textureData);
     if (!imageData.valid())
     {
-        std::cout<<"Texture not created"<<std::endl;
+        DEBUG_OUTPUT<<"Texture not created"<<std::endl;
         return;
     }
 
@@ -210,18 +216,18 @@ void Texture::compile(Context& context)
         // setup binding of descriptors
         _bindDescriptorSets = vsg::BindDescriptorSets::create(VK_PIPELINE_BIND_POINT_GRAPHICS, context.pipelineLayout, vsg::DescriptorSets{descriptorSet}); // device dependent
 
-        std::cout<<"Texture::compile(() succeeded."<<std::endl;
-        std::cout<<"   imageData._sampler = "<<imageData._sampler.get()<<std::endl;
-        std::cout<<"   imageData._imageView = "<<imageData._imageView.get()<<std::endl;
-        std::cout<<"   imageData._imageLayout = "<<imageData._imageLayout<<std::endl;
+        DEBUG_OUTPUT<<"Texture::compile(() succeeded."<<std::endl;
+        DEBUG_OUTPUT<<"   imageData._sampler = "<<imageData._sampler.get()<<std::endl;
+        DEBUG_OUTPUT<<"   imageData._imageView = "<<imageData._imageView.get()<<std::endl;
+        DEBUG_OUTPUT<<"   imageData._imageLayout = "<<imageData._imageLayout<<std::endl;
     }
     else
     {
-        std::cout<<"Texture::compile(() failed, descriptorSet not created."<<std::endl;
-        std::cout<<"   imageData._sampler = "<<imageData._sampler.get()<<std::endl;
-        std::cout<<"   imageData._imageView = "<<imageData._imageView.get()<<std::endl;
-        std::cout<<"   imageData._imageLayout = "<<imageData._imageLayout<<std::endl;
-        std::cout<<"   _textureData = "<<_textureData->width()<<", "<<_textureData->height()<<", "<<_textureData->depth()<<", "<<std::endl;
+        DEBUG_OUTPUT<<"Texture::compile(() failed, descriptorSet not created."<<std::endl;
+        DEBUG_OUTPUT<<"   imageData._sampler = "<<imageData._sampler.get()<<std::endl;
+        DEBUG_OUTPUT<<"   imageData._imageView = "<<imageData._imageView.get()<<std::endl;
+        DEBUG_OUTPUT<<"   imageData._imageLayout = "<<imageData._imageLayout<<std::endl;
+        DEBUG_OUTPUT<<"   _textureData = "<<_textureData->width()<<", "<<_textureData->height()<<", "<<_textureData->depth()<<", "<<std::endl;
     }
 }
 
