@@ -146,6 +146,10 @@ namespace vsg
 
         ref_ptr<Data> _textureData;
         ref_ptr<vsg::BindDescriptorSets> _bindDescriptorSets;
+
+        // experimental
+        uint32_t _bindingIndex = 0;
+        ref_ptr<Sampler> _sampler;
     };
     VSG_type_name(vsg::Texture)
 

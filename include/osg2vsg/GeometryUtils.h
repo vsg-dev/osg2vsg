@@ -44,6 +44,12 @@ namespace osg2vsg
 
     extern OSG2VSG_DECLSPEC VkPrimitiveTopology convertToTopology(osg::PrimitiveSet::Mode primitiveMode);
 
+    extern OSG2VSG_DECLSPEC VkSamplerAddressMode covertToSamplerAddressMode(osg::Texture::WrapMode wrapmode);
+
+    extern OSG2VSG_DECLSPEC std::pair<VkFilter, VkSamplerMipmapMode> convertToFilterAndMipmapMode(osg::Texture::FilterMode filtermode);
+
+    extern OSG2VSG_DECLSPEC VkSamplerCreateInfo convertToSamplerCreateInfo(const osg::Texture* texture);
+
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Geometry> convertToVsg(osg::Geometry* geometry, uint32_t requiredAttributesMask = 0);
 
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGeometryGraphicsPipeline(const uint32_t& geometryAttributesMask, const uint32_t& stateMask, unsigned int maxNumDescriptors);
