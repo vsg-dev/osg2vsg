@@ -10,6 +10,12 @@
 
 using namespace osg2vsg;
 
+#if 0
+#define DEBUG_OUTPUT std::cout
+#else
+#define DEBUG_OUTPUT if (false) std::cout
+#endif
+
 uint32_t osg2vsg::calculateStateMask(osg::StateSet* stateSet)
 {
     uint32_t stateMask = 0;
@@ -414,13 +420,13 @@ bool ShaderCompiler::compile(Shaders& shaders)
         }
         else
         {
-            std::cout << "glslLang: Error parsing shader: " << shader->getInfoLog() << std::endl;
+            DEBUG_OUTPUT << "glslLang: Error parsing shader: " << shader->getInfoLog() << std::endl;
         }
     }
 
     if (stageShaderMap.empty())
     {
-        std::cout<<"ShaderCompiler::compile(Shaders& shaders) stageShaderMap.empty()"<<std::endl;
+        DEBUG_OUTPUT<<"ShaderCompiler::compile(Shaders& shaders) stageShaderMap.empty()"<<std::endl;
         return false;
     }
 
