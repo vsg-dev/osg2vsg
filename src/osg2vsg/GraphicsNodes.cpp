@@ -198,7 +198,7 @@ void Texture::accept(DispatchTraversal& dv) const
 
 void Texture::compile(Context& context)
 {
-    vsg::ImageData imageData = vsg::transferImageData(context.device, context.commandPool, context.graphicsQueue, _textureData);
+    vsg::ImageData imageData = vsg::transferImageData(context.device, context.commandPool, context.graphicsQueue, _textureData, _sampler);
     if (!imageData.valid())
     {
         DEBUG_OUTPUT<<"Texture not created"<<std::endl;
@@ -208,7 +208,7 @@ void Texture::compile(Context& context)
     // set up DescriptorSet
     vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = vsg::DescriptorSet::create(context.device, context.descriptorPool, context.descriptorSetLayout,
     {
-        vsg::DescriptorImage::create(0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, vsg::ImageDataList{imageData})
+        vsg::DescriptorImage::create(_bindingIndex, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, vsg::ImageDataList{imageData})
     });
 
     if (descriptorSet)
@@ -281,7 +281,6 @@ void Geometry::accept(DispatchTraversal& dv) const
 void Geometry::compile(Context& context)
 {
     auto vertexBufferData = vsg::createBufferAndTransferData(context.device, context.commandPool, context.graphicsQueue, _arrays, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE);
-    auto indexBufferData = vsg::createBufferAndTransferData(context.device, context.commandPool, context.graphicsQueue, {_indices}, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE);
 
     _renderImplementation = new vsg::Group;
 
@@ -290,8 +289,12 @@ void Geometry::compile(Context& context)
     _renderImplementation->addChild(bindVertexBuffers); // device dependent
 
     // set up index buffer binding
-    vsg::ref_ptr<vsg::BindIndexBuffer> bindIndexBuffer = vsg::BindIndexBuffer::create(indexBufferData.front(), VK_INDEX_TYPE_UINT16); // device dependent
-    _renderImplementation->addChild(bindIndexBuffer); // device dependent
+    if(_indices->dataSize() > 0)
+    {
+        auto indexBufferData = vsg::createBufferAndTransferData(context.device, context.commandPool, context.graphicsQueue, { _indices }, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE);
+        vsg::ref_ptr<vsg::BindIndexBuffer> bindIndexBuffer = vsg::BindIndexBuffer::create(indexBufferData.front(), VK_INDEX_TYPE_UINT16); // device dependent
+        _renderImplementation->addChild(bindIndexBuffer); // device dependent
+    }
 
     // add the commands in the the _renderImplementation group.
     for(auto& command : _commands) _renderImplementation->addChild(command);

@@ -99,6 +99,62 @@ namespace osg2vsg
         }
     }
 
+    VkSamplerAddressMode covertToSamplerAddressMode(osg::Texture::WrapMode wrapmode)
+    {
+        switch (wrapmode)
+        {
+            case osg::Texture::WrapMode::CLAMP: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            case osg::Texture::WrapMode::CLAMP_TO_EDGE: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            case osg::Texture::WrapMode::CLAMP_TO_BORDER: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            case osg::Texture::WrapMode::REPEAT: return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            case osg::Texture::WrapMode::MIRROR: return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+                //VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE no osg equivelent for this
+            default: return VK_SAMPLER_ADDRESS_MODE_MAX_ENUM; // unknown
+        }
+    }
+
+    std::pair<VkFilter, VkSamplerMipmapMode> convertToFilterAndMipmapMode(osg::Texture::FilterMode filtermode)
+    {
+        switch (filtermode)
+        {
+            case osg::Texture::FilterMode::LINEAR: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST };
+            case osg::Texture::FilterMode::LINEAR_MIPMAP_LINEAR: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR };
+            case osg::Texture::FilterMode::LINEAR_MIPMAP_NEAREST: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST };
+            case osg::Texture::FilterMode::NEAREST: return { VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST };
+            case osg::Texture::FilterMode::NEAREST_MIPMAP_LINEAR: return { VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_LINEAR };
+            case osg::Texture::FilterMode::NEAREST_MIPMAP_NEAREST: return { VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST };
+            default: return { VK_FILTER_MAX_ENUM, VK_SAMPLER_MIPMAP_MODE_MAX_ENUM }; // unknown
+        }
+    }
+
+    VkSamplerCreateInfo convertToSamplerCreateInfo(const osg::Texture* texture)
+    {
+        auto minFilterMipmapMode = convertToFilterAndMipmapMode(texture->getFilter(osg::Texture::FilterParameter::MIN_FILTER));
+        auto magFilterMipmapMode = convertToFilterAndMipmapMode(texture->getFilter(osg::Texture::FilterParameter::MAG_FILTER));
+        
+        VkSamplerCreateInfo samplerInfo = {};
+        samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        samplerInfo.minFilter = minFilterMipmapMode.first;
+        samplerInfo.magFilter = magFilterMipmapMode.first;
+        samplerInfo.addressModeU = covertToSamplerAddressMode(texture->getWrap(osg::Texture::WrapParameter::WRAP_S));
+        samplerInfo.addressModeV = covertToSamplerAddressMode(texture->getWrap(osg::Texture::WrapParameter::WRAP_T));
+        samplerInfo.addressModeW = covertToSamplerAddressMode(texture->getWrap(osg::Texture::WrapParameter::WRAP_R));
+#if 1
+        // requres Logical device to have deviceFeatures.samplerAnisotropy = VK_TRUE; set when creating the vsg::Deivce
+        samplerInfo.anisotropyEnable = VK_TRUE;
+        samplerInfo.maxAnisotropy = 16;
+#else
+        samplerInfo.anisotropyEnable = VK_FALSE;
+        samplerInfo.maxAnisotropy = 1;
+#endif
+        samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        samplerInfo.unnormalizedCoordinates = VK_FALSE;
+        samplerInfo.compareEnable = VK_FALSE;
+        samplerInfo.mipmapMode = minFilterMipmapMode.second; // should we use min or mag?
+
+        return samplerInfo;
+    }
+
     vsg::ref_ptr<vsg::Geometry> convertToVsg(osg::Geometry* ingeometry, uint32_t requiredAttributesMask)
     {
         bool hasrequirements = requiredAttributesMask != 0;
@@ -140,32 +196,52 @@ namespace osg2vsg
         if ((texcoord0.valid() && texcoord0->valueCount() > 0) && (!hasrequirements || (requiredAttributesMask & TEXCOORD0))) attributeArrays.push_back(texcoord0);
 
         // convert indicies
-        osg::Geometry::DrawElementsList drawElementsList;
-        ingeometry->getDrawElementsList(drawElementsList);
 
-        // asume all the draw elements use the same primitive mode
+        // asume all the draw elements use the same primitive mode, copy all drawelements indicies into one indicie array and use in single drawindexed command
+        // create a draw command per drawarrays primitive set
 
-        std::vector<uint16_t> indcies;
-        for(auto drawel : drawElementsList)
+        vsg::Geometry::Commands drawCommands;
+
+        std::vector<uint16_t> indcies; // use to combine indicies from all drawelements
+        osg::Geometry::PrimitiveSetList& primitiveSets = ingeometry->getPrimitiveSetList();
+        for (osg::Geometry::PrimitiveSetList::const_iterator itr = primitiveSets.begin();
+            itr != primitiveSets.end();
+            ++itr)
         {
-            auto numindcies = drawel->getNumIndices();
-            for (unsigned int i = 0; i < numindcies; i++)
+            osg::DrawElements* de = (*itr)->getDrawElements();
+            if (de)
             {
-                indcies.push_back(drawel->index(i));
+                // merge indicies
+                auto numindcies = de->getNumIndices();
+                for (unsigned int i = 0; i < numindcies; i++)
+                {
+                    indcies.push_back(de->index(i));
+                }
+            }
+            else
+            {
+                // see if we have a drawarrays and create a draw command
+                if ((*itr)->getType() == osg::PrimitiveSet::Type::DrawArraysPrimitiveType) //  asDrawArrays != nullptr)
+                {
+                    osg::DrawArrays* da = dynamic_cast<osg::DrawArrays*>((*itr).get());
+
+                    drawCommands.push_back(vsg::Draw::create(da->getCount(), 1, da->getFirst(), 0));
+                }
             }
         }
 
+        // copy into ushortArray
         vsg::ref_ptr<vsg::ushortArray> vsgindices(new vsg::ushortArray(indcies.size()));
         std::copy(indcies.begin(), indcies.end(), reinterpret_cast<uint16_t*>(vsgindices->dataPointer()));
+
+        drawCommands.push_back(vsg::DrawIndexed::create(vsgindices->valueCount(), 1, 0, 0, 0));
 
         // create the vsg geometry
         auto geometry = vsg::Geometry::create();
 
         geometry->_arrays = attributeArrays;
         geometry->_indices = vsgindices;
-
-        vsg::ref_ptr<vsg::DrawIndexed> drawIndexed = vsg::DrawIndexed::create(vsgindices->valueCount(), 1, 0, 0, 0);
-        geometry->_commands = vsg::Geometry::Commands{ drawIndexed };
+        geometry->_commands = drawCommands;
 
         return geometry;
     }
@@ -222,19 +298,19 @@ namespace osg2vsg
         if (geometryAttributesMask & NORMAL)
         {
             vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ bindingindex, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX});
-            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ NORMAL_CHANNEL, bindingindex, VK_FORMAT_R32G32B32_SFLOAT, 0 });
+            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ NORMAL_CHANNEL, bindingindex, VK_FORMAT_R32G32B32_SFLOAT, 0 }); // normal as vec3
             bindingindex++;
         }
         if (geometryAttributesMask & COLOR)
         {
-            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ bindingindex, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX });
-            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ COLOR_CHANNEL, bindingindex, VK_FORMAT_R32G32B32_SFLOAT, 0 });
+            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ bindingindex, sizeof(vsg::vec4), VK_VERTEX_INPUT_RATE_VERTEX });
+            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ COLOR_CHANNEL, bindingindex, VK_FORMAT_R32G32B32A32_SFLOAT, 0 }); // color as vec4
             bindingindex++;
         }
         if (geometryAttributesMask & TEXCOORD0)
         {
             vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ bindingindex, sizeof(vsg::vec2), VK_VERTEX_INPUT_RATE_VERTEX });
-            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ TEXCOORD0_CHANNEL, bindingindex, VK_FORMAT_R32G32_SFLOAT, 0 });
+            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ TEXCOORD0_CHANNEL, bindingindex, VK_FORMAT_R32G32_SFLOAT, 0 }); // texcoord as vec2
             bindingindex++;
         }
 
