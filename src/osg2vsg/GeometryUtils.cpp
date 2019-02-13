@@ -230,17 +230,22 @@ namespace osg2vsg
             }
         }
 
-        // copy into ushortArray
-        vsg::ref_ptr<vsg::ushortArray> vsgindices(new vsg::ushortArray(indcies.size()));
-        std::copy(indcies.begin(), indcies.end(), reinterpret_cast<uint16_t*>(vsgindices->dataPointer()));
-
-        drawCommands.push_back(vsg::DrawIndexed::create(vsgindices->valueCount(), 1, 0, 0, 0));
-
         // create the vsg geometry
         auto geometry = vsg::Geometry::create();
 
         geometry->_arrays = attributeArrays;
-        geometry->_indices = vsgindices;
+
+        // copy into ushortArray
+        if(indcies.size() > 0)
+        {
+            vsg::ref_ptr<vsg::ushortArray> vsgindices(new vsg::ushortArray(indcies.size()));
+            std::copy(indcies.begin(), indcies.end(), reinterpret_cast<uint16_t*>(vsgindices->dataPointer()));
+
+            geometry->_indices = vsgindices;
+
+            drawCommands.push_back(vsg::DrawIndexed::create(vsgindices->valueCount(), 1, 0, 0, 0));
+        }
+
         geometry->_commands = drawCommands;
 
         return geometry;
