@@ -513,7 +513,7 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createVSG(vsg::Paths& searchPaths)
                 vsg::Group* attachpoint = stateGroup;
 
                 // if we have a texture insert a texture node
-                if (stateset->getTextureAttribute(0, osg::StateAttribute::TEXTURE))
+                if (stateset && stateset->getTextureAttribute(0, osg::StateAttribute::TEXTURE))
                 {
                     /*std::string textureFile("textures/lz.vsgb");
                     vsg::vsgReaderWriter vsgReader;
@@ -581,7 +581,7 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createNewVSG(vsg::Paths& searchPat
             vsg::Group* attachpoint = graphicsPipelineGroup;
 
             // if we have a texture insert a texture node
-            if (stateset->getTextureAttribute(0, osg::StateAttribute::TEXTURE))
+            if (stateset && stateset->getTextureAttribute(0, osg::StateAttribute::TEXTURE))
             {
                 osg::Texture2D* osgtex = dynamic_cast<osg::Texture2D*>(stateset->getTextureAttribute(0, osg::StateAttribute::TEXTURE));
 

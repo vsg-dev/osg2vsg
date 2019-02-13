@@ -34,14 +34,10 @@ target_include_directories(osg2vsg PUBLIC
 
 target_link_libraries(osg2vsg PUBLIC
     vsg::vsg
-    glslang::glslang
-    glslang::OSDependent
-    glslang::SPIRV
-    glslang::OGLCompiler
-    glslang::HLSL
-    Vulkan::Vulkan
+    ${GLSLANG}
     ${OPENTHREADS_LIBRARIES} ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES}
 )
+
 
 install(TARGETS osg2vsg EXPORT osg2vsgTargets
         LIBRARY DESTINATION lib

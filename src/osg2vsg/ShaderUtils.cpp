@@ -19,14 +19,17 @@ using namespace osg2vsg;
 uint32_t osg2vsg::calculateStateMask(osg::StateSet* stateSet)
 {
     uint32_t stateMask = 0;
-    //if (stateSet->getMode(GL_BLEND) & osg::StateAttribute::ON)
-    //    stateMask |= ShaderGen::BLEND;
-    if (stateSet->getMode(GL_LIGHTING) & osg::StateAttribute::ON)
-        stateMask |= LIGHTING;
-    if (stateSet->getTextureAttribute(0, osg::StateAttribute::TEXTURE))
-        stateMask |= DIFFUSE_MAP;
-    if (stateSet->getTextureAttribute(1, osg::StateAttribute::TEXTURE) /*&& geometry != 0 && geometry->getVertexAttribArray(6)*/)
-        stateMask |= NORMAL_MAP;
+    if (stateSet)
+    {
+        //if (stateSet->getMode(GL_BLEND) & osg::StateAttribute::ON)
+        //    stateMask |= ShaderGen::BLEND;
+        if (stateSet->getMode(GL_LIGHTING) & osg::StateAttribute::ON)
+            stateMask |= LIGHTING;
+        if (stateSet->getTextureAttribute(0, osg::StateAttribute::TEXTURE))
+            stateMask |= DIFFUSE_MAP;
+        if (stateSet->getTextureAttribute(1, osg::StateAttribute::TEXTURE) /*&& geometry != 0 && geometry->getVertexAttribArray(6)*/)
+            stateMask |= NORMAL_MAP;
+    }
     return stateMask;
 }
 
