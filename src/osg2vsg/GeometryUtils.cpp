@@ -176,8 +176,8 @@ namespace osg2vsg
         vsg::ref_ptr<vsg::Data> colors(osg2vsg::convertToVsg(ingeometry->getColorArray(), ingeometry->getColorBinding() == osg::Array::Binding::BIND_OVERALL, vertcount));
         if ((!colors.valid() || colors->valueCount() == 0) && (requiredAttributesMask & COLOR)) // if no colors but we've requested them, add them
         {
-            vsg::ref_ptr<vsg::vec3Array> defaultcolors(new vsg::vec3Array(vertcount));
-            for (unsigned int i = 0; i < vertcount; i++) defaultcolors->set(i, vsg::vec3(1.0f, 1.0f, 1.0f));
+            vsg::ref_ptr<vsg::vec4Array> defaultcolors(new vsg::vec4Array(vertcount));
+            for (unsigned int i = 0; i < vertcount; i++) defaultcolors->set(i, vsg::vec4(1.0f, 1.0f, 1.0f, 1.0f));
             colors = defaultcolors;
         }
 
