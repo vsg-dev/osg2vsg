@@ -176,8 +176,8 @@ namespace osg2vsg
         vsg::ref_ptr<vsg::Data> colors(osg2vsg::convertToVsg(ingeometry->getColorArray(), ingeometry->getColorBinding() == osg::Array::Binding::BIND_OVERALL, vertcount));
         if ((!colors.valid() || colors->valueCount() == 0) && (requiredAttributesMask & COLOR)) // if no colors but we've requested them, add them
         {
-            vsg::ref_ptr<vsg::vec3Array> defaultcolors(new vsg::vec3Array(vertcount));
-            for (unsigned int i = 0; i < vertcount; i++) defaultcolors->set(i, vsg::vec3(1.0f, 1.0f, 1.0f));
+            vsg::ref_ptr<vsg::vec4Array> defaultcolors(new vsg::vec4Array(vertcount));
+            for (unsigned int i = 0; i < vertcount; i++) defaultcolors->set(i, vsg::vec4(1.0f, 1.0f, 1.0f, 1.0f));
             colors = defaultcolors;
         }
 
@@ -230,17 +230,22 @@ namespace osg2vsg
             }
         }
 
-        // copy into ushortArray
-        vsg::ref_ptr<vsg::ushortArray> vsgindices(new vsg::ushortArray(indcies.size()));
-        std::copy(indcies.begin(), indcies.end(), reinterpret_cast<uint16_t*>(vsgindices->dataPointer()));
-
-        drawCommands.push_back(vsg::DrawIndexed::create(vsgindices->valueCount(), 1, 0, 0, 0));
-
         // create the vsg geometry
         auto geometry = vsg::Geometry::create();
 
         geometry->_arrays = attributeArrays;
-        geometry->_indices = vsgindices;
+
+        // copy into ushortArray
+        if(indcies.size() > 0)
+        {
+            vsg::ref_ptr<vsg::ushortArray> vsgindices(new vsg::ushortArray(indcies.size()));
+            std::copy(indcies.begin(), indcies.end(), reinterpret_cast<uint16_t*>(vsgindices->dataPointer()));
+
+            geometry->_indices = vsgindices;
+
+            drawCommands.push_back(vsg::DrawIndexed::create(vsgindices->valueCount(), 1, 0, 0, 0));
+        }
+
         geometry->_commands = drawCommands;
 
         return geometry;

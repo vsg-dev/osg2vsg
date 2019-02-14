@@ -289,7 +289,7 @@ void Geometry::compile(Context& context)
     _renderImplementation->addChild(bindVertexBuffers); // device dependent
 
     // set up index buffer binding
-    if(_indices->dataSize() > 0)
+    if(_indices &&_indices->dataSize() > 0)
     {
         auto indexBufferData = vsg::createBufferAndTransferData(context.device, context.commandPool, context.graphicsQueue, { _indices }, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE);
         vsg::ref_ptr<vsg::BindIndexBuffer> bindIndexBuffer = vsg::BindIndexBuffer::create(indexBufferData.front(), VK_INDEX_TYPE_UINT16); // device dependent

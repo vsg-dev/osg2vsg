@@ -95,6 +95,8 @@ std::string osg2vsg::createVertexSource(const uint32_t& stateMask, const uint32_
 
     inputs << "layout(location = " << vertexindex << ") in vec3 osg_Vertex;\n"; // vertex always at location 0
 
+    if (hascolor) inputs << "layout(location = " << colorindex << ") in vec4 osg_Color;\n";
+
     if (usenormal) inputs << "layout(location = " << normalindex << ") in vec3 osg_Normal;\n";
 
     if (usetex0) inputs << "layout(location = " << tex0index << ") in vec2 osg_MultiTexCoord0;\n";
@@ -129,6 +131,11 @@ std::string osg2vsg::createVertexSource(const uint32_t& stateMask, const uint32_
             << "uniform osg_LightSourceParameters osg_LightSource;\n";
 
         uniforms << lightuniform.str();*/
+    }
+
+    if (hascolor)
+    {
+        outputs << "layout(location = 4) out vec4 vertColor;\n";
     }
 
     if (!osgCompatible)
@@ -217,6 +224,11 @@ std::string osg2vsg::createVertexSource(const uint32_t& stateMask, const uint32_
             "    lightDir = lpos.xyz + dir;\n";
     }
 
+    if(hascolor)
+    {
+        vert << "  vertColor = osg_Color;\n";
+    }
+
     vert << "}\n";
 
     return vert.str();
@@ -263,6 +275,11 @@ std::string osg2vsg::createFragmentSource(const uint32_t& stateMask, const uint3
             << "uniform osg_LightSourceParameters osg_LightSource;\n";
 
         uniforms << lightuniform.str();*/
+    }
+
+    if (hascolor)
+    {
+        inputs << "layout(location = 4) in vec4 vertColor;\n";
     }
 
     // uniforms
@@ -315,6 +332,11 @@ std::string osg2vsg::createFragmentSource(const uint32_t& stateMask, const uint3
     else
     {
         frag << "  vec4 base = vec4(1.0);\n";
+    }
+
+    if(hascolor)
+    {
+        frag << "  base = base * vertColor;\n";
     }
 
     if (usenormalmap)
