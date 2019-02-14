@@ -87,9 +87,9 @@ namespace vsg
             }
         }
 
-        void apply(vsg::Group& stateGroup)
+        void apply(vsg::Group& group)
         {
-            stateGroup.traverse(*this);
+            group.traverse(*this);
         }
     };
 

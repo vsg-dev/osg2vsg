@@ -155,11 +155,11 @@ if(glslang_FOUND AND NOT TARGET glslang::glslang)
         glslang::HLSL
     )
     if (SPIRV-Tools_LIBRARY)
-        append(GLSLANG glslang::SPIRV-Tools)
+        list(APPEND GLSLANG glslang::SPIRV-Tools)
     endif()
 
     if (SPIRV-Tools-opt_LIBRARY)
-        append(GLSLANG glslang::SPIRV-Tools-opt)
+        list(APPEND GLSLANG glslang::SPIRV-Tools-opt)
     endif()
 endif()
 
