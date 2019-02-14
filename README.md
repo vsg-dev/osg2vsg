@@ -49,6 +49,7 @@ You'll also need glslLang inorder to compile GLSL shaders to Vulkan compatible S
 
     git clone https://github.com/KhronosGroup/glslang.git
     cd ./glsllang
+    ./update_glslang_sources.py
     cmake . -G "Visual Studio 15 2017 Win64"
     
 Open the generated Visual Studio solution file (Ensure you start Visual Studi as Admin if installing to the default location). Build install target for debug and release and finally add the install location (default C:\Program Files\glslang) to CMAKE_PREFIX_PATH environment variable.
