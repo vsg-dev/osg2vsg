@@ -21,6 +21,13 @@
 
 int main(int argc, char** argv)
 {
+    // write out command line to aid debugging
+    for(int i=0; i<argc; ++i)
+    {
+        std::cout<<argv[i]<<" ";
+    }
+    std::cout<<std::endl;
+
     auto windowTraits = vsg::Window::Traits::create();
     windowTraits->windowTitle = "osg2vsg";
 
@@ -49,12 +56,6 @@ int main(int argc, char** argv)
 
     // read osg models.
     osg::ArgumentParser osg_arguments(&argc, argv);
-
-    for(int i=0; i<argc; ++i)
-    {
-        std::cout<<argv[i]<<" ";
-    }
-    std::cout<<std::endl;
 
     osg::ref_ptr<osg::Node> osg_scene = osgDB::readNodeFiles(osg_arguments);
 
