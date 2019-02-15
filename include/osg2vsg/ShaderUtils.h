@@ -10,12 +10,12 @@
 
 namespace osg2vsg
 {
-    enum StateMask
+    enum ShaderModeMask
     {
         NONE = 0,
         LIGHTING = 1,
-        DIFFUSE_MAP = 2, //< Texture in unit 0
-        NORMAL_MAP = 4  //< Texture in unit 1 and tangent vector array in index 6
+        DIFFUSE_MAP = 2,
+        NORMAL_MAP = 4 
     };
 
     // taken from osg fbx plugin
@@ -31,12 +31,12 @@ namespace osg2vsg
         SHININESS_TEXTURE_UNIT
     };
 
-    extern OSG2VSG_DECLSPEC uint32_t calculateStateMask(osg::StateSet* stateSet);
+    extern OSG2VSG_DECLSPEC uint32_t calculateShaderModeMask(osg::StateSet* stateSet);
 
     // create vertex shader source using statemask to determine type of shader to build and geometryattributes to determine attribute binding locations
-    extern OSG2VSG_DECLSPEC std::string createVertexSource(const uint32_t& stateMask, const uint32_t& geometryAttrbutes, bool osgCompatible);
+    extern OSG2VSG_DECLSPEC std::string createVertexSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes, bool osgCompatible);
 
-    extern OSG2VSG_DECLSPEC std::string createFragmentSource(const uint32_t& stateMask, const uint32_t& geometryAttrbutes, bool osgCompatible);
+    extern OSG2VSG_DECLSPEC std::string createFragmentSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes, bool osgCompatible);
 
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Shader> compileSourceToSPV(const std::string& source, bool isvert);
 

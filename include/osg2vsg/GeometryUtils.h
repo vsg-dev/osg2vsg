@@ -14,20 +14,22 @@ namespace osg2vsg
     {
         VERTEX = 1,
         NORMAL = 2,
-        COLOR = 4,
-        TEXCOORD0 = 8,
-        TEXCOORD1 = 16,
-        TEXCOORD2 = 32,
+        TANGENT = 4,
+        COLOR = 8,
+        TEXCOORD0 = 16,
+        TEXCOORD1 = 32,
+        TEXCOORD2 = 64,
         STANDARD_ATTS = VERTEX | NORMAL | COLOR | TEXCOORD0,
-        ALL_ATTS = VERTEX | NORMAL | COLOR | TEXCOORD0 | TEXCOORD1 | TEXCOORD2
+        ALL_ATTS = VERTEX | NORMAL | COLOR | TEXCOORD0 | TEXCOORD1 | TEXCOORD2 | TANGENT
     };
 
     enum AttributeChannels
     {
-        VERTEX_CHANNEL = 0,
-        NORMAL_CHANNEL = 1,
-        COLOR_CHANNEL = 2,
-        TEXCOORD0_CHANNEL = 3,
+        VERTEX_CHANNEL = 0,  // osg 0
+        NORMAL_CHANNEL = 1, // osg 1
+        TANGENT_CHANNEL = 2, //osg 6
+        COLOR_CHANNEL = 3, // osg 2
+        TEXCOORD0_CHANNEL = 4, //osg 3
         TEXCOORD1_CHANNEL = TEXCOORD0_CHANNEL + 1,
         TEXCOORD2_CHANNEL = TEXCOORD0_CHANNEL + 2,
     };
@@ -50,8 +52,12 @@ namespace osg2vsg
 
     extern OSG2VSG_DECLSPEC VkSamplerCreateInfo convertToSamplerCreateInfo(const osg::Texture* texture);
 
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Texture> convertToVsg(const osg::Texture* osgtexture);
+
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::AttributesNode> createTextureAttributesNode(const osg::StateSet* stateset);
+
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Geometry> convertToVsg(osg::Geometry* geometry, uint32_t requiredAttributesMask = 0);
 
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGeometryGraphicsPipeline(const uint32_t& geometryAttributesMask, const uint32_t& stateMask, unsigned int maxNumDescriptors);
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGeometryGraphicsPipeline(const uint32_t& shaderModeMask, const uint32_t& geometryAttributesMask, unsigned int maxNumDescriptors);
 
 }

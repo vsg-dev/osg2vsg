@@ -174,6 +174,25 @@ void GraphicsPipelineGroup::compile(Context& context)
 Texture::Texture(Allocator* allocator) :
     Inherit(allocator)
 {
+    // set default sampler info
+    _samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    _samplerInfo.minFilter = VK_FILTER_LINEAR;
+    _samplerInfo.magFilter = VK_FILTER_LINEAR;
+    _samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    _samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    _samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+#if 1
+    // requres Logical device to have deviceFeatures.samplerAnisotropy = VK_TRUE; set when creating the vsg::Deivce
+    _samplerInfo.anisotropyEnable = VK_TRUE;
+    _samplerInfo.maxAnisotropy = 16;
+#else
+    _samplerInfo.anisotropyEnable = VK_FALSE;
+    _samplerInfo.maxAnisotropy = 1;
+#endif
+    _samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    _samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    _samplerInfo.compareEnable = VK_FALSE;
+    _samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 }
 
 void Texture::traverse(Visitor& visitor)
@@ -198,7 +217,8 @@ void Texture::accept(DispatchTraversal& dv) const
 
 void Texture::compile(Context& context)
 {
-    vsg::ImageData imageData = vsg::transferImageData(context.device, context.commandPool, context.graphicsQueue, _textureData, _sampler);
+    ref_ptr<Sampler> sampler = Sampler::create(context.device, _samplerInfo, nullptr);
+    vsg::ImageData imageData = vsg::transferImageData(context.device, context.commandPool, context.graphicsQueue, _textureData, sampler);
     if (!imageData.valid())
     {
         DEBUG_OUTPUT<<"Texture not created"<<std::endl;
@@ -298,4 +318,153 @@ void Geometry::compile(Context& context)
 
     // add the commands in the the _renderImplementation group.
     for(auto& command : _commands) _renderImplementation->addChild(command);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+//
+// AttributesNode
+//
+AttributesNode::AttributesNode(Allocator* allocator) :
+    Inherit(allocator)
+{
+
+}
+
+void AttributesNode::traverse(Visitor& visitor)
+{
+    if (_bindDescriptorSets) _bindDescriptorSets->accept(visitor);
+    Inherit::traverse(visitor);
+}
+
+void AttributesNode::traverse(ConstVisitor& visitor) const
+{
+    if (_bindDescriptorSets) _bindDescriptorSets->accept(visitor);
+    Inherit::traverse(visitor);
+}
+
+
+void AttributesNode::accept(DispatchTraversal& dv) const
+{
+    if (_bindDescriptorSets) _bindDescriptorSets->accept(dv);
+    traverse(dv);
+}
+
+
+void AttributesNode::compile(Context& context)
+{
+    // set up DescriptorSet
+    vsg::Descriptors attributeDescriptors;
+
+    for(auto attribute : _attributesList)
+    {
+        attribute->compile(context);
+        if(attribute->_descriptor.valid())
+        {
+            attributeDescriptors.push_back(attribute->_descriptor);
+        }
+    }
+
+    vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = vsg::DescriptorSet::create(context.device, context.descriptorPool, context.descriptorSetLayout, attributeDescriptors);
+
+    if (descriptorSet)
+    {
+        // setup binding of descriptors
+        _bindDescriptorSets = vsg::BindDescriptorSets::create(VK_PIPELINE_BIND_POINT_GRAPHICS, context.pipelineLayout, vsg::DescriptorSets{ descriptorSet }); // device dependent
+
+        DEBUG_OUTPUT << "AttributesNode::compile(() succeeded." << std::endl;
+    }
+    else
+    {
+        DEBUG_OUTPUT << "AttributesNode::compile(() failed, descriptorSet not created." << std::endl;
+    }
+}
+
+
+void AttributesNode::read(Input& input)
+{
+    GraphicsNode::read(input);
+
+    _attributesList.resize(input.readValue<uint32_t>("NumAttributes"));
+    for (auto& attribute : _attributesList)
+    {
+        attribute = input.readObject<Attribute>("Attribute");
+    }
+}
+
+void AttributesNode::write(Output& output) const
+{
+    GraphicsNode::write(output);
+
+    output.writeValue<uint32_t>("NumAttributes", _attributesList.size());
+    for (auto& attribute : _attributesList)
+    {
+        output.writeObject("Attribute", attribute.get());
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+//
+// Attribute
+//
+Attribute::Attribute(Allocator* allocator) :
+    Inherit(allocator)
+{
+
+}
+
+void Attribute::read(Input& input)
+{
+    Object::read(input);
+
+    _bindingIndex = input.readValue<uint32_t>("BindingIndex");
+}
+
+void Attribute::write(Output& output) const
+{
+    Object::write(output);
+
+    output.writeValue<uint32_t>("BindingIndex", _bindingIndex);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////
+//
+// TextureAttribute
+//
+TextureAttribute::TextureAttribute(Allocator* allocator) :
+    Inherit(allocator)
+{
+    // set default sampler info
+    _samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    _samplerInfo.minFilter = VK_FILTER_LINEAR;
+    _samplerInfo.magFilter = VK_FILTER_LINEAR;
+    _samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    _samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    _samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+#if 1
+    // requres Logical device to have deviceFeatures.samplerAnisotropy = VK_TRUE; set when creating the vsg::Deivce
+    _samplerInfo.anisotropyEnable = VK_TRUE;
+    _samplerInfo.maxAnisotropy = 16;
+#else
+    _samplerInfo.anisotropyEnable = VK_FALSE;
+    _samplerInfo.maxAnisotropy = 1;
+#endif
+    _samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    _samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    _samplerInfo.compareEnable = VK_FALSE;
+    _samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+}
+
+void TextureAttribute::compile(Context& context)
+{
+    ref_ptr<Sampler> sampler = Sampler::create(context.device, _samplerInfo, nullptr);
+    vsg::ImageData imageData = vsg::transferImageData(context.device, context.commandPool, context.graphicsQueue, _textureData, sampler);
+    if (!imageData.valid())
+    {
+        DEBUG_OUTPUT << "Texture not created" << std::endl;
+        return;
+    }
+
+    // set up DescriptorSet
+    _descriptor = vsg::DescriptorImage::create(_bindingIndex, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, vsg::ImageDataList{imageData});
 }

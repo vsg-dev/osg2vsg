@@ -16,7 +16,7 @@ using namespace osg2vsg;
 #define DEBUG_OUTPUT if (false) std::cout
 #endif
 
-uint32_t osg2vsg::calculateStateMask(osg::StateSet* stateSet)
+uint32_t osg2vsg::calculateShaderModeMask(osg::StateSet* stateSet)
 {
     uint32_t stateMask = 0;
     if (stateSet)
@@ -27,7 +27,7 @@ uint32_t osg2vsg::calculateStateMask(osg::StateSet* stateSet)
             stateMask |= LIGHTING;
         if (stateSet->getTextureAttribute(0, osg::StateAttribute::TEXTURE))
             stateMask |= DIFFUSE_MAP;
-        if (stateSet->getTextureAttribute(1, osg::StateAttribute::TEXTURE) /*&& geometry != 0 && geometry->getVertexAttribArray(6)*/)
+        if (stateSet->getTextureAttribute(NORMAL_TEXTURE_UNIT, osg::StateAttribute::TEXTURE) /*&& geometry != 0 && geometry->getVertexAttribArray(6)*/)
             stateMask |= NORMAL_MAP;
     }
     return stateMask;
@@ -35,25 +35,28 @@ uint32_t osg2vsg::calculateStateMask(osg::StateSet* stateSet)
 
 // create vertex shader source using statemask to determine type of shader to build and geometryattributes to determine attribute binding locations
 
-std::string osg2vsg::createVertexSource(const uint32_t& stateMask, const uint32_t& geometryAttrbutes, bool osgCompatible)
+std::string osg2vsg::createVertexSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes, bool osgCompatible)
 {
     bool hasnormal = geometryAttrbutes & NORMAL;
     bool hascolor = geometryAttrbutes & COLOR;
     bool hastex0 = geometryAttrbutes & TEXCOORD0;
+    bool hastanget = geometryAttrbutes & TANGENT;
 
     // regardless of if we use the attribute figure out what it's index should be
     uint32_t inputindex = 0;
 
     uint32_t vertexindex = osgCompatible ? 0 : VERTEX_CHANNEL;
     uint32_t normalindex = osgCompatible ? 1 : (hasnormal ? NORMAL_CHANNEL : 0);
+    uint32_t tangentindex = osgCompatible ? 6 : (hastanget ? TANGENT_CHANNEL : 0);
     uint32_t colorindex = osgCompatible ? 2 : (hascolor ? COLOR_CHANNEL : 0);
     uint32_t tex0index = osgCompatible ? 3 : (hastex0 ? TEXCOORD0_CHANNEL : 0);
 
-    bool usenormal = hasnormal && (stateMask & (LIGHTING | NORMAL_MAP));
-    bool usetex0 = hastex0 && (stateMask & (DIFFUSE_MAP | NORMAL_MAP));
-    bool uselighting = usenormal && (stateMask & (LIGHTING));
-    bool usediffusemap = usetex0 && (stateMask & (DIFFUSE_MAP));
-    bool usenormalmap = usetex0 && (stateMask & (NORMAL_MAP));
+    bool usenormal = hasnormal && (shaderModeMask & (LIGHTING | NORMAL_MAP));
+    bool usetex0 = hastex0 && (shaderModeMask & (DIFFUSE_MAP | NORMAL_MAP));
+    bool uselighting = usenormal && (shaderModeMask & (LIGHTING));
+    bool usediffusemap = usetex0 && (shaderModeMask & (DIFFUSE_MAP));
+    bool usenormalmap = usetex0 && hastanget && (shaderModeMask & (NORMAL_MAP));
+
 
     std::ostringstream uniforms;
     std::ostringstream inputs;
@@ -95,16 +98,17 @@ std::string osg2vsg::createVertexSource(const uint32_t& stateMask, const uint32_
 
     inputs << "layout(location = " << vertexindex << ") in vec3 osg_Vertex;\n"; // vertex always at location 0
 
-    if (hascolor) inputs << "layout(location = " << colorindex << ") in vec4 osg_Color;\n";
-
     if (usenormal) inputs << "layout(location = " << normalindex << ") in vec3 osg_Normal;\n";
+
+    if (hastanget)
+    {
+        inputs << "layout(location = " << tangentindex << ") in vec4 osg_Tangent;\n";
+    }
+
+    if (hascolor) inputs << "layout(location = " << colorindex << ") in vec4 osg_Color;\n";
 
     if (usetex0) inputs << "layout(location = " << tex0index << ") in vec2 osg_MultiTexCoord0;\n";
 
-    if (usenormalmap)
-    {
-        inputs << "layout(location = 6) in vec3 tangent;\n"; // figure this out later
-    }
 
     // vert outputs
 
@@ -174,7 +178,7 @@ std::string osg2vsg::createVertexSource(const uint32_t& stateMask, const uint32_
         {
             vert <<
                 "  vec3 n = " << nmat << " * osg_Normal;\n"\
-                "  vec3 t = " << nmat << " * tangent;\n"\
+                "  vec3 t = " << nmat << " * osg_Tangent.xyz;\n"\
                 "  vec3 b = cross(n, t);\n"\
                 "  vec3 dir = -vec3(" << mvmat << " * vec4(osg_Vertex, 1.0));\n"\
                 "  viewDir.x = dot(dir, t);\n"\
@@ -185,7 +189,7 @@ std::string osg2vsg::createVertexSource(const uint32_t& stateMask, const uint32_
         {
             vert <<
                 "  vec3 n = (" << mvmat << " * vec4(osg_Normal, 0.0)).xyz;\n"\
-                "  vec3 t = (" << mvmat << " * vec4(tangent, 0.0)).xyz;\n"\
+                "  vec3 t = (" << mvmat << " * vec4(osg_Tangent.xyz, 0.0)).xyz;\n"\
                 "  vec3 b = cross(n, t);\n"\
                 "  vec3 dir = -vec3(" << mvmat << " * vec4(osg_Vertex, 1.0));\n"\
                 "  viewDir.x = dot(dir, t);\n"\
@@ -234,17 +238,17 @@ std::string osg2vsg::createVertexSource(const uint32_t& stateMask, const uint32_
     return vert.str();
 }
 
-std::string osg2vsg::createFragmentSource(const uint32_t& stateMask, const uint32_t& geometryAttrbutes, bool osgCompatible)
+std::string osg2vsg::createFragmentSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes, bool osgCompatible)
 {
     bool hasnormal = geometryAttrbutes & NORMAL;
     bool hascolor = geometryAttrbutes & COLOR;
     bool hastex0 = geometryAttrbutes & TEXCOORD0;
 
-    bool usenormal = hasnormal && (stateMask & (LIGHTING | NORMAL_MAP));
-    bool usetex0 = hastex0 && (stateMask & (DIFFUSE_MAP | NORMAL_MAP));
-    bool uselighting = usenormal && (stateMask & (LIGHTING));
-    bool usediffusemap = usetex0 && (stateMask & (DIFFUSE_MAP));
-    bool usenormalmap = usetex0 && (stateMask & (NORMAL_MAP));
+    bool usenormal = hasnormal && (shaderModeMask & (LIGHTING | NORMAL_MAP));
+    bool usetex0 = hastex0 && (shaderModeMask & (DIFFUSE_MAP | NORMAL_MAP));
+    bool uselighting = usenormal && (shaderModeMask & (LIGHTING));
+    bool usediffusemap = usetex0 && (shaderModeMask & (DIFFUSE_MAP));
+    bool usenormalmap = usetex0 && (shaderModeMask & (NORMAL_MAP));
 
     std::ostringstream uniforms;
     std::ostringstream inputs;
