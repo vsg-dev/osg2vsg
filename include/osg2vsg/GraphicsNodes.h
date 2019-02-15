@@ -149,7 +149,7 @@ namespace vsg
 
         // experimental
         uint32_t _bindingIndex = 0;
-        ref_ptr<Sampler> _sampler;
+        VkSamplerCreateInfo _samplerInfo;
     };
     VSG_type_name(vsg::Texture)
 
@@ -186,4 +186,55 @@ namespace vsg
         ref_ptr<Group> _renderImplementation;
     };
     VSG_type_name(vsg::Geometry)
+
+    class Attribute : public Inherit<Object, Attribute>
+    {
+    public:
+        Attribute(Allocator* allocator = nullptr);
+
+        void read(Input& input) override;
+        void write(Output& output) const override;
+
+        virtual void compile(Context& context) = 0;
+
+        ref_ptr<vsg::Descriptor> _descriptor;
+        uint32_t _bindingIndex = 0;
+    };
+    VSG_type_name(vsg::Attribute)
+
+    class TextureAttribute : public Inherit<Attribute, TextureAttribute>
+    {
+    public:
+        TextureAttribute(Allocator* allocator = nullptr);
+
+        void compile(Context& context) override;
+
+        ref_ptr<Data> _textureData;
+        VkSamplerCreateInfo _samplerInfo;
+    };
+    VSG_type_name(vsg::TextureAttribute)
+
+    class AttributesNode : public Inherit<GraphicsNode, AttributesNode>
+    {
+    public:
+        AttributesNode(Allocator* allocator = nullptr);
+
+        using Inherit::traverse;
+
+        void traverse(Visitor& visitor) override;
+        void traverse(ConstVisitor& visitor) const override;
+
+        void accept(DispatchTraversal& dv) const override;
+
+        void read(Input& input) override;
+        void write(Output& output) const override;
+
+        void compile(Context& context) override;
+
+        ref_ptr<vsg::BindDescriptorSets> _bindDescriptorSets;
+
+        using AttributesList = std::vector<ref_ptr<Attribute>>;
+        AttributesList _attributesList;
+    };
+    VSG_type_name(vsg::AttributesNode)
 }
