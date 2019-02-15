@@ -147,8 +147,6 @@ int main(int argc, char** argv)
     vsg::ref_ptr<vsg::CommandPool> commandPool = vsg::CommandPool::create(device, physicalDevice->getGraphicsFamily());
 
     // camera related state
-    vsg::ref_ptr<vsg::mat4Value> projMatrix(new vsg::mat4Value);
-    vsg::ref_ptr<vsg::mat4Value> viewMatrix(new vsg::mat4Value);
     auto viewport = vsg::ViewportState::create(window->extent2D());
 
     // compute the bounds of the scene graph to help position camera
@@ -162,6 +160,10 @@ int main(int argc, char** argv)
     vsg::ref_ptr<vsg::LookAt> lookAt(new vsg::LookAt(centre+vsg::dvec3(0.0, -radius, 0.0), centre, vsg::dvec3(0.0, 0.0, 1.0)));
     vsg::ref_ptr<vsg::Camera> camera(new vsg::Camera(perspective, lookAt, viewport));
 
+
+    // create graphics stage
+    auto stage = vsg::GraphicsStage::create(vsg_scene, camera);
+
     // compile the Vulkan objects
     vsg::CompileTraversal compile;
     compile.context.device = device;
@@ -169,66 +171,41 @@ int main(int argc, char** argv)
     compile.context.renderPass = renderPass;
     compile.context.viewport = viewport;
     compile.context.graphicsQueue = graphicsQueue;
-    compile.context.projMatrix = projMatrix;
-    compile.context.viewMatrix = viewMatrix;
+    compile.context.projMatrix = stage->_projMatrix;
+    compile.context.viewMatrix = stage->_viewMatrix;
 
     vsg_scene->accept(compile);
+
+    // add a GraphicsStage tp the Window to do dispatch of the command graph to the commnad buffer(s)
+    window->addStage(stage);
 
     //
     // end of initialize vulkan
     //
     /////////////////////////////////////////////////////////////////////
 
-    for (auto& win : viewer->windows())
-    {
-        // add a GraphicsStage tp the Window to do dispatch of the command graph to the commnad buffer(s)
-        win->addStage(vsg::GraphicsStage::create(vsg_scene));
-    }
-
 
     // assign a Trackball and CloseHandler to the Viewer to respond to events
-    auto trackball = vsg::Trackball::create(camera);
-    viewer->addEventHandlers({trackball, vsg::CloseHandler::create(viewer)});
+    viewer->addEventHandlers({
+        vsg::Trackball::create(camera),
+        vsg::CloseHandler::create(viewer)
+    });
 
-    bool windowResized = false;
-    double time = 0.0f;
-
+    double time = 0.0;
     while (viewer->active() && (numFrames<0 || (numFrames--)>0))
     {
         // poll events and advance frame counters
         viewer->advance();
 
-        // pass any events into EventHandlers assigned to the Viewer
-        viewer->handleEvents();
-
         double previousTime = time;
         time = std::chrono::duration<double, std::chrono::seconds::period>(std::chrono::steady_clock::now()-viewer->start_point()).count();
         if (printFrameRate) std::cout<<"time = "<<time<<" fps="<<1.0/(time-previousTime)<<std::endl;
 
-        camera->getProjectionMatrix()->get((*projMatrix));
-        camera->getViewMatrix()->get((*viewMatrix));
-
-        if (window->resized()) windowResized = true;
+        // pass any events into EventHandlers assigned to the Viewer
+        viewer->handleEvents();
 
         if (viewer->aquireNextFrame())
         {
-            if (windowResized)
-            {
-                windowResized = false;
-
-                auto windowExtent = window->extent2D();
-
-                vsg::UpdatePipeline updatePipeline(camera->getViewportState());
-
-                viewport->getViewport().width = static_cast<float>(windowExtent.width);
-                viewport->getViewport().height = static_cast<float>(windowExtent.height);
-                viewport->getScissor().extent = windowExtent;
-
-                vsg_scene->accept(updatePipeline);
-
-                perspective->aspectRatio = static_cast<double>(windowExtent.width) / static_cast<double>(windowExtent.height);
-            }
-
             viewer->populateNextFrame();
 
             viewer->submitNextFrame();
