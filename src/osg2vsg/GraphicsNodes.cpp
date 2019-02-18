@@ -182,7 +182,7 @@ Texture::Texture(Allocator* allocator) :
     _samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     _samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 #if 1
-    // requres Logical device to have deviceFeatures.samplerAnisotropy = VK_TRUE; set when creating the vsg::Deivce
+    // requres Logical device to have deviceFeatures.samplerAnisotropy = VK_TRUE; set when creating the vsg::Device
     _samplerInfo.anisotropyEnable = VK_TRUE;
     _samplerInfo.maxAnisotropy = 16;
 #else
@@ -442,7 +442,7 @@ TextureAttribute::TextureAttribute(Allocator* allocator) :
     _samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     _samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 #if 1
-    // requres Logical device to have deviceFeatures.samplerAnisotropy = VK_TRUE; set when creating the vsg::Deivce
+    // requres Logical device to have deviceFeatures.samplerAnisotropy = VK_TRUE; set when creating the vsg::Device
     _samplerInfo.anisotropyEnable = VK_TRUE;
     _samplerInfo.maxAnisotropy = 16;
 #else
