@@ -7,50 +7,10 @@
 #include <vsg/vk/CommandPool.h>
 #include <vsg/vk/DescriptorSet.h>
 #include <vsg/vk/DescriptorPool.h>
-
+#include <vsg/traversals/CompileTraversal.h>
 
 namespace vsg
 {
-    struct Context
-    {
-        ref_ptr<Device> device;
-        ref_ptr<CommandPool> commandPool;
-        ref_ptr<RenderPass> renderPass;
-        ref_ptr<ViewportState> viewport;
-        VkQueue graphicsQueue = 0;
-
-        ref_ptr<DescriptorPool> descriptorPool;
-        ref_ptr<DescriptorSetLayout> descriptorSetLayout;
-        ref_ptr<PipelineLayout> pipelineLayout;
-
-        ref_ptr<mat4Value> projMatrix;
-        ref_ptr<mat4Value> viewMatrix;
-    };
-
-    class GraphicsNode : public Inherit<Group, GraphicsNode>
-    {
-    public:
-        GraphicsNode(Allocator* allocator = nullptr):
-            Inherit(allocator) {}
-
-        void read(Input& input) override;
-        void write(Output& output) const override;
-
-        virtual void compile(Context& context) = 0;
-    };
-    VSG_type_name(vsg::GraphicsNode)
-
-    class CompileTraversal : public Visitor
-    {
-    public:
-
-        CompileTraversal() {}
-
-        void apply(Group& group);
-        void apply(GraphicsNode& graphics);
-
-        Context context;
-    };
 
     class GraphicsPipelineGroup : public Inherit<GraphicsNode, GraphicsPipelineGroup>
     {

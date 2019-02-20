@@ -25,43 +25,6 @@ using namespace vsg;
 
 /////////////////////////////////////////////////////////////////////////////////////////
 //
-// CompileTraversal
-//
-void CompileTraversal::apply(Group& group)
-{
-    auto graphics = dynamic_cast<GraphicsNode*>(&group);
-    if (graphics)
-    {
-        apply(*graphics);
-    }
-    else
-    {
-        group.traverse(*this);
-    }
-}
-
-void CompileTraversal::apply(GraphicsNode& graphics)
-{
-    graphics.compile(context);
-    graphics.traverse(*this);
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////
-//
-// GraphicsNode
-//
-void GraphicsNode::read(Input& input)
-{
-    Group::read(input);
-}
-
-void GraphicsNode::write(Output& output) const
-{
-    Group::write(output);
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////
-//
 // GraphicsPipelineGroup
 //
 GraphicsPipelineGroup::GraphicsPipelineGroup(Allocator* allocator) :
