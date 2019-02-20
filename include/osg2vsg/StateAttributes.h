@@ -48,10 +48,10 @@ namespace vsg
     };
     VSG_type_name(vsg::GraphicsPipelineAttribute)
 
-    class TextureAttribute : public Inherit<StateComponent, TextureAttribute>
+    class TextureAttributeNew : public Inherit<StateComponent, TextureAttributeNew>
     {
     public:
-        TextureAttribute(Allocator* allocator = nullptr);
+        TextureAttributeNew(Allocator* allocator = nullptr);
 
         void compile(Context& context);
 
@@ -67,6 +67,6 @@ namespace vsg
         ref_ptr<vsg::BindDescriptorSets> _bindDescriptorSets;
 
     };
-    VSG_type_name(vsg::TextureAttribute)
+    VSG_type_name(vsg::TextureAttributeNew)
 
 }

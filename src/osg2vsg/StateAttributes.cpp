@@ -119,7 +119,7 @@ void GraphicsPipelineAttribute::compile(Context& context)
 //
 // TextureAttribut
 //
-TextureAttribute::TextureAttribute(Allocator* allocator) :
+TextureAttributeNew::TextureAttributeNew(Allocator* allocator) :
     Inherit(allocator)
 {
     // set default sampler info
@@ -143,7 +143,7 @@ TextureAttribute::TextureAttribute(Allocator* allocator) :
     _samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 }
 
-void TextureAttribute::compile(Context& context)
+void TextureAttributeNew::compile(Context& context)
 {
     ref_ptr<Sampler> sampler = Sampler::create(context.device, _samplerInfo, nullptr);
     vsg::ImageData imageData = vsg::transferImageData(context.device, context.commandPool, context.graphicsQueue, _textureData, sampler);
@@ -179,12 +179,12 @@ void TextureAttribute::compile(Context& context)
     }
 }
 
-void TextureAttribute::pushTo(State& state) const
+void TextureAttributeNew::pushTo(State& state) const
 {
     if (_bindDescriptorSets) _bindDescriptorSets->pushTo(state);
 }
 
-void TextureAttribute::popFrom(State& state) const
+void TextureAttributeNew::popFrom(State& state) const
 {
     if (_bindDescriptorSets) _bindDescriptorSets->popFrom(state);
 }
