@@ -32,6 +32,20 @@ GraphicsPipelineAttribute::GraphicsPipelineAttribute(Allocator* allocator) :
 {
 }
 
+void GraphicsPipelineAttribute::pushTo(State& state) const
+{
+    if (_bindPipeline) _bindPipeline->pushTo(state);
+    if (_projPushConstant) _projPushConstant->pushTo(state);
+    if (_viewPushConstant) _viewPushConstant->pushTo(state);
+}
+
+void GraphicsPipelineAttribute::popFrom(State& state) const
+{
+    if (_bindPipeline) _bindPipeline->popFrom(state);
+    if (_projPushConstant) _projPushConstant->popFrom(state);
+    if (_viewPushConstant) _viewPushConstant->popFrom(state);
+}
+
 void GraphicsPipelineAttribute::read(Input& input)
 {
     StateComponent::read(input);
@@ -163,5 +177,15 @@ void TextureAttribute::compile(Context& context)
         DEBUG_OUTPUT<<"   imageData._imageLayout = "<<imageData._imageLayout<<std::endl;
         DEBUG_OUTPUT<<"   _textureData = "<<_textureData->width()<<", "<<_textureData->height()<<", "<<_textureData->depth()<<", "<<std::endl;
     }
+}
+
+void TextureAttribute::pushTo(State& state) const
+{
+    if (_bindDescriptorSets) _bindDescriptorSets->pushTo(state);
+}
+
+void TextureAttribute::popFrom(State& state) const
+{
+    if (_bindDescriptorSets) _bindDescriptorSets->popFrom(state);
 }
 

@@ -20,6 +20,9 @@ namespace vsg
 
         void compile(Context& context) override;
 
+        void pushTo(State& state) const override;
+        void popFrom(State& state) const override;
+
         void read(Input& input) override;
         void write(Output& output) const override;
 
@@ -51,6 +54,9 @@ namespace vsg
         TextureAttribute(Allocator* allocator = nullptr);
 
         void compile(Context& context);
+
+        void pushTo(State& state) const override;
+        void popFrom(State& state) const override;
 
         // settings
         uint32_t _bindingIndex = 0;
