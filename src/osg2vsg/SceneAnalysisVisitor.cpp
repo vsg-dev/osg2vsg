@@ -534,7 +534,7 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createNewVSG(vsg::Paths& searchPat
             if (!transformGeometryGraph) continue;
 
             vsg::ref_ptr<vsg::AttributesNode> attributesNode = createTextureAttributesNode(stateset);
-            if (attributesNode.valid())
+            if (attributesNode)
             {
                 graphicsPipelineGroup->addChild(attributesNode);
                 attributesNode->addChild(transformGeometryGraph);
@@ -568,9 +568,6 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createCoreVSG(vsg::Paths& searchPa
 
         auto graphicsPipelineGroup = vsg::StateGroup::create(createStateSetWithGraphicsPipeline(shaderModeMask, geometrymask, maxNumDescriptors));
 
-        std::cout<<"   graphicsPipelineGroup="<<graphicsPipelineGroup->className()<<std::endl;
-        std::cout<<"   graphicsPipelineGroup->getStateSet()="<<graphicsPipelineGroup->getStateSet()->className()<<std::endl;
-
         group->addChild(graphicsPipelineGroup);
 
         for (auto[stateset, transformeGeometryMap] : transformStatePair.stateTransformMap)
@@ -578,11 +575,12 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createCoreVSG(vsg::Paths& searchPa
             vsg::ref_ptr<vsg::Node> transformGeometryGraph = createTransformGeometryGraphVSG(transformeGeometryMap, searchPaths, forceGeomAttributes);
             if (!transformGeometryGraph) continue;
 
-            vsg::ref_ptr<vsg::AttributesNode> attributesNode = createTextureAttributesNode(stateset);
-            if (attributesNode.valid())
+            vsg::ref_ptr<vsg::StateSet> vsg_stateset = createVsgStateSet(stateset);
+            if (vsg_stateset)
             {
-                graphicsPipelineGroup->addChild(attributesNode);
-                attributesNode->addChild(transformGeometryGraph);
+                auto stategroup = vsg::StateGroup::create(vsg_stateset);
+                graphicsPipelineGroup->addChild(stategroup);
+                stategroup->addChild(transformGeometryGraph);
             }
             else
             {

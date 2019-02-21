@@ -420,6 +420,51 @@ namespace osg2vsg
         return gp;
     }
 
+
+    vsg::ref_ptr<vsg::Texture> convertToVsgTexture(const osg::Texture* osgtexture)
+    {
+        if (!osgtexture || !osgtexture->getImage(0)) return vsg::ref_ptr<vsg::Texture>();
+
+        auto textureData = convertToVsg(osgtexture->getImage(0));
+        if (!textureData)
+        {
+            // DEBUG_OUTPUT << "Could not convert osg image data" << std::endl;
+            return vsg::ref_ptr<vsg::Texture>();
+        }
+        vsg::ref_ptr<vsg::Texture> texture = vsg::Texture::create();
+        texture->_textureData = textureData;
+        texture->_samplerInfo = convertToSamplerCreateInfo(osgtexture);
+
+        return texture;
+    }
+
+    vsg::ref_ptr<vsg::StateSet> createVsgStateSet(const osg::StateSet* stateset)
+    {
+        if (!stateset) return vsg::ref_ptr<vsg::StateSet>();
+
+        auto vsg_stateset = vsg::StateSet::create();
+
+        unsigned int units = stateset->getNumTextureAttributeLists();
+        uint32_t texcount = 0;
+        for(unsigned int i=0; i<units; i++)
+        {
+            const osg::StateAttribute* texatt = stateset->getTextureAttribute(i, osg::StateAttribute::TEXTURE);
+            if (texatt)
+            {
+                const osg::Texture* osgtex = dynamic_cast<const osg::Texture*>(texatt);
+
+                vsg::ref_ptr<vsg::Texture> vsgtex = convertToVsgTexture(osgtex);
+                vsgtex->_bindingIndex = texcount++; // i
+                vsg_stateset->add(vsgtex);
+            }
+        }
+
+        if (texcount==0) return vsg::ref_ptr<vsg::StateSet>();
+
+        return vsg_stateset;
+    }
+
+
     vsg::ref_ptr<vsg::StateSet> createStateSetWithGraphicsPipeline(const uint32_t& shaderModeMask, const uint32_t& geometryAttributesMask, unsigned int maxNumDescriptors)
     {
         auto stateset = vsg::StateSet::create();
