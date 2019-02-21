@@ -51,31 +51,6 @@ namespace vsg
     };
     VSG_type_name(vsg::GraphicsPipelineGroup)
 
-    class Texture : public Inherit<GraphicsNode, Texture>
-    {
-    public:
-        Texture(Allocator* allocator = nullptr);
-
-        using Inherit::traverse;
-
-        void traverse(Visitor& visitor) override;
-        void traverse(ConstVisitor& visitor) const override;
-
-        void accept(DispatchTraversal& dv) const override;
-
-        void compile(Context& context);
-
-        // settings
-        uint32_t _bindingIndex = 0;
-        VkSamplerCreateInfo _samplerInfo;
-        ref_ptr<Data> _textureData;
-
-        // compiled objects
-        ref_ptr<vsg::BindDescriptorSets> _bindDescriptorSets;
-
-    };
-    VSG_type_name(vsg::Texture)
-
     class MatrixTransform : public Inherit<GraphicsNode, MatrixTransform>
     {
     public:

@@ -2,6 +2,7 @@
 
 #include <osg2vsg/Export.h>
 #include <osg2vsg/GraphicsNodes.h>
+#include <osg2vsg/StateAttributes.h>
 
 #include <vsg/all.h>
 
@@ -52,12 +53,16 @@ namespace osg2vsg
 
     extern OSG2VSG_DECLSPEC VkSamplerCreateInfo convertToSamplerCreateInfo(const osg::Texture* texture);
 
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Texture> convertToVsg(const osg::Texture* osgtexture);
-
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::AttributesNode> createTextureAttributesNode(const osg::StateSet* stateset);
 
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Geometry> convertToVsg(osg::Geometry* geometry, uint32_t requiredAttributesMask = 0);
 
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGeometryGraphicsPipeline(const uint32_t& shaderModeMask, const uint32_t& geometryAttributesMask, unsigned int maxNumDescriptors);
+
+
+    // core VSG style usage
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Texture> convertToVsgTexture(const osg::Texture* osgtexture);
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::StateSet> createVsgStateSet(const osg::StateSet* stateset);
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::StateSet> createStateSetWithGraphicsPipeline(const uint32_t& shaderModeMask, const uint32_t& geometryAttributesMask, unsigned int maxNumDescriptors);
 
 }

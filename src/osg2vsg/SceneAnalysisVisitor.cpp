@@ -415,10 +415,53 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createNewVSG(vsg::Paths& searchPat
             if (!transformGeometryGraph) continue;
 
             vsg::ref_ptr<vsg::AttributesNode> attributesNode = createTextureAttributesNode(stateset);
-            if (attributesNode.valid())
+            if (attributesNode)
             {
                 graphicsPipelineGroup->addChild(attributesNode);
                 attributesNode->addChild(transformGeometryGraph);
+            }
+            else
+            {
+                graphicsPipelineGroup->addChild(transformGeometryGraph);
+            }
+        }
+    }
+    return group;
+}
+
+vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createCoreVSG(vsg::Paths& searchPaths)
+{
+    std::cout<<"SceneAnalysisVisitor::createCoreVSG(vsg::Paths& searchPaths)"<<std::endl;
+
+    uint32_t forceGeomAttributes = GeometryAttributes::STANDARD_ATTS;
+
+    vsg::ref_ptr<vsg::Group> group = vsg::Group::create();
+
+    for (auto[masks, transformStatePair] : masksTransformStateMap)
+    {
+        uint32_t geometrymask = masks.second;
+        uint32_t shaderModeMask = masks.first;
+
+        // override masks
+        geometrymask = forceGeomAttributes;
+
+        unsigned int maxNumDescriptors = transformStatePair.stateTransformMap.size();
+
+        auto graphicsPipelineGroup = vsg::StateGroup::create(createStateSetWithGraphicsPipeline(shaderModeMask, geometrymask, maxNumDescriptors));
+
+        group->addChild(graphicsPipelineGroup);
+
+        for (auto[stateset, transformeGeometryMap] : transformStatePair.stateTransformMap)
+        {
+            vsg::ref_ptr<vsg::Node> transformGeometryGraph = createTransformGeometryGraphVSG(transformeGeometryMap, searchPaths, forceGeomAttributes);
+            if (!transformGeometryGraph) continue;
+
+            vsg::ref_ptr<vsg::StateSet> vsg_stateset = createVsgStateSet(stateset);
+            if (vsg_stateset)
+            {
+                auto stategroup = vsg::StateGroup::create(vsg_stateset);
+                graphicsPipelineGroup->addChild(stategroup);
+                stategroup->addChild(transformGeometryGraph);
             }
             else
             {

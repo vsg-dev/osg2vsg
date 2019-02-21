@@ -5,19 +5,71 @@
 #include <chrono>
 #include <thread>
 
+#include <osg/Version>
+#include <osg/Billboard>
+#include <osg/MatrixTransform>
+#include <osg/AnimationPath>
+#include <osg/io_utils>
 #include <osgDB/ReadFile>
 #include <osgDB/WriteFile>
 #include <osgUtil/Optimizer>
 #include <osgUtil/MeshOptimizers>
-#include <osg/Version>
-#include <osg/Billboard>
-#include <osg/MatrixTransform>
 
 #include <osg2vsg/GraphicsNodes.h>
 #include <osg2vsg/ShaderUtils.h>
 #include <osg2vsg/GeometryUtils.h>
 #include <osg2vsg/SceneAnalysisVisitor.h>
 #include <osg2vsg/ComputeBounds.h>
+
+
+namespace vsg
+{
+    class AnimationPathHandler : public Inherit<Visitor, AnimationPathHandler>
+    {
+    public:
+        AnimationPathHandler(ref_ptr<Camera> camera, osg::ref_ptr<osg::AnimationPath> animationPath, clock::time_point start_point) :
+            _camera(camera),
+            _path(animationPath),
+            _start_point(start_point)
+        {
+            _lookAt = dynamic_cast<LookAt*>(_camera->getViewMatrix());
+
+            if (!_lookAt)
+            {
+                // TODO: need to work out how to map the original ViewMatrix to a LookAt and back, for now just fallback to assigning our own LookAt
+                _lookAt = new LookAt;
+            }
+        }
+
+        void apply(KeyPressEvent& keyPress) override
+        {
+            std::cout<<"KeyPressEvent "<<keyPress.keyBase<<std::endl;
+        }
+
+        void apply(FrameEvent& frame) override
+        {
+            double time = std::chrono::duration<double, std::chrono::seconds::period>(frame.frameStamp->time - _start_point).count();
+            osg::Matrixd matrix;
+            _path->getMatrix(time, matrix);
+
+            vsg::dmat4 vsg_matrix(matrix(0,0), matrix(1,0), matrix(2,0), matrix(3,0),
+                                  matrix(0,1), matrix(1,1), matrix(2,1), matrix(3,1),
+                                  matrix(0,2), matrix(1,2), matrix(2,2), matrix(3,2),
+                                  matrix(0,3), matrix(1,3), matrix(2,3), matrix(3,3));
+
+            _lookAt->set(vsg_matrix);
+        }
+
+
+    protected:
+        ref_ptr<Camera> _camera;
+        ref_ptr<LookAt> _lookAt;
+        ref_ptr<osg::AnimationPath> _path;
+        KeySymbol _homeKey = KEY_Space;
+        clock::time_point _start_point;
+    };
+}
+
 
 int main(int argc, char** argv)
 {
@@ -45,7 +97,9 @@ int main(int argc, char** argv)
     auto sleepTime = arguments.value(0.0, "--sleep");
     auto writeToFileProgramAndDataSetSets = arguments.read({"--write-stateset", "--ws"});
     auto optimize = !arguments.read("--no-optimize");
+    auto coreGenerator = arguments.read({"--core-generator", "--core"});
     auto outputFilename = arguments.value(std::string(), "-o");
+    auto pathFilename = arguments.value(std::string(),"-p");
     arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height);
     if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
 
@@ -92,7 +146,9 @@ int main(int argc, char** argv)
     osg_scene->accept(sceneAnalysis);
 
     // build VSG scene
-    auto vsg_scene = sceneAnalysis.createNewVSG(searchPaths);
+    vsg::ref_ptr<vsg::Node> vsg_scene;
+    if (coreGenerator) vsg_scene = sceneAnalysis.createCoreVSG(searchPaths);
+    else vsg_scene = sceneAnalysis.createNewVSG(searchPaths);
 
     if (!outputFilename.empty())
     {
@@ -163,8 +219,8 @@ int main(int argc, char** argv)
     double radius = vsg::length(computeBounds.bounds.max-computeBounds.bounds.min)*0.6;
 
     // set up the camera
-    vsg::ref_ptr<vsg::Perspective> perspective(new vsg::Perspective(60.0, static_cast<double>(window->extent2D().width) / static_cast<double>(window->extent2D().height), 0.1, radius * 2.0));
-    vsg::ref_ptr<vsg::LookAt> lookAt(new vsg::LookAt(centre+vsg::dvec3(0.0, -radius, 0.0), centre, vsg::dvec3(0.0, 0.0, 1.0)));
+    vsg::ref_ptr<vsg::Perspective> perspective(new vsg::Perspective(30.0, static_cast<double>(window->extent2D().width) / static_cast<double>(window->extent2D().height), 0.1, radius * 4.5));
+    vsg::ref_ptr<vsg::LookAt> lookAt(new vsg::LookAt(centre+vsg::dvec3(0.0, -radius*3.5, 0.0), centre, vsg::dvec3(0.0, 0.0, 1.0)));
     vsg::ref_ptr<vsg::Camera> camera(new vsg::Camera(perspective, lookAt, viewport));
 
 
@@ -191,12 +247,27 @@ int main(int argc, char** argv)
     //
     /////////////////////////////////////////////////////////////////////
 
+    viewer->addEventHandler(vsg::CloseHandler::create(viewer));
 
-    // assign a Trackball and CloseHandler to the Viewer to respond to events
-    viewer->addEventHandlers({
-        vsg::Trackball::create(camera),
-        vsg::CloseHandler::create(viewer)
-    });
+    if (pathFilename.empty())
+    {
+        viewer->addEventHandler(vsg::Trackball::create(camera));
+    }
+    else
+    {
+        std::ifstream in(pathFilename);
+        if (!in)
+        {
+            std::cout << "AnimationPat: Could not open animation path file \"" << pathFilename << "\".\n";
+            return 1;
+        }
+
+        osg::ref_ptr<osg::AnimationPath> animationPath = new osg::AnimationPath;
+        animationPath->setLoopMode(osg::AnimationPath::LOOP);
+        animationPath->read(in);
+
+        viewer->addEventHandler(vsg::AnimationPathHandler::create(camera, animationPath, viewer->start_point()));
+    }
 
     double time = 0.0;
     while (viewer->active() && (numFrames<0 || (numFrames--)>0))

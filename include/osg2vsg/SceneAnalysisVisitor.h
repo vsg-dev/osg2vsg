@@ -88,5 +88,7 @@ namespace osg2vsg
 
         vsg::ref_ptr<vsg::Node> createTransformGeometryGraphVSG(TransformGeometryMap& transformGeometryMap, vsg::Paths& searchPaths, uint32_t requiredGeomAttributesMask);
         vsg::ref_ptr<vsg::Node> createNewVSG(vsg::Paths& searchPaths);
+
+        vsg::ref_ptr<vsg::Node> createCoreVSG(vsg::Paths& searchPaths);
     };
 }
