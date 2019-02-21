@@ -97,7 +97,6 @@ int main(int argc, char** argv)
     auto sleepTime = arguments.value(0.0, "--sleep");
     auto writeToFileProgramAndDataSetSets = arguments.read({"--write-stateset", "--ws"});
     auto optimize = !arguments.read("--no-optimize");
-    auto newGenerator = arguments.read({"--new-generator", "--ng"});
     auto coreGenerator = arguments.read({"--core-generator", "--core"});
     auto outputFilename = arguments.value(std::string(), "-o");
     auto pathFilename = arguments.value(std::string(),"-p");
@@ -149,8 +148,7 @@ int main(int argc, char** argv)
     // build VSG scene
     vsg::ref_ptr<vsg::Node> vsg_scene;
     if (coreGenerator) vsg_scene = sceneAnalysis.createCoreVSG(searchPaths);
-    else if (newGenerator) vsg_scene = sceneAnalysis.createNewVSG(searchPaths);
-    else vsg_scene = sceneAnalysis.createVSG(searchPaths);
+    else vsg_scene = sceneAnalysis.createNewVSG(searchPaths);
 
     if (!outputFilename.empty())
     {

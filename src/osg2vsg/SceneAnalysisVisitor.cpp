@@ -357,45 +357,6 @@ osg::ref_ptr<osg::Node> SceneAnalysisVisitor::createOSG()
     return group;
 }
 
-vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createStateGeometryGraphVSG(StateGeometryMap& stateGeometryMap, vsg::Paths& searchPaths, uint32_t requiredGeomAttributesMask)
-{
-    DEBUG_OUTPUT << "createStateGeometryGraph()" << stateGeometryMap.size() << std::endl;
-
-    if (stateGeometryMap.empty()) return vsg::ref_ptr<vsg::Node>();
-
-    vsg::ref_ptr<vsg::Group> group = vsg::Group::create();
-    for (auto[stateset, geometries] : stateGeometryMap)
-    {
-        uint32_t shaderModeMask = calculateShaderModeMask(stateset);
-        shaderModeMask |= LIGHTING; // force lighting on/off
-
-        vsg::ref_ptr<vsg::GraphicsPipelineGroup> graphicsPipelineGroup = createGeometryGraphicsPipeline(shaderModeMask, requiredGeomAttributesMask, 1);
-        group->addChild(graphicsPipelineGroup);
-
-        auto stateGroup = vsg::Group::create();
-        graphicsPipelineGroup->addChild(stateGroup);
-
-        vsg::Group* attachpoint = stateGroup;
-
-        vsg::ref_ptr<vsg::AttributesNode> attributesNode = createTextureAttributesNode(stateset);
-        if (attributesNode.valid())
-        {
-            stateGroup->addChild(attributesNode);
-            attachpoint = attributesNode;
-        }
-
-        for (auto& geometry : geometries)
-        {
-            vsg::ref_ptr<vsg::Geometry> new_geometry = convertToVsg(geometry, requiredGeomAttributesMask);
-            if (new_geometry) attachpoint->addChild(new_geometry);
-        }
-    }
-
-    if (group->getNumChildren() == 1) return vsg::ref_ptr<vsg::Node>(group->getChild(0));
-
-    return group;
-}
-
 vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createTransformGeometryGraphVSG(TransformGeometryMap& transformGeometryMap, vsg::Paths& searchPaths, uint32_t requiredGeomAttributesMask)
 {
     DEBUG_OUTPUT << "createStateGeometryGraph()" << transformGeometryMap.size() << std::endl;
@@ -428,89 +389,9 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createTransformGeometryGraphVSG(Tr
     return group;
 }
 
-vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createVSG(vsg::Paths& searchPaths)
-{
-    uint32_t forceGeomAttributes = GeometryAttributes::STANDARD_ATTS;
-
-    vsg::ref_ptr<vsg::Group> group = vsg::Group::create();
-
-    for (auto[programStateSet, transformStatePair] : programTransformStateMap)
-    {
-        bool transformAtTop = transformStatePair.matrixStateGeometryMap.size() < transformStatePair.stateTransformMap.size();
-        if (transformAtTop)
-        {
-            for (auto[matrix, stateGeometryMap] : transformStatePair.matrixStateGeometryMap)
-            {
-                vsg::ref_ptr<vsg::Node> stateGeometryGraph = createStateGeometryGraphVSG(stateGeometryMap, searchPaths, forceGeomAttributes);
-                if (!stateGeometryGraph) continue;
-
-                if (!matrix.isIdentity())
-                {
-                    vsg::ref_ptr<vsg::MatrixTransform> transform = vsg::MatrixTransform::create();
-
-                    vsg::mat4 vsgmatrix = vsg::mat4(matrix(0, 0), matrix(1, 0), matrix(2, 0), matrix(3, 0),
-                                                    matrix(0, 1), matrix(1, 1), matrix(2, 1), matrix(3, 1),
-                                                    matrix(0, 2), matrix(1, 2), matrix(2, 2), matrix(3, 2),
-                                                    matrix(0, 3), matrix(1, 3), matrix(2, 3), matrix(3, 3));
-
-
-                    transform->_matrix = new vsg::mat4Value(vsgmatrix);
-
-                    group->addChild(transform);
-                    transform->addChild(stateGeometryGraph);
-                }
-                else
-                {
-                    group->addChild(stateGeometryGraph);
-                }
-            }
-        }
-        else
-        {
-            for (auto[stateset, transformeGeometryMap] : transformStatePair.stateTransformMap)
-            {
-                uint32_t shaderModeMask = calculateShaderModeMask(stateset);
-                shaderModeMask |= LIGHTING; // force lighting on/off
-
-                if (shaderModeMask & NORMAL_MAP)
-                {
-                    forceGeomAttributes |= TANGENT;
-                }
-
-                vsg::ref_ptr<vsg::Node> transformGeometryGraph = createTransformGeometryGraphVSG(transformeGeometryMap, searchPaths, forceGeomAttributes);
-                if (!transformGeometryGraph) continue;
-
-                vsg::ref_ptr<vsg::GraphicsPipelineGroup> graphicsPipelineGroup = createGeometryGraphicsPipeline(shaderModeMask, forceGeomAttributes, 1);
-                group->addChild(graphicsPipelineGroup);
-
-                auto stateGroup = vsg::Group::create();
-                graphicsPipelineGroup->addChild(stateGroup);
-
-                vsg::ref_ptr<vsg::AttributesNode> attributesNode = createTextureAttributesNode(stateset);
-                if(attributesNode.valid())
-                {
-                    stateGroup->addChild(attributesNode);
-                    attributesNode->addChild(transformGeometryGraph);
-                }
-                else
-                {
-                    stateGroup->addChild(transformGeometryGraph);
-                }
-            }
-        }
-
-        DEBUG_OUTPUT << "       programStateSet = " << programStateSet.get() << std::endl;
-        DEBUG_OUTPUT << "           transformStatePair.matrixStateGeometryMap.size() = " << transformStatePair.matrixStateGeometryMap.size() << std::endl;
-        DEBUG_OUTPUT << "           transformStatePair.stateTransformMap.size() = " << transformStatePair.stateTransformMap.size() << std::endl;
-    }
-    return group;
-}
-
 vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createNewVSG(vsg::Paths& searchPaths)
 {
     DEBUG_OUTPUT<<"SceneAnalysisVisitor::createNewVSG(vsg::Paths& searchPaths)"<<std::endl;
-
-    uint32_t forceGeomAttributes = GeometryAttributes::STANDARD_ATTS;
 
     vsg::ref_ptr<vsg::Group> group = vsg::Group::create();
 
@@ -519,8 +400,8 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createNewVSG(vsg::Paths& searchPat
         uint32_t geometrymask = masks.second;
         uint32_t shaderModeMask = masks.first;
 
-        // override masks
-        geometrymask = forceGeomAttributes;
+        shaderModeMask |= LIGHTING; // force lighting on
+        if(shaderModeMask & NORMAL_MAP) geometrymask |= TANGENT; // mesh propably won't have tangets so force them on if we want Normal mapping
 
         unsigned int maxNumDescriptors = transformStatePair.stateTransformMap.size();
 
@@ -530,7 +411,7 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createNewVSG(vsg::Paths& searchPat
 
         for (auto[stateset, transformeGeometryMap] : transformStatePair.stateTransformMap)
         {
-            vsg::ref_ptr<vsg::Node> transformGeometryGraph = createTransformGeometryGraphVSG(transformeGeometryMap, searchPaths, forceGeomAttributes);
+            vsg::ref_ptr<vsg::Node> transformGeometryGraph = createTransformGeometryGraphVSG(transformeGeometryMap, searchPaths, geometrymask);
             if (!transformGeometryGraph) continue;
 
             vsg::ref_ptr<vsg::AttributesNode> attributesNode = createTextureAttributesNode(stateset);
