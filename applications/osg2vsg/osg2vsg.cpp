@@ -46,6 +46,7 @@ int main(int argc, char** argv)
     auto writeToFileProgramAndDataSetSets = arguments.read({"--write-stateset", "--ws"});
     auto optimize = !arguments.read("--no-optimize");
     auto newGenerator = arguments.read({"--new-generator", "--ng"});
+    auto coreGenerator = arguments.read({"--core-generator", "--core"});
     auto outputFilename = arguments.value(std::string(), "-o");
     arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height);
     if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
@@ -93,7 +94,10 @@ int main(int argc, char** argv)
     osg_scene->accept(sceneAnalysis);
 
     // build VSG scene
-    auto vsg_scene = newGenerator ? sceneAnalysis.createNewVSG(searchPaths) : sceneAnalysis.createVSG(searchPaths);
+    vsg::ref_ptr<vsg::Node> vsg_scene;
+    if (coreGenerator) vsg_scene = sceneAnalysis.createCoreVSG(searchPaths);
+    else if (newGenerator) vsg_scene = sceneAnalysis.createNewVSG(searchPaths);
+    else vsg_scene = sceneAnalysis.createVSG(searchPaths);
 
     if (!outputFilename.empty())
     {

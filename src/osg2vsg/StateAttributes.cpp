@@ -46,6 +46,13 @@ void GraphicsPipelineAttribute::popFrom(State& state) const
     if (_viewPushConstant) _viewPushConstant->popFrom(state);
 }
 
+void GraphicsPipelineAttribute::dispatch(CommandBuffer& commandBuffer) const
+{
+    if (_bindPipeline) _bindPipeline->dispatch(commandBuffer);
+    if (_projPushConstant) _projPushConstant->dispatch(commandBuffer);
+    if (_viewPushConstant) _viewPushConstant->dispatch(commandBuffer);
+}
+
 void GraphicsPipelineAttribute::read(Input& input)
 {
     StateComponent::read(input);
@@ -189,3 +196,7 @@ void TextureAttributeNew::popFrom(State& state) const
     if (_bindDescriptorSets) _bindDescriptorSets->popFrom(state);
 }
 
+void TextureAttributeNew::dispatch(CommandBuffer& commandBuffer) const
+{
+    if (_bindDescriptorSets) _bindDescriptorSets->dispatch(commandBuffer);
+}

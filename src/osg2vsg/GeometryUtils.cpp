@@ -1,7 +1,10 @@
 #include <osg2vsg/GeometryUtils.h>
-
 #include <osg2vsg/ImageUtils.h>
 #include <osg2vsg/ShaderUtils.h>
+#include <osg2vsg/StateAttributes.h>
+
+#include <vsg/nodes/StateGroup.h>
+
 #include <osgUtil/MeshOptimizers>
 #include <osgUtil/TangentSpaceGenerator>
 
@@ -137,7 +140,7 @@ namespace osg2vsg
     {
         auto minFilterMipmapMode = convertToFilterAndMipmapMode(texture->getFilter(osg::Texture::FilterParameter::MIN_FILTER));
         auto magFilterMipmapMode = convertToFilterAndMipmapMode(texture->getFilter(osg::Texture::FilterParameter::MAG_FILTER));
-        
+
         VkSamplerCreateInfo samplerInfo = {};
         samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         samplerInfo.minFilter = minFilterMipmapMode.first;
@@ -369,7 +372,7 @@ namespace osg2vsg
 
 
         vsg::DescriptorSetLayoutBindings descriptorBindings  = vsg::DescriptorSetLayoutBindings();
-        
+
         if (shaderModeMask & DIFFUSE_MAP) descriptorBindings.push_back( { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr } ); // { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
         if (shaderModeMask & NORMAL_MAP) descriptorBindings.push_back( { 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr  } );
 
@@ -432,6 +435,104 @@ namespace osg2vsg
         };
 
         return gp;
+    }
+
+    vsg::ref_ptr<vsg::StateSet> createStateSetWithGraphicsPipeline(const uint32_t& shaderModeMask, const uint32_t& geometryAttributesMask, unsigned int maxNumDescriptors)
+    {
+        auto stateset = vsg::StateSet::create();
+        //
+        // load shaders
+        //
+        ShaderCompiler shaderCompiler;
+
+        vsg::GraphicsPipelineAttribute::Shaders shaders{
+            vsg::Shader::create(VK_SHADER_STAGE_VERTEX_BIT, "main", createVertexSource(shaderModeMask, geometryAttributesMask, false)),
+            vsg::Shader::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", createFragmentSource(shaderModeMask, geometryAttributesMask, false)),
+        };
+
+        if (!shaderCompiler.compile(shaders)) return vsg::ref_ptr<vsg::StateSet>();
+
+        // how many textures
+        maxNumDescriptors = maxNumDescriptors * ((shaderModeMask & DIFFUSE_MAP ? 1 : 0) + (shaderModeMask & NORMAL_MAP ? 1 : 0));
+
+        //
+        // set up graphics pipeline
+        //
+        vsg::ref_ptr<vsg::GraphicsPipelineAttribute> gp = vsg::GraphicsPipelineAttribute::create();
+        gp->shaders = shaders;
+        gp->maxSets = maxNumDescriptors;
+        gp->descriptorPoolSizes = vsg::DescriptorPoolSizes
+        {
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxNumDescriptors} // type, descriptorCount
+        };
+
+
+        vsg::DescriptorSetLayoutBindings descriptorBindings  = vsg::DescriptorSetLayoutBindings();
+
+        if (shaderModeMask & DIFFUSE_MAP) descriptorBindings.push_back( { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr } ); // { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
+        if (shaderModeMask & NORMAL_MAP) descriptorBindings.push_back( { 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr  } );
+
+        gp->descriptorSetLayoutBindings = descriptorBindings;
+
+        gp->pushConstantRanges = vsg::PushConstantRanges
+        {
+            {VK_SHADER_STAGE_VERTEX_BIT, 0, 196} // projection view, and model matrices
+        };
+
+        uint32_t vertexBindingIndex = 0;
+
+        vsg::VertexInputState::Bindings vertexBindingsDescriptions = vsg::VertexInputState::Bindings
+        {
+            VkVertexInputBindingDescription{vertexBindingIndex, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX}, // vertex data
+        };
+
+        vsg::VertexInputState::Attributes vertexAttributeDescriptions = vsg::VertexInputState::Attributes
+        {
+            VkVertexInputAttributeDescription{VERTEX_CHANNEL, vertexBindingIndex, VK_FORMAT_R32G32B32_SFLOAT, 0}, // vertex data
+        };
+
+        vertexBindingIndex++;
+
+        if (geometryAttributesMask & NORMAL)
+        {
+            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingIndex, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX});
+            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ NORMAL_CHANNEL, vertexBindingIndex, VK_FORMAT_R32G32B32_SFLOAT, 0 }); // normal as vec3
+            vertexBindingIndex++;
+        }
+        if (geometryAttributesMask & TANGENT)
+        {
+            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingIndex, sizeof(vsg::vec4), VK_VERTEX_INPUT_RATE_VERTEX });
+            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ TANGENT_CHANNEL, vertexBindingIndex, VK_FORMAT_R32G32B32A32_SFLOAT, 0 }); // tanget as vec4
+            vertexBindingIndex++;
+        }
+        if (geometryAttributesMask & COLOR)
+        {
+            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingIndex, sizeof(vsg::vec4), VK_VERTEX_INPUT_RATE_VERTEX });
+            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ COLOR_CHANNEL, vertexBindingIndex, VK_FORMAT_R32G32B32A32_SFLOAT, 0 }); // color as vec4
+            vertexBindingIndex++;
+        }
+        if (geometryAttributesMask & TEXCOORD0)
+        {
+            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingIndex, sizeof(vsg::vec2), VK_VERTEX_INPUT_RATE_VERTEX });
+            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ TEXCOORD0_CHANNEL, vertexBindingIndex, VK_FORMAT_R32G32_SFLOAT, 0 }); // texcoord as vec2
+            vertexBindingIndex++;
+        }
+
+        gp->vertexBindingsDescriptions = vertexBindingsDescriptions;
+        gp->vertexAttributeDescriptions = vertexAttributeDescriptions;
+
+        gp->pipelineStates = vsg::GraphicsPipelineStates
+        {
+            vsg::InputAssemblyState::create(),
+            vsg::RasterizationState::create(),
+            vsg::MultisampleState::create(),
+            vsg::ColorBlendState::create(),
+            vsg::DepthStencilState::create()
+        };
+
+        stateset->add(gp);
+
+        return stateset;
     }
 }
 

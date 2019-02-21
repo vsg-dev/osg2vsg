@@ -23,6 +23,8 @@ namespace vsg
         void pushTo(State& state) const override;
         void popFrom(State& state) const override;
 
+        void dispatch(CommandBuffer& commandBuffer) const override;
+
         void read(Input& input) override;
         void write(Output& output) const override;
 
@@ -57,6 +59,8 @@ namespace vsg
 
         void pushTo(State& state) const override;
         void popFrom(State& state) const override;
+
+        void dispatch(CommandBuffer& commandBuffer) const override;
 
         // settings
         uint32_t _bindingIndex = 0;

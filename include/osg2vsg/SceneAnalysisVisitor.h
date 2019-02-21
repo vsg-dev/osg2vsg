@@ -91,5 +91,7 @@ namespace osg2vsg
         vsg::ref_ptr<vsg::Node> createVSG(vsg::Paths& searchPaths);
 
         vsg::ref_ptr<vsg::Node> createNewVSG(vsg::Paths& searchPaths);
+
+        vsg::ref_ptr<vsg::Node> createCoreVSG(vsg::Paths& searchPaths);
     };
 }
