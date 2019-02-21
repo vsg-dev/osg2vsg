@@ -164,23 +164,6 @@ namespace osg2vsg
         return samplerInfo;
     }
 
-    vsg::ref_ptr<vsg::Texture> convertToVsg(const osg::Texture* osgtexture)
-    {
-        if (!osgtexture || !osgtexture->getImage(0)) return vsg::ref_ptr<vsg::Texture>();
-
-        auto textureData = convertToVsg(osgtexture->getImage(0));
-        if (!textureData)
-        {
-           // DEBUG_OUTPUT << "Could not convert osg image data" << std::endl;
-            return vsg::ref_ptr<vsg::Texture>();
-        }
-        vsg::ref_ptr<vsg::Texture> texture = vsg::Texture::create();
-        texture->_textureData = textureData;
-        texture->_samplerInfo = convertToSamplerCreateInfo(osgtexture);
-
-        return texture;
-    }
-
     vsg::ref_ptr<vsg::TextureAttribute> convertToVsgAttribute(const osg::Texture* osgtexture)
     {
         if (!osgtexture || !osgtexture->getImage(0)) return vsg::ref_ptr<vsg::TextureAttribute>();

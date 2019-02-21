@@ -52,8 +52,6 @@ namespace osg2vsg
 
     extern OSG2VSG_DECLSPEC VkSamplerCreateInfo convertToSamplerCreateInfo(const osg::Texture* texture);
 
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Texture> convertToVsg(const osg::Texture* osgtexture);
-
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::AttributesNode> createTextureAttributesNode(const osg::StateSet* stateset);
 
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Geometry> convertToVsg(osg::Geometry* geometry, uint32_t requiredAttributesMask = 0);
