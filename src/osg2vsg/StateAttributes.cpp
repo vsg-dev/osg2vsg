@@ -126,7 +126,7 @@ void GraphicsPipelineAttribute::compile(Context& context)
 //
 // TextureAttribut
 //
-TextureAttributeNew::TextureAttributeNew(Allocator* allocator) :
+Texture::Texture(Allocator* allocator) :
     Inherit(allocator)
 {
     // set default sampler info
@@ -150,7 +150,7 @@ TextureAttributeNew::TextureAttributeNew(Allocator* allocator) :
     _samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 }
 
-void TextureAttributeNew::compile(Context& context)
+void Texture::compile(Context& context)
 {
     ref_ptr<Sampler> sampler = Sampler::create(context.device, _samplerInfo, nullptr);
     vsg::ImageData imageData = vsg::transferImageData(context.device, context.commandPool, context.graphicsQueue, _textureData, sampler);
@@ -171,14 +171,14 @@ void TextureAttributeNew::compile(Context& context)
         // setup binding of descriptors
         _bindDescriptorSets = vsg::BindDescriptorSets::create(VK_PIPELINE_BIND_POINT_GRAPHICS, context.pipelineLayout, vsg::DescriptorSets{descriptorSet}); // device dependent
 
-        DEBUG_OUTPUT<<"TextureAttribute::compile(() succeeded."<<std::endl;
+        DEBUG_OUTPUT<<"Texture::compile(() succeeded."<<std::endl;
         DEBUG_OUTPUT<<"   imageData._sampler = "<<imageData._sampler.get()<<std::endl;
         DEBUG_OUTPUT<<"   imageData._imageView = "<<imageData._imageView.get()<<std::endl;
         DEBUG_OUTPUT<<"   imageData._imageLayout = "<<imageData._imageLayout<<std::endl;
     }
     else
     {
-        DEBUG_OUTPUT<<"TextureAttribute::compile(() failed, descriptorSet not created."<<std::endl;
+        DEBUG_OUTPUT<<"Texture::compile(() failed, descriptorSet not created."<<std::endl;
         DEBUG_OUTPUT<<"   imageData._sampler = "<<imageData._sampler.get()<<std::endl;
         DEBUG_OUTPUT<<"   imageData._imageView = "<<imageData._imageView.get()<<std::endl;
         DEBUG_OUTPUT<<"   imageData._imageLayout = "<<imageData._imageLayout<<std::endl;
@@ -186,17 +186,17 @@ void TextureAttributeNew::compile(Context& context)
     }
 }
 
-void TextureAttributeNew::pushTo(State& state) const
+void Texture::pushTo(State& state) const
 {
     if (_bindDescriptorSets) _bindDescriptorSets->pushTo(state);
 }
 
-void TextureAttributeNew::popFrom(State& state) const
+void Texture::popFrom(State& state) const
 {
     if (_bindDescriptorSets) _bindDescriptorSets->popFrom(state);
 }
 
-void TextureAttributeNew::dispatch(CommandBuffer& commandBuffer) const
+void Texture::dispatch(CommandBuffer& commandBuffer) const
 {
     if (_bindDescriptorSets) _bindDescriptorSets->dispatch(commandBuffer);
 }
