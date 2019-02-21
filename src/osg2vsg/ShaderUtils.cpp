@@ -23,12 +23,12 @@ uint32_t osg2vsg::calculateShaderModeMask(osg::StateSet* stateSet)
     {
         //if (stateSet->getMode(GL_BLEND) & osg::StateAttribute::ON)
         //    stateMask |= ShaderGen::BLEND;
-        if (stateSet->getMode(GL_LIGHTING) & osg::StateAttribute::ON)
-            stateMask |= LIGHTING;
-        if (stateSet->getTextureAttribute(0, osg::StateAttribute::TEXTURE))
-            stateMask |= DIFFUSE_MAP;
-        if (stateSet->getTextureAttribute(NORMAL_TEXTURE_UNIT, osg::StateAttribute::TEXTURE) /*&& geometry != 0 && geometry->getVertexAttribArray(6)*/)
-            stateMask |= NORMAL_MAP;
+        if (stateSet->getMode(GL_LIGHTING) & osg::StateAttribute::ON)  stateMask |= LIGHTING;
+        if (stateSet->getTextureAttribute(0, osg::StateAttribute::TEXTURE)) stateMask |= DIFFUSE_MAP;
+        if (stateSet->getTextureAttribute(OPACITY_TEXTURE_UNIT, osg::StateAttribute::TEXTURE)) stateMask |= OPACITY_MAP;
+        if (stateSet->getTextureAttribute(AMBIENT_TEXTURE_UNIT, osg::StateAttribute::TEXTURE)) stateMask |= AMBIENT_MAP;
+        if (stateSet->getTextureAttribute(NORMAL_TEXTURE_UNIT, osg::StateAttribute::TEXTURE)) stateMask |= NORMAL_MAP;
+        if (stateSet->getTextureAttribute(SPECULAR_TEXTURE_UNIT, osg::StateAttribute::TEXTURE)) stateMask |= SPECULAR_MAP;
     }
     return stateMask;
 }
@@ -51,11 +51,9 @@ std::string osg2vsg::createVertexSource(const uint32_t& shaderModeMask, const ui
     uint32_t colorindex = osgCompatible ? 2 : (hascolor ? COLOR_CHANNEL : 0);
     uint32_t tex0index = osgCompatible ? 3 : (hastex0 ? TEXCOORD0_CHANNEL : 0);
 
-    bool usenormal = hasnormal && (shaderModeMask & (LIGHTING | NORMAL_MAP));
-    bool usetex0 = hastex0 && (shaderModeMask & (DIFFUSE_MAP | NORMAL_MAP));
-    bool uselighting = usenormal && (shaderModeMask & (LIGHTING));
-    bool usediffusemap = usetex0 && (shaderModeMask & (DIFFUSE_MAP));
-    bool usenormalmap = usetex0 && hastanget && (shaderModeMask & (NORMAL_MAP));
+    bool uselighting = hasnormal && (shaderModeMask & (LIGHTING));
+    bool usediffusemap = hastex0 && (shaderModeMask & (DIFFUSE_MAP));
+    bool usenormalmap = hastex0 && uselighting && hastanget && (shaderModeMask & (NORMAL_MAP));
 
 
     std::ostringstream uniforms;
@@ -72,7 +70,7 @@ std::string osg2vsg::createVertexSource(const uint32_t& shaderModeMask, const ui
     {
         uniforms << "uniform mat4 osg_ModelViewProjectionMatrix;\n";
         if (uselighting) uniforms << "uniform mat4 osg_ModelViewMatrix;\n";
-        if (usenormal) uniforms << "uniform mat3 osg_NormalMatrix;\n";
+        if (hasnormal) uniforms << "uniform mat3 osg_NormalMatrix;\n";
 
         mvpmat = "osg_ModelViewProjectionMatrix";
         mvmat = "osg_ModelViewMatrix";
@@ -98,7 +96,7 @@ std::string osg2vsg::createVertexSource(const uint32_t& shaderModeMask, const ui
 
     inputs << "layout(location = " << vertexindex << ") in vec3 osg_Vertex;\n"; // vertex always at location 0
 
-    if (usenormal) inputs << "layout(location = " << normalindex << ") in vec3 osg_Normal;\n";
+    if (hasnormal) inputs << "layout(location = " << normalindex << ") in vec3 osg_Normal;\n";
 
     if (hastanget)
     {
@@ -107,12 +105,12 @@ std::string osg2vsg::createVertexSource(const uint32_t& shaderModeMask, const ui
 
     if (hascolor) inputs << "layout(location = " << colorindex << ") in vec4 osg_Color;\n";
 
-    if (usetex0) inputs << "layout(location = " << tex0index << ") in vec2 osg_MultiTexCoord0;\n";
+    if (hastex0) inputs << "layout(location = " << tex0index << ") in vec2 osg_MultiTexCoord0;\n";
 
 
     // vert outputs
 
-    if (usetex0)
+    if (hastex0)
     {
         outputs << "layout(location = 0) out vec2 texCoord0;\n";
     }
@@ -164,7 +162,7 @@ std::string osg2vsg::createVertexSource(const uint32_t& shaderModeMask, const ui
         "{\n"\
         "  gl_Position = " << mvpmat << " * vec4(osg_Vertex, 1.0);\n";
 
-    if (usetex0)
+    if (hastex0)
     {
         vert << "  texCoord0 = osg_MultiTexCoord0.st;\n";
     }
@@ -244,11 +242,18 @@ std::string osg2vsg::createFragmentSource(const uint32_t& shaderModeMask, const 
     bool hascolor = geometryAttrbutes & COLOR;
     bool hastex0 = geometryAttrbutes & TEXCOORD0;
 
-    bool usenormal = hasnormal && (shaderModeMask & (LIGHTING | NORMAL_MAP));
-    bool usetex0 = hastex0 && (shaderModeMask & (DIFFUSE_MAP | NORMAL_MAP));
-    bool uselighting = usenormal && (shaderModeMask & (LIGHTING));
-    bool usediffusemap = usetex0 && (shaderModeMask & (DIFFUSE_MAP));
-    bool usenormalmap = usetex0 && (shaderModeMask & (NORMAL_MAP));
+    bool hasdiffusemap = shaderModeMask & DIFFUSE_MAP;
+    bool hasopacitymap = shaderModeMask & OPACITY_MAP;
+    bool hasambientmap = shaderModeMask & AMBIENT_MAP;
+    bool hasnormalmap = shaderModeMask & NORMAL_MAP;
+    bool hasspecularmap = shaderModeMask & SPECULAR_MAP;
+
+    bool uselighting = hasnormal && (shaderModeMask & (LIGHTING));
+    bool usediffusemap = hastex0 && hasdiffusemap;
+    bool useopacitymap = hastex0 && hasopacitymap;
+    bool useambientmap = hastex0 && uselighting && hasambientmap;
+    bool usenormalmap = hastex0 && uselighting && hasnormalmap;
+    bool usespecularmap = hastex0 && hasspecularmap;
 
     std::ostringstream uniforms;
     std::ostringstream inputs;
@@ -256,7 +261,7 @@ std::string osg2vsg::createFragmentSource(const uint32_t& shaderModeMask, const 
 
     // inputs
 
-    if (usetex0)
+    if (hastex0)
     {
         inputs << "layout(location = 0) in vec2 texCoord0;\n";
     }
@@ -299,14 +304,29 @@ std::string osg2vsg::createFragmentSource(const uint32_t& shaderModeMask, const 
             "uniform osgMaterial osg_Material;\n";*/
     }
 
-    if (usediffusemap)
+    if (hasdiffusemap)
     {
-        uniforms << "layout(binding = 0) uniform sampler2D diffuseMap;\n";
+        uniforms << "layout(binding = " << DIFFUSE_TEXTURE_UNIT << ") uniform sampler2D diffuseMap;\n";
     }
 
-    if (usenormalmap)
+    if (hasopacitymap)
     {
-        uniforms << "layout(binding = 1) uniform sampler2D normalMap;\n";
+        uniforms << "layout(binding = " << OPACITY_TEXTURE_UNIT << ") uniform sampler2D opacityMap;\n";
+    }
+
+    if (hasambientmap)
+    {
+        uniforms << "layout(binding = " << AMBIENT_TEXTURE_UNIT << ") uniform sampler2D ambientMap;\n";
+    }
+
+    if (hasnormalmap)
+    {
+        uniforms << "layout(binding = " << NORMAL_TEXTURE_UNIT << ") uniform sampler2D normalMap;\n";
+    }
+
+    if (hasspecularmap)
+    {
+        uniforms << "layout(binding = " << SPECULAR_TEXTURE_UNIT << ") uniform sampler2D specularMap;\n";
     }
 
     // outputs
@@ -346,11 +366,15 @@ std::string osg2vsg::createFragmentSource(const uint32_t& shaderModeMask, const 
     if (usenormalmap)
     {
         frag << "  vec3 normalDir = texture(normalMap, texCoord0.st).xyz*2.0-1.0;\n";
-        //frag << " normalDir.g = -normalDir.g;\n";
+        frag << " normalDir.g = -normalDir.g;\n";
     }
 
     if (uselighting || usenormalmap)
     {
+        frag << "vec3 specularColor = " << (usespecularmap ? "texture(specularMap, texCoord0.st).rgb" : "vec3(0.2,0.2,0.2)") << ";\n";
+
+        frag << "float ambientOcclusion = " << (useambientmap ? "texture(ambientMap, texCoord0.st).r" : "1.0") << ";\n";
+
         frag <<
             "  vec3 nd = normalize(normalDir);\n"\
             "  vec3 ld = normalize(lightDir);\n"\
@@ -359,12 +383,13 @@ std::string osg2vsg::createFragmentSource(const uint32_t& shaderModeMask, const 
             "  color += /*osg_Material.ambient*/ vec4(0.1,0.1,0.1,0.0);\n"\
             "  float diff = max(dot(ld, nd), 0.0);\n"\
             "  color += /*osg_Material.diffuse*/ vec4(0.8,0.8,0.8,0.0) * diff;\n"\
+            "  color *= ambientOcclusion;\n"\
             "  color *= base;\n"\
             "  if (diff > 0.0)\n"\
             "  {\n"\
             "    vec3 halfDir = normalize(ld+vd);\n"\
-            "    color.rgb += base.a * /*osg_Material.specular.rgb*/ vec3(0.2,0.2,0.2) * \n"\
-            "      pow(max(dot(halfDir, nd), 0.0), /*osg_Material.shine*/ 16.0);\n"\
+            "    color.rgb += base.a * specularColor * \n"\
+            "      pow(max(dot(halfDir, nd), 0.0), 16.0/*osg_Material.shine*/);\n"\
             "  }\n";
     }
     else
@@ -373,6 +398,12 @@ std::string osg2vsg::createFragmentSource(const uint32_t& shaderModeMask, const 
     }
 
     frag << "  outColor = color;\n";
+
+    if (useopacitymap)
+    {
+        frag << "  outColor.a *= texture(opacityMap, texCoord0.st).r;\n";
+    }
+
     frag << "}\n";
 
     return frag.str();

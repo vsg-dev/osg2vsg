@@ -15,7 +15,10 @@ namespace osg2vsg
         NONE = 0,
         LIGHTING = 1,
         DIFFUSE_MAP = 2,
-        NORMAL_MAP = 4 
+        OPACITY_MAP = 4,
+        AMBIENT_MAP = 8,
+        NORMAL_MAP = 16,
+        SPECULAR_MAP = 32
     };
 
     // taken from osg fbx plugin
