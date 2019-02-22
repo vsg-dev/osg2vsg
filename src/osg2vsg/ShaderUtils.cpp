@@ -24,11 +24,19 @@ uint32_t osg2vsg::calculateShaderModeMask(osg::StateSet* stateSet)
         //if (stateSet->getMode(GL_BLEND) & osg::StateAttribute::ON)
         //    stateMask |= ShaderGen::BLEND;
         if (stateSet->getMode(GL_LIGHTING) & osg::StateAttribute::ON)  stateMask |= LIGHTING;
-        if (stateSet->getTextureAttribute(0, osg::StateAttribute::TEXTURE)) stateMask |= DIFFUSE_MAP;
-        if (stateSet->getTextureAttribute(OPACITY_TEXTURE_UNIT, osg::StateAttribute::TEXTURE)) stateMask |= OPACITY_MAP;
-        if (stateSet->getTextureAttribute(AMBIENT_TEXTURE_UNIT, osg::StateAttribute::TEXTURE)) stateMask |= AMBIENT_MAP;
-        if (stateSet->getTextureAttribute(NORMAL_TEXTURE_UNIT, osg::StateAttribute::TEXTURE)) stateMask |= NORMAL_MAP;
-        if (stateSet->getTextureAttribute(SPECULAR_TEXTURE_UNIT, osg::StateAttribute::TEXTURE)) stateMask |= SPECULAR_MAP;
+
+        auto hasTextureWithImageInChannel = [](osg::StateSet* stateSet, unsigned int channel)
+        {
+            auto asTex = dynamic_cast<osg::Texture*>(stateSet->getTextureAttribute(channel, osg::StateAttribute::TEXTURE));
+            if(asTex && asTex->getImage(0)) return true;
+            return false;
+        };
+
+        if (hasTextureWithImageInChannel(stateSet, 0)) stateMask |= DIFFUSE_MAP;
+        if (hasTextureWithImageInChannel(stateSet, OPACITY_TEXTURE_UNIT)) stateMask |= OPACITY_MAP;
+        if (hasTextureWithImageInChannel(stateSet, AMBIENT_TEXTURE_UNIT)) stateMask |= AMBIENT_MAP;
+        if (hasTextureWithImageInChannel(stateSet, NORMAL_TEXTURE_UNIT)) stateMask |= NORMAL_MAP;
+        if (hasTextureWithImageInChannel(stateSet, SPECULAR_TEXTURE_UNIT)) stateMask |= SPECULAR_MAP;
     }
     return stateMask;
 }
