@@ -85,10 +85,14 @@ void GraphicsPipelineAttribute::compile(Context& context)
     context.descriptorPool = DescriptorPool::create(context.device, maxSets, descriptorPoolSizes);
     DEBUG_OUTPUT<<"  context.descriptorPool = "<<context.descriptorPool.get()<<std::endl;
 
-    context.descriptorSetLayout = DescriptorSetLayout::create(context.device, descriptorSetLayoutBindings);
-    DEBUG_OUTPUT<<"  context.descriptorSetLayout = "<<context.descriptorSetLayout.get()<<std::endl;
+    for(unsigned int i = 0; i< descriptorSetLayoutBindings.size(); i++)
+    {
+        context.descriptorSetLayouts.push_back(DescriptorSetLayout::create(context.device, descriptorSetLayoutBindings[i]));
+        DEBUG_OUTPUT << "  context.descriptorSetLayout = " << context.descriptorSetLayouts[i].get() << std::endl;
+    }
+    
 
-    context.pipelineLayout = PipelineLayout::create(context.device, {context.descriptorSetLayout}, pushConstantRanges);
+    context.pipelineLayout = PipelineLayout::create(context.device, context.descriptorSetLayouts, pushConstantRanges);
     DEBUG_OUTPUT<<"  context.pipelineLayout = "<<context.pipelineLayout.get()<<std::endl;
 
 
@@ -160,10 +164,13 @@ void Texture::compile(Context& context)
         return;
     }
 
-    // set up DescriptorSet
-    vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = vsg::DescriptorSet::create(context.device, context.descriptorPool, context.descriptorSetLayout,
+    _descriptor = vsg::DescriptorImage::create(_bindingIndex, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, vsg::ImageDataList{ imageData });
+
+    /*
+    // set up DescriptorSet (at the mo theres a descriptor set per texture, use the binding index to determine set number so we can find in the shader) 
+    vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = vsg::DescriptorSet::create(context.device, context.descriptorPool, context.descriptorSetLayouts[_bindingIndex],
     {
-        vsg::DescriptorImage::create(_bindingIndex, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, vsg::ImageDataList{imageData})
+        vsg::DescriptorImage::create(0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, vsg::ImageDataList{imageData})
     });
 
     if (descriptorSet)
@@ -184,19 +191,17 @@ void Texture::compile(Context& context)
         DEBUG_OUTPUT<<"   imageData._imageLayout = "<<imageData._imageLayout<<std::endl;
         DEBUG_OUTPUT<<"   _textureData = "<<_textureData->width()<<", "<<_textureData->height()<<", "<<_textureData->depth()<<", "<<std::endl;
     }
+    */
 }
 
 void Texture::pushTo(State& state) const
 {
-    if (_bindDescriptorSets) _bindDescriptorSets->pushTo(state);
 }
 
 void Texture::popFrom(State& state) const
 {
-    if (_bindDescriptorSets) _bindDescriptorSets->popFrom(state);
 }
 
 void Texture::dispatch(CommandBuffer& commandBuffer) const
 {
-    if (_bindDescriptorSets) _bindDescriptorSets->dispatch(commandBuffer);
 }

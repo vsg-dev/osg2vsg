@@ -236,7 +236,7 @@ std::string osg2vsg::createVertexSource(const uint32_t& shaderModeMask, const ui
     return vert.str();
 }
 
-std::string osg2vsg::createFragmentSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes, bool osgCompatible)
+std::string osg2vsg::createFragmentSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes, bool osgCompatible, bool setPerTexture)
 {
     bool hasnormal = geometryAttrbutes & NORMAL;
     bool hascolor = geometryAttrbutes & COLOR;
@@ -304,29 +304,60 @@ std::string osg2vsg::createFragmentSource(const uint32_t& shaderModeMask, const 
             "uniform osgMaterial osg_Material;\n";*/
     }
 
-    if (hasdiffusemap)
+    if(setPerTexture)
     {
-        uniforms << "layout(binding = " << DIFFUSE_TEXTURE_UNIT << ") uniform sampler2D diffuseMap;\n";
-    }
+        int setIndex = 0;
+        if (hasdiffusemap)
+        {
+            uniforms << "layout(set = " << setIndex++ << ", binding = 0) uniform sampler2D diffuseMap;\n";
+        }
 
-    if (hasopacitymap)
-    {
-        uniforms << "layout(binding = " << OPACITY_TEXTURE_UNIT << ") uniform sampler2D opacityMap;\n";
-    }
+        if (hasopacitymap)
+        {
+            uniforms << "layout(set = " << setIndex++ << ", binding = 0) uniform sampler2D opacityMap;\n";
+        }
 
-    if (hasambientmap)
-    {
-        uniforms << "layout(binding = " << AMBIENT_TEXTURE_UNIT << ") uniform sampler2D ambientMap;\n";
-    }
+        if (hasambientmap)
+        {
+            uniforms << "layout(set = " << setIndex++ << ", binding = 0) uniform sampler2D ambientMap;\n";
+        }
 
-    if (hasnormalmap)
-    {
-        uniforms << "layout(binding = " << NORMAL_TEXTURE_UNIT << ") uniform sampler2D normalMap;\n";
-    }
+        if (hasnormalmap)
+        {
+            uniforms << "layout(set = " << setIndex++ << ", binding = 0) uniform sampler2D normalMap;\n";
+        }
 
-    if (hasspecularmap)
+        if (hasspecularmap)
+        {
+            uniforms << "layout(set = " << setIndex++ << ", binding = 0) uniform sampler2D specularMap;\n";
+        }
+    }
+    else
     {
-        uniforms << "layout(binding = " << SPECULAR_TEXTURE_UNIT << ") uniform sampler2D specularMap;\n";
+        if (hasdiffusemap)
+        {
+            uniforms << "layout(binding = " << DIFFUSE_TEXTURE_UNIT << ") uniform sampler2D diffuseMap;\n";
+        }
+
+        if (hasopacitymap)
+        {
+            uniforms << "layout(binding = " << OPACITY_TEXTURE_UNIT << ") uniform sampler2D opacityMap;\n";
+        }
+
+        if (hasambientmap)
+        {
+            uniforms << "layout(binding = " << AMBIENT_TEXTURE_UNIT << ") uniform sampler2D ambientMap;\n";
+        }
+
+        if (hasnormalmap)
+        {
+            uniforms << "layout(binding = " << NORMAL_TEXTURE_UNIT << ") uniform sampler2D normalMap;\n";
+        }
+
+        if (hasspecularmap)
+        {
+            uniforms << "layout(binding = " << SPECULAR_TEXTURE_UNIT << ") uniform sampler2D specularMap;\n";
+        }
     }
 
     // outputs

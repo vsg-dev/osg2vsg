@@ -12,6 +12,59 @@
 
 namespace vsg
 {
+    class DescriptorStateComponent : public Inherit<StateComponent, DescriptorStateComponent>
+    {
+    public:
+        DescriptorStateComponent(Allocator* allocator = nullptr) : Inherit(allocator) {}
+
+        void pushTo(Descriptors& descriptors) const
+        {
+            if (_descriptor.valid())
+            {
+                descriptors.push_back(_descriptor);
+            }
+        }
+
+        // compiled object
+        ref_ptr<vsg::Descriptor> _descriptor;
+    };
+    VSG_type_name(vsg::DescriptorStateComponent);
+
+    class DescriptorSetStateSet : public Inherit<StateSet, DescriptorSetStateSet>
+    {
+    public:
+        DescriptorSetStateSet(Allocator* allocator = nullptr) : Inherit(allocator) {}
+
+        void compile(Context& context)
+        {
+            Inherit::compile(context);
+
+            Descriptors descriptors;
+            for (auto& component : _stateComponents)
+            {
+                auto descriptorComponent = dynamic_cast<DescriptorStateComponent*>(component.get());
+                if(descriptorComponent) descriptorComponent->pushTo(descriptors);
+            }
+            vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = vsg::DescriptorSet::create(context.device, context.descriptorPool, context.descriptorSetLayouts[0], descriptors);
+            _bindDescriptorSets = vsg::BindDescriptorSets::create(VK_PIPELINE_BIND_POINT_GRAPHICS, context.pipelineLayout, vsg::DescriptorSets{ descriptorSet });
+        }
+
+        void pushTo(State& state) const
+        {
+            Inherit::pushTo(state);
+            _bindDescriptorSets->pushTo(state);
+        }
+
+        void popFrom(State& state) const
+        {
+            Inherit::popFrom(state);
+            _bindDescriptorSets->popFrom(state);
+        }
+
+        // compild object
+        ref_ptr<vsg::BindDescriptorSets> _bindDescriptorSets;
+    };
+    VSG_type_name(vsg::DescriptorSetStateSet)
 
     class GraphicsPipelineAttribute : public Inherit<StateComponent, GraphicsPipelineAttribute>
     {
@@ -36,7 +89,7 @@ namespace vsg
         uint32_t maxSets = 0;
         DescriptorPoolSizes descriptorPoolSizes; // need to accumulate descriptorPoolSizes by looking at scene graph
         // descriptorSetLayout ..
-        DescriptorSetLayoutBindings descriptorSetLayoutBindings;
+        std::vector<DescriptorSetLayoutBindings> descriptorSetLayoutBindings;
         PushConstantRanges pushConstantRanges;
         VertexInputState::Bindings vertexBindingsDescriptions;
         VertexInputState::Attributes vertexAttributeDescriptions;
@@ -50,7 +103,7 @@ namespace vsg
     };
     VSG_type_name(vsg::GraphicsPipelineAttribute)
 
-    class Texture : public Inherit<StateComponent, Texture>
+    class Texture : public Inherit<DescriptorStateComponent, Texture>
     {
     public:
         Texture(Allocator* allocator = nullptr);
@@ -68,8 +121,7 @@ namespace vsg
         ref_ptr<Data> _textureData;
 
         // compiled objects
-        ref_ptr<vsg::BindDescriptorSets> _bindDescriptorSets;
-
+        //ref_ptr<vsg::BindDescriptorSets> _bindDescriptorSets;
     };
     VSG_type_name(vsg::Texture)
 

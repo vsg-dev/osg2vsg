@@ -93,10 +93,13 @@ void GraphicsPipelineGroup::compile(Context& context)
     context.descriptorPool = DescriptorPool::create(context.device, maxSets, descriptorPoolSizes);
     DEBUG_OUTPUT<<"  context.descriptorPool = "<<context.descriptorPool.get()<<std::endl;
 
-    context.descriptorSetLayout = DescriptorSetLayout::create(context.device, descriptorSetLayoutBindings);
-    DEBUG_OUTPUT<<"  context.descriptorSetLayout = "<<context.descriptorSetLayout.get()<<std::endl;
+    for (unsigned int i = 0; i < descriptorSetLayoutBindings.size(); i++)
+    {
+        context.descriptorSetLayouts.push_back(DescriptorSetLayout::create(context.device, descriptorSetLayoutBindings[i]));
+        DEBUG_OUTPUT << "  context.descriptorSetLayout = " << context.descriptorSetLayouts[i].get() << std::endl;
+    }
 
-    context.pipelineLayout = PipelineLayout::create(context.device, {context.descriptorSetLayout}, pushConstantRanges);
+    context.pipelineLayout = PipelineLayout::create(context.device, context.descriptorSetLayouts, pushConstantRanges);
     DEBUG_OUTPUT<<"  context.pipelineLayout = "<<context.pipelineLayout.get()<<std::endl;
 
 
@@ -243,7 +246,8 @@ void AttributesNode::compile(Context& context)
         }
     }
 
-    vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = vsg::DescriptorSet::create(context.device, context.descriptorPool, context.descriptorSetLayout, attributeDescriptors);
+    // this path uses one descriptor set
+    vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = vsg::DescriptorSet::create(context.device, context.descriptorPool, context.descriptorSetLayouts[0], attributeDescriptors);
 
     if (descriptorSet)
     {

@@ -442,8 +442,8 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createCoreVSG(vsg::Paths& searchPa
         uint32_t geometrymask = masks.second;
         uint32_t shaderModeMask = masks.first;
 
-        // override masks
-        geometrymask = forceGeomAttributes;
+        shaderModeMask |= LIGHTING; // force lighting on
+        if (shaderModeMask & NORMAL_MAP) geometrymask |= TANGENT; // mesh propably won't have tangets so force them on if we want Normal mapping
 
         unsigned int maxNumDescriptors = transformStatePair.stateTransformMap.size();
 
@@ -453,7 +453,7 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createCoreVSG(vsg::Paths& searchPa
 
         for (auto[stateset, transformeGeometryMap] : transformStatePair.stateTransformMap)
         {
-            vsg::ref_ptr<vsg::Node> transformGeometryGraph = createTransformGeometryGraphVSG(transformeGeometryMap, searchPaths, forceGeomAttributes);
+            vsg::ref_ptr<vsg::Node> transformGeometryGraph = createTransformGeometryGraphVSG(transformeGeometryMap, searchPaths, geometrymask);
             if (!transformGeometryGraph) continue;
 
             vsg::ref_ptr<vsg::StateSet> vsg_stateset = createVsgStateSet(stateset);
