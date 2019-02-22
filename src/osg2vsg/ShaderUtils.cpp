@@ -35,6 +35,151 @@ uint32_t osg2vsg::calculateShaderModeMask(osg::StateSet* stateSet)
 
 // create vertex shader source using statemask to determine type of shader to build and geometryattributes to determine attribute binding locations
 
+std::string createPSCDefinesString(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
+{
+    bool hasnormal = geometryAttrbutes & NORMAL;
+    bool hascolor = geometryAttrbutes & COLOR;
+    bool hastex0 = geometryAttrbutes & TEXCOORD0;
+    bool hastanget = geometryAttrbutes & TANGENT;
+
+    std::string defines = "";
+    if (hasnormal) defines += "#define VSG_NORMAL\n";
+    if (hascolor) defines += "#define VSG_COLOR\n";
+    if (hastex0) defines += "#define VSG_TEXCOORD0\n";
+    if (hastanget) defines += "#define VSG_TANGENT\n";
+    if (hasnormal && (shaderModeMask & LIGHTING)) defines += "#define VSG_LIGHTING\n";
+    if (hastex0 && (shaderModeMask & DIFFUSE_MAP)) defines += "#define VSG_DIFFUSE_MAP\n";
+    if (hastex0 && (shaderModeMask & OPACITY_MAP)) defines += "#define VSG_OPACITY_MAP\n";
+    if (hastex0 && (shaderModeMask & AMBIENT_MAP)) defines += "#define VSG_AMBIENT_MAP\n";
+    if (hastex0 && (shaderModeMask & NORMAL_MAP)) defines += "#define VSG_NORMAL_MAP\n";
+    if (hastex0 && (shaderModeMask & SPECULAR_MAP)) defines += "#define VSG_SPECULAR_MAP\n";
+
+   return defines;
+}
+
+std::string osg2vsg::createVertexSourcePSC(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
+{
+    std::string defines = createPSCDefinesString(shaderModeMask, geometryAttrbutes);
+
+    std::string source = 
+    "#version 450\n" \
+    "#extension GL_ARB_separate_shader_objects : enable\n";
+    
+    source += defines;
+    
+    source += 
+    "layout(push_constant) uniform PushConstants {\n" \
+    "    mat4 projection; \n" \
+    "    mat4 view;\n" \
+    "    mat4 model; \n" \
+    "    //mat3 normal;\n" \
+    "} pc; \n" \
+    "layout(location = 0) in vec3 osg_Vertex;\n" \
+    "#if VSG_NORMAL\n" \
+    "layout(location = 1) in vec3 osg_Normal;\n" \
+    "layout(location = 1) out vec3 normalDir;\n" \
+    "#endif\n" \
+    "#if VSG_TANGENT\n" \
+    "layout(location = 2) in vec4 osg_Tangent;\n" \
+    "#endif\n"
+    "#if VSG_COLOR\n" \
+    "layout(location = 3) in vec4 osg_Color;\n" \
+    "layout(location = 3) out vec4 vertColor;\n" \
+    "#endif\n"
+    "#if VSG_TEXCOORD0\n" \
+    "layout(location = 4) in vec2 osg_MultiTexCoord0;\n" \
+    "layout(location = 4) out vec2 texCoord0;\n" \
+    "#endif\n"
+    "#if VSG_LIGHTING\n" \
+    "layout(location = 5) out vec3 viewDir;\n" \
+    "layout(location = 6) out vec3 lightDir;\n" \
+    "#endif\n" \
+    "out gl_PerVertex{ vec4 gl_Position; };\n" \
+    "\n" \
+    "void main()\n" \
+    "{\n" \
+    "    gl_Position = (pc.projection * pc.view * pc.model) * vec4(osg_Vertex, 1.0);\n" \
+    "#if VSG_TEXCOORD0\n" \
+    "    texCoord0 = osg_MultiTexCoord0.st;\n" \
+    "#endif\n" \
+    "#if VSG_LIGHTING\n" \
+    "    vec4 lpos = /*osg_LightSource.position*/ vec4(0.0, 0.25, 1.0, 0.0);\n" \
+    "    vec3 n = ((pc.view * pc.model) * vec4(osg_Normal, 0.0)).xyz;\n" \
+
+    "    vec3 t = ((pc.view * pc.model) * vec4(osg_Tangent.xyz, 0.0)).xyz;\n" \
+    "    vec3 b = cross(n, t);\n" \
+    "    vec3 dir = -vec3((pc.view * pc.model) * vec4(osg_Vertex, 1.0));\n" \
+    "    viewDir.x = dot(dir, t);\n" \
+    "    viewDir.y = dot(dir, b);\n" \
+    "    viewDir.z = dot(dir, n);\n" \
+    "    if (lpos.w == 0.0)\n" \
+    "        dir = lpos.xyz;\n" \
+    "    else\n" \
+    "        dir += lpos.xyz;\n" \
+    "    lightDir.x = dot(dir, t); \n" \
+    "    lightDir.y = dot(dir, b);\n" \
+    "    lightDir.z = dot(dir, n); \n" \
+    "#endif\n" \
+    "#if VSG_COLOR\n" \
+    "    vertColor = osg_Color;\n" \
+    "#endif\n" \
+    "}\n";
+    return source;
+}
+
+std::string osg2vsg::createFragmentSourePSC(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
+{
+    std::string defines = createPSCDefinesString(shaderModeMask, geometryAttrbutes);
+
+    std::string source =
+    "#version 450\n" \
+    "#extension GL_ARB_separate_shader_objects : enable\n";
+
+    source += defines;
+
+    source +=
+    "layout(binding = 0) uniform sampler2D diffuseMap; \n" \
+    "layout(binding = 1) uniform sampler2D opacityMap;\n" \
+    "layout(binding = 4) uniform sampler2D ambientMap; \n" \
+    "layout(binding = 5) uniform sampler2D normalMap;\n" \
+    "layout(binding = 6) uniform sampler2D specularMap; \n" \
+    "layout(location = 0) in vec2 texCoord0;\n" \
+    "layout(location = 1) in vec3 normalDir; \n" \
+    "layout(location = 2) in vec3 viewDir; \n" \
+    "layout(location = 3) in vec3 lightDir;\n" \
+    "layout(location = 4) in vec4 vertColor; \n" \
+    "layout(location = 0) out vec4 outColor;\n" \
+    "\n" \
+    "void main()\n" \
+    "{\n" \
+    "    vec4 base = texture(diffuseMap, texCoord0.st);\n" \
+    "    base = base * vertColor;\n" \
+    "    vec3 normalDir = texture(normalMap, texCoord0.st).xyz*2.0 - 1.0;\n" \
+    "    normalDir.g = -normalDir.g;\n" \
+    "    vec3 specularColor = texture(specularMap, texCoord0.st).rgb;\n" \
+    "    float ambientOcclusion = texture(ambientMap, texCoord0.st).r;\n" \
+    "    vec3 nd = normalize(normalDir);\n" \
+    "    vec3 ld = normalize(lightDir);\n" \
+    "    vec3 vd = normalize(viewDir);\n" \
+    "    vec4 color = vec4(0.01, 0.01, 0.01, 1.0);\n" \
+    "    color += /*osg_Material.ambient*/ vec4(0.1, 0.1, 0.1, 0.0);\n" \
+    "    float diff = max(dot(ld, nd), 0.0);\n" \
+    "    color += /*osg_Material.diffuse*/ vec4(0.8, 0.8, 0.8, 0.0) * diff;\n" \
+    "    color *= ambientOcclusion;\n" \
+    "    color *= base;\n" \
+    "    if (diff > 0.0)\n" \
+    "    {\n" \
+    "        vec3 halfDir = normalize(ld + vd);\n" \
+    "        color.rgb += base.a * specularColor *\n" \
+    "            pow(max(dot(halfDir, nd), 0.0), 16.0/*osg_Material.shine*/);\n" \
+    "    }\n" \
+    "    outColor = color;\n" \
+    "    outColor.a *= texture(opacityMap, texCoord0.st).r;\n" \
+    "}\n";
+    return source;
+}
+
+
 std::string osg2vsg::createVertexSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes, bool osgCompatible)
 {
     bool hasnormal = geometryAttrbutes & NORMAL;
