@@ -166,9 +166,8 @@ namespace osg2vsg
 
     vsg::ref_ptr<vsg::TextureAttribute> convertToVsgAttribute(const osg::Texture* osgtexture)
     {
-        if (!osgtexture || !osgtexture->getImage(0)) return vsg::ref_ptr<vsg::TextureAttribute>();
-
-        auto textureData = convertToVsg(osgtexture->getImage(0));
+        const osg::Image* image = osgtexture ? osgtexture->getImage(0) : nullptr;
+        auto textureData = convertToVsg(image);
         if (!textureData)
         {
             // DEBUG_OUTPUT << "Could not convert osg image data" << std::endl;
@@ -434,9 +433,8 @@ namespace osg2vsg
 
     vsg::ref_ptr<vsg::Texture> convertToVsgTexture(const osg::Texture* osgtexture)
     {
-        if (!osgtexture || !osgtexture->getImage(0)) return vsg::ref_ptr<vsg::Texture>();
-
-        auto textureData = convertToVsg(osgtexture->getImage(0));
+        const osg::Image* image = osgtexture ? osgtexture->getImage(0) : nullptr;
+        auto textureData = convertToVsg(image);
         if (!textureData)
         {
             // DEBUG_OUTPUT << "Could not convert osg image data" << std::endl;
