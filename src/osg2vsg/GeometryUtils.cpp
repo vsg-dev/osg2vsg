@@ -166,9 +166,8 @@ namespace osg2vsg
 
     vsg::ref_ptr<vsg::TextureAttribute> convertToVsgAttribute(const osg::Texture* osgtexture)
     {
-        if (!osgtexture || !osgtexture->getImage(0)) return vsg::ref_ptr<vsg::TextureAttribute>();
-
-        auto textureData = convertToVsg(osgtexture->getImage(0));
+        const osg::Image* image = osgtexture ? osgtexture->getImage(0) : nullptr;
+        auto textureData = convertToVsg(image);
         if (!textureData)
         {
             // DEBUG_OUTPUT << "Could not convert osg image data" << std::endl;
@@ -193,13 +192,19 @@ namespace osg2vsg
         for(unsigned int i=0; i<units; i++)
         {
             const osg::StateAttribute* texatt = stateset->getTextureAttribute(i, osg::StateAttribute::TEXTURE);
-            if (texatt)
+            const osg::Texture* osgtex = dynamic_cast<const osg::Texture*>(texatt);
+            if (osgtex)
             {
-                const osg::Texture* osgtex = dynamic_cast<const osg::Texture*>(texatt);
-
                 vsg::ref_ptr<vsg::TextureAttribute> vsgtex = convertToVsgAttribute(osgtex);
-                vsgtex->_bindingIndex = i;
-                attributesNode->_attributesList.push_back(vsgtex);
+                if (vsgtex)
+                {
+                    vsgtex->_bindingIndex = i;
+                    attributesNode->_attributesList.push_back(vsgtex);
+                }
+                else
+                {
+                    std::cout<<"createTextureAttributesNode(..) osg::Texture, with i="<<i<<" found but cannot be mapped to vsg::TextureAttribute."<<std::endl;
+                }
             }
         }
 
@@ -347,8 +352,8 @@ namespace osg2vsg
         gp->maxSets = std::max<unsigned int>(maxNumDescriptors, 1);
 
         vsg::DescriptorSetLayoutBindings descriptorBindings  = vsg::DescriptorSetLayoutBindings();
-        
-        // this path uses a single descriptor set
+
+        // these need to go in incremental order by texture unit value as that how they will have been added to the desctiptor set
         if (shaderModeMask & DIFFUSE_MAP) descriptorBindings.push_back( { DIFFUSE_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr } ); // { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
         if (shaderModeMask & OPACITY_MAP) descriptorBindings.push_back( { OPACITY_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
         if (shaderModeMask & AMBIENT_MAP) descriptorBindings.push_back( { AMBIENT_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
@@ -428,9 +433,8 @@ namespace osg2vsg
 
     vsg::ref_ptr<vsg::Texture> convertToVsgTexture(const osg::Texture* osgtexture)
     {
-        if (!osgtexture || !osgtexture->getImage(0)) return vsg::ref_ptr<vsg::Texture>();
-
-        auto textureData = convertToVsg(osgtexture->getImage(0));
+        const osg::Image* image = osgtexture ? osgtexture->getImage(0) : nullptr;
+        auto textureData = convertToVsg(image);
         if (!textureData)
         {
             // DEBUG_OUTPUT << "Could not convert osg image data" << std::endl;
@@ -454,13 +458,20 @@ namespace osg2vsg
         for(unsigned int i=0; i<units; i++)
         {
             const osg::StateAttribute* texatt = stateset->getTextureAttribute(i, osg::StateAttribute::TEXTURE);
-            if (texatt)
+            const osg::Texture* osgtex = dynamic_cast<const osg::Texture*>(texatt);
+            if (osgtex)
             {
-                const osg::Texture* osgtex = dynamic_cast<const osg::Texture*>(texatt);
-
                 vsg::ref_ptr<vsg::Texture> vsgtex = convertToVsgTexture(osgtex);
-                vsgtex->_bindingIndex = i;
-                vsg_stateset->add(vsgtex);
+
+                if (vsgtex)
+                {
+                    vsgtex->_bindingIndex = i; //texcount++
+                    vsg_stateset->add(vsgtex);
+                }
+                else
+                {
+                    std::cout<<"createVsgStateSet(..) osg::Texture, with i="<<i<<" found but cannot be mapped to vsg::Texture."<<std::endl;
+                }
             }
         }
 

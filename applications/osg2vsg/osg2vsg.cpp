@@ -43,12 +43,31 @@ namespace vsg
 
         void apply(KeyPressEvent& keyPress) override
         {
-            std::cout<<"KeyPressEvent "<<keyPress.keyBase<<std::endl;
+            if (keyPress.keyBase==' ')
+            {
+                _frameCount = 0;
+            }
         }
 
         void apply(FrameEvent& frame) override
         {
+            if (_frameCount==0)
+            {
+                _start_point = frame.frameStamp->time;
+            }
+
             double time = std::chrono::duration<double, std::chrono::seconds::period>(frame.frameStamp->time - _start_point).count();
+            if (time > _path->getPeriod())
+            {
+                double average_framerate = double(_frameCount) / time;
+                std::cout<<"Period complete numFrames="<<_frameCount<<", average frame rate = "<<average_framerate<<std::endl;
+
+                // reset time back to start
+                _start_point = frame.frameStamp->time;
+                time = 0.0;
+                _frameCount = 0;
+            }
+
             osg::Matrixd matrix;
             _path->getMatrix(time, matrix);
 
@@ -58,6 +77,8 @@ namespace vsg
                                   matrix(0,3), matrix(1,3), matrix(2,3), matrix(3,3));
 
             _lookAt->set(vsg_matrix);
+
+            ++_frameCount;
         }
 
 
@@ -67,6 +88,7 @@ namespace vsg
         ref_ptr<osg::AnimationPath> _path;
         KeySymbol _homeKey = KEY_Space;
         clock::time_point _start_point;
+        unsigned int _frameCount = 0;
     };
 }
 

@@ -83,6 +83,17 @@ osg::ref_ptr<osg::Image> formatImageToRGBA(const osg::Image* image)
 
 vsg::ref_ptr<vsg::Data> convertToVsg(const osg::Image* image)
 {
+    if (!image)
+    {
+        vsg::ref_ptr<vsg::vec4Array2D> vsg_data(new vsg::vec4Array2D(1,1));
+        vsg_data->setFormat(VK_FORMAT_R32G32B32A32_SFLOAT);
+        for(auto& color : *vsg_data)
+        {
+            color = vsg::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+        }
+        return vsg_data;
+    }
+
     osg::ref_ptr<osg::Image> new_image = formatImageToRGBA(image);
 
     // we want to pass ownership of the new_image data onto th vsg_image so reset the allocation mode on the image to prevent deletetion.
