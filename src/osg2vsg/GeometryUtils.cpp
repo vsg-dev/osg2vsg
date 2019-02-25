@@ -360,7 +360,7 @@ namespace osg2vsg
         if (shaderModeMask & NORMAL_MAP) descriptorBindings.push_back( { NORMAL_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
         if (shaderModeMask & SPECULAR_MAP) descriptorBindings.push_back( { SPECULAR_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
 
-        gp->descriptorSetLayoutBindings = descriptorBindings;
+        gp->descriptorSetLayoutBindings.push_back(descriptorBindings);
 
         vsg::DescriptorPoolSizes descriptorPoolSizes = vsg::DescriptorPoolSizes();
 
@@ -529,7 +529,7 @@ namespace osg2vsg
         if (shaderModeMask & DIFFUSE_MAP) descriptorBindings.push_back( { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr } );
         if (shaderModeMask & NORMAL_MAP) descriptorBindings.push_back( { 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr  } );
 
-        gp->descriptorSetLayoutBindings = descriptorBindings;
+        gp->descriptorSetLayoutBindings.push_back(descriptorBindings);
 
         gp->pushConstantRanges = vsg::PushConstantRanges
         {
