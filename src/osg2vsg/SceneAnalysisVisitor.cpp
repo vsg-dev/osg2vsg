@@ -433,19 +433,41 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createCoreVSG(vsg::Paths& searchPa
 {
     std::cout<<"SceneAnalysisVisitor::createCoreVSG(vsg::Paths& searchPaths)"<<std::endl;
 
+#if 1
+    uint32_t activeGeometryAttributes = GeometryAttributes::STANDARD_ATTS;
+    uint32_t activeShaderModeMask = ShaderModeMask::ALL_SHADER_MODE_MASK;
+#else
+    uint32_t activeGeometryAttributes = GeometryAttributes::VERTEX | GeometryAttributes::NORMAL;
+    uint32_t activeShaderModeMask = ShaderModeMask::LIGHTING;// | ShaderModeMask::DIFFUSE_MAP;
+#endif
+
+#if 1
     uint32_t forceGeomAttributes = GeometryAttributes::STANDARD_ATTS;
+    uint32_t forceShaderModeMask = ShaderModeMask::NONE;
+#else
+    uint32_t forceGeomAttributes = GeometryAttributes::STANDARD_ATTS;
+    uint32_t forceShaderModeMask = ShaderModeMask::LIGHTING;
+#endif
 
     vsg::ref_ptr<vsg::Group> group = vsg::Group::create();
 
     for (auto[masks, transformStatePair] : masksTransformStateMap)
     {
-        uint32_t geometrymask = masks.second;
-        uint32_t shaderModeMask = masks.first;
-
-        // override masks
-        geometrymask = forceGeomAttributes;
-
         unsigned int maxNumDescriptors = transformStatePair.stateTransformMap.size();
+        if (maxNumDescriptors==0)
+        {
+            std::cout<<"  Skipping empty transformStatePair"<<std::endl;
+            continue;
+        }
+        else
+        {
+            std::cout<<"  maxNumDescriptors = "<<maxNumDescriptors<<std::endl;
+        }
+
+        uint32_t geometrymask = (masks.second | forceGeomAttributes) & activeGeometryAttributes;
+        uint32_t shaderModeMask = (masks.first | forceShaderModeMask) & activeShaderModeMask;
+
+        std::cout<<"  about to call createStateSetWithGraphicsPipeline("<<shaderModeMask<<", "<<geometrymask<<", "<<maxNumDescriptors<<")"<<std::endl;
 
         auto graphicsPipelineGroup = vsg::StateGroup::create(createStateSetWithGraphicsPipeline(shaderModeMask, geometrymask, maxNumDescriptors));
 
@@ -453,7 +475,7 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createCoreVSG(vsg::Paths& searchPa
 
         for (auto[stateset, transformeGeometryMap] : transformStatePair.stateTransformMap)
         {
-            vsg::ref_ptr<vsg::Node> transformGeometryGraph = createTransformGeometryGraphVSG(transformeGeometryMap, searchPaths, forceGeomAttributes);
+            vsg::ref_ptr<vsg::Node> transformGeometryGraph = createTransformGeometryGraphVSG(transformeGeometryMap, searchPaths, geometrymask);
             if (!transformGeometryGraph) continue;
 
             vsg::ref_ptr<vsg::StateSet> vsg_stateset = createVsgStateSet(stateset);

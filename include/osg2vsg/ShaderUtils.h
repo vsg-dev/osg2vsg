@@ -10,7 +10,7 @@
 
 namespace osg2vsg
 {
-    enum ShaderModeMask
+    enum ShaderModeMask : uint32_t
     {
         NONE = 0,
         LIGHTING = 1,
@@ -18,11 +18,12 @@ namespace osg2vsg
         OPACITY_MAP = 4,
         AMBIENT_MAP = 8,
         NORMAL_MAP = 16,
-        SPECULAR_MAP = 32
+        SPECULAR_MAP = 32,
+        ALL_SHADER_MODE_MASK = LIGHTING | DIFFUSE_MAP | OPACITY_MAP | AMBIENT_MAP | SPECULAR_MAP
     };
 
     // taken from osg fbx plugin
-    enum TextureUnit
+    enum TextureUnit : uint32_t
     {
         DIFFUSE_TEXTURE_UNIT = 0,
         OPACITY_TEXTURE_UNIT,

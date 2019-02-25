@@ -11,7 +11,7 @@
 
 namespace osg2vsg
 {
-    enum GeometryAttributes
+    enum GeometryAttributes : uint32_t
     {
         VERTEX = 1,
         NORMAL = 2,
@@ -24,7 +24,7 @@ namespace osg2vsg
         ALL_ATTS = VERTEX | NORMAL | COLOR | TEXCOORD0 | TEXCOORD1 | TEXCOORD2 | TANGENT
     };
 
-    enum AttributeChannels
+    enum AttributeChannels : uint32_t
     {
         VERTEX_CHANNEL = 0,  // osg 0
         NORMAL_CHANNEL = 1, // osg 1

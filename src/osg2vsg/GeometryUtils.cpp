@@ -496,7 +496,11 @@ namespace osg2vsg
         if (!shaderCompiler.compile(shaders)) return vsg::ref_ptr<vsg::StateSet>();
 
         // how many textures
+#if 0
         maxNumDescriptors = maxNumDescriptors * ((shaderModeMask & DIFFUSE_MAP ? 1 : 0) + (shaderModeMask & NORMAL_MAP ? 1 : 0));
+#else
+        maxNumDescriptors = std::max(1u, maxNumDescriptors * ((shaderModeMask & DIFFUSE_MAP ? 1 : 0) + (shaderModeMask & NORMAL_MAP ? 1 : 0)));
+#endif
 
         //
         // set up graphics pipeline
@@ -508,6 +512,8 @@ namespace osg2vsg
         {
             {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxNumDescriptors} // type, descriptorCount
         };
+
+        std::cout<<"createStateSetWithGraphicsPipeline("<<shaderModeMask<<", "<<geometryAttributesMask<<", "<<maxNumDescriptors<<")"<<std::endl;
 
 
         vsg::DescriptorSetLayoutBindings descriptorBindings  = vsg::DescriptorSetLayoutBindings();
