@@ -82,7 +82,7 @@ void GraphicsPipelineAttribute::compile(Context& context)
     //
     // set up descriptor layout and descriptor set and pipeline layout for uniforms
     //
-    context.descriptorPool = DescriptorPool::create(context.device, maxSets, descriptorPoolSizes);
+    if (!descriptorPoolSizes.empty()) context.descriptorPool = DescriptorPool::create(context.device, maxSets, descriptorPoolSizes);
     DEBUG_OUTPUT<<"  context.descriptorPool = "<<context.descriptorPool.get()<<std::endl;
 
     context.descriptorSetLayout = DescriptorSetLayout::create(context.device, descriptorSetLayoutBindings);

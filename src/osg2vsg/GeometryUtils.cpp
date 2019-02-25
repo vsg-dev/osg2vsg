@@ -447,7 +447,7 @@ namespace osg2vsg
         return texture;
     }
 
-    vsg::ref_ptr<vsg::StateSet> createVsgStateSet(const osg::StateSet* stateset)
+    vsg::ref_ptr<vsg::StateSet> createVsgStateSet(const osg::StateSet* stateset, uint32_t shaderModeMask)
     {
         if (!stateset) return vsg::ref_ptr<vsg::StateSet>();
 
@@ -455,7 +455,8 @@ namespace osg2vsg
 
         unsigned int units = stateset->getNumTextureAttributeLists();
         uint32_t texcount = 0;
-        for(unsigned int i=0; i<units; i++)
+
+        auto addTexture = [&] (unsigned int i)
         {
             const osg::StateAttribute* texatt = stateset->getTextureAttribute(i, osg::StateAttribute::TEXTURE);
             const osg::Texture* osgtex = dynamic_cast<const osg::Texture*>(texatt);
@@ -472,7 +473,13 @@ namespace osg2vsg
                     std::cout<<"createVsgStateSet(..) osg::Texture, with i="<<i<<" found but cannot be mapped to vsg::Texture."<<std::endl;
                 }
             }
-        }
+        };
+
+        if (shaderModeMask & ShaderModeMask::DIFFUSE_MAP) addTexture(DIFFUSE_TEXTURE_UNIT);
+        if (shaderModeMask & ShaderModeMask::OPACITY_MAP) addTexture(OPACITY_TEXTURE_UNIT);
+        if (shaderModeMask & ShaderModeMask::AMBIENT_MAP) addTexture(AMBIENT_TEXTURE_UNIT);
+        if (shaderModeMask & ShaderModeMask::NORMAL_MAP) addTexture(NORMAL_TEXTURE_UNIT);
+        if (shaderModeMask & ShaderModeMask::SPECULAR_MAP) addTexture(SPECULAR_TEXTURE_UNIT);
 
         if (texcount==0) return vsg::ref_ptr<vsg::StateSet>();
 
@@ -480,7 +487,7 @@ namespace osg2vsg
     }
 
 
-    vsg::ref_ptr<vsg::StateSet> createStateSetWithGraphicsPipeline(const uint32_t& shaderModeMask, const uint32_t& geometryAttributesMask, unsigned int maxNumDescriptors)
+    vsg::ref_ptr<vsg::StateSet> createStateSetWithGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryAttributesMask, unsigned int maxNumDescriptors)
     {
         auto stateset = vsg::StateSet::create();
         //
@@ -496,11 +503,7 @@ namespace osg2vsg
         if (!shaderCompiler.compile(shaders)) return vsg::ref_ptr<vsg::StateSet>();
 
         // how many textures
-#if 0
         maxNumDescriptors = maxNumDescriptors * ((shaderModeMask & DIFFUSE_MAP ? 1 : 0) + (shaderModeMask & NORMAL_MAP ? 1 : 0));
-#else
-        maxNumDescriptors = std::max(1u, maxNumDescriptors * ((shaderModeMask & DIFFUSE_MAP ? 1 : 0) + (shaderModeMask & NORMAL_MAP ? 1 : 0)));
-#endif
 
         //
         // set up graphics pipeline
@@ -508,17 +511,22 @@ namespace osg2vsg
         vsg::ref_ptr<vsg::GraphicsPipelineAttribute> gp = vsg::GraphicsPipelineAttribute::create();
         gp->shaders = shaders;
         gp->maxSets = maxNumDescriptors;
-        gp->descriptorPoolSizes = vsg::DescriptorPoolSizes
+
+        if (maxNumDescriptors > 0)
         {
-            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxNumDescriptors} // type, descriptorCount
-        };
+            gp->descriptorPoolSizes = vsg::DescriptorPoolSizes
+            {
+                {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxNumDescriptors} // type, descriptorCount
+            };
+        }
 
         std::cout<<"createStateSetWithGraphicsPipeline("<<shaderModeMask<<", "<<geometryAttributesMask<<", "<<maxNumDescriptors<<")"<<std::endl;
 
 
-        vsg::DescriptorSetLayoutBindings descriptorBindings  = vsg::DescriptorSetLayoutBindings();
+        vsg::DescriptorSetLayoutBindings descriptorBindings;
 
-        if (shaderModeMask & DIFFUSE_MAP) descriptorBindings.push_back( { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr } ); // { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
+        // VkDescriptorSetLayoutBinding { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
+        if (shaderModeMask & DIFFUSE_MAP) descriptorBindings.push_back( { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr } );
         if (shaderModeMask & NORMAL_MAP) descriptorBindings.push_back( { 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr  } );
 
         gp->descriptorSetLayoutBindings = descriptorBindings;

@@ -62,7 +62,7 @@ namespace osg2vsg
 
     // core VSG style usage
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Texture> convertToVsgTexture(const osg::Texture* osgtexture);
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::StateSet> createVsgStateSet(const osg::StateSet* stateset);
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::StateSet> createStateSetWithGraphicsPipeline(const uint32_t& shaderModeMask, const uint32_t& geometryAttributesMask, unsigned int maxNumDescriptors);
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::StateSet> createVsgStateSet(const osg::StateSet* stateset, uint32_t shaderModeMask);
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::StateSet> createStateSetWithGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryAttributesMask, unsigned int maxNumDescriptors);
 
 }
