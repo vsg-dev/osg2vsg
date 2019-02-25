@@ -11,7 +11,7 @@
 
 namespace osg2vsg
 {
-    enum GeometryAttributes
+    enum GeometryAttributes : uint32_t
     {
         VERTEX = 1,
         NORMAL = 2,
@@ -24,7 +24,7 @@ namespace osg2vsg
         ALL_ATTS = VERTEX | NORMAL | COLOR | TEXCOORD0 | TEXCOORD1 | TEXCOORD2 | TANGENT
     };
 
-    enum AttributeChannels
+    enum AttributeChannels : uint32_t
     {
         VERTEX_CHANNEL = 0,  // osg 0
         NORMAL_CHANNEL = 1, // osg 1
@@ -62,7 +62,7 @@ namespace osg2vsg
 
     // core VSG style usage
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Texture> convertToVsgTexture(const osg::Texture* osgtexture);
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::StateSet> createVsgStateSet(const osg::StateSet* stateset);
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::StateSet> createStateSetWithGraphicsPipeline(const uint32_t& shaderModeMask, const uint32_t& geometryAttributesMask, unsigned int maxNumDescriptors);
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::StateSet> createVsgStateSet(const osg::StateSet* stateset, uint32_t shaderModeMask);
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::StateSet> createStateSetWithGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryAttributesMask, unsigned int maxNumDescriptors);
 
 }

@@ -433,19 +433,25 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createCoreVSG(vsg::Paths& searchPa
 {
     std::cout<<"SceneAnalysisVisitor::createCoreVSG(vsg::Paths& searchPaths)"<<std::endl;
 
-    uint32_t forceGeomAttributes = GeometryAttributes::STANDARD_ATTS;
-
     vsg::ref_ptr<vsg::Group> group = vsg::Group::create();
 
     for (auto[masks, transformStatePair] : masksTransformStateMap)
     {
-        uint32_t geometrymask = masks.second;
-        uint32_t shaderModeMask = masks.first;
-
-        shaderModeMask |= LIGHTING; // force lighting on
-        if (shaderModeMask & NORMAL_MAP) geometrymask |= TANGENT; // mesh propably won't have tangets so force them on if we want Normal mapping
-
         unsigned int maxNumDescriptors = transformStatePair.stateTransformMap.size();
+        if (maxNumDescriptors==0)
+        {
+            std::cout<<"  Skipping empty transformStatePair"<<std::endl;
+            continue;
+        }
+        else
+        {
+            std::cout<<"  maxNumDescriptors = "<<maxNumDescriptors<<std::endl;
+        }
+
+        uint32_t geometrymask = (masks.second | overrideGeomAttributes) & supportedGeometryAttributes;
+        uint32_t shaderModeMask = (masks.first | overrideShaderModeMask) & supportedShaderModeMask;
+
+        std::cout<<"  about to call createStateSetWithGraphicsPipeline("<<shaderModeMask<<", "<<geometrymask<<", "<<maxNumDescriptors<<")"<<std::endl;
 
         auto graphicsPipelineGroup = vsg::StateGroup::create(createStateSetWithGraphicsPipeline(shaderModeMask, geometrymask, maxNumDescriptors));
 
@@ -456,7 +462,7 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createCoreVSG(vsg::Paths& searchPa
             vsg::ref_ptr<vsg::Node> transformGeometryGraph = createTransformGeometryGraphVSG(transformeGeometryMap, searchPaths, geometrymask);
             if (!transformGeometryGraph) continue;
 
-            vsg::ref_ptr<vsg::StateSet> vsg_stateset = createVsgStateSet(stateset);
+            vsg::ref_ptr<vsg::StateSet> vsg_stateset = createVsgStateSet(stateset, shaderModeMask);
             if (vsg_stateset)
             {
                 auto stategroup = vsg::StateGroup::create(vsg_stateset);
