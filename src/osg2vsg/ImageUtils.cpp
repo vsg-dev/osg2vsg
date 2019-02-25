@@ -146,10 +146,12 @@ vsg::ImageData readImageFile(vsg::Device* device, vsg::CommandPool* commandPool,
     std::cout<<"VK_FORMAT_R8G8B8A8_UNORM= "<<VK_FORMAT_R8G8B8A8_UNORM<<std::endl;
     std::cout<<"  osg2vsg : "<<osg2vsg::convertGLImageFormatToVulkan(osg_image->getDataType(), osg_image->getPixelFormat())<<std::endl;
 
+    VkImageType imageType = osg_image->r()>1 ? VK_IMAGE_TYPE_3D : (osg_image->t()>1 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_1D);;
+    VkImageViewType imageViewType = osg_image->r() > 1 ? VK_IMAGE_VIEW_TYPE_3D : (osg_image->t() > 1 ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_1D);
 
     VkImageCreateInfo imageCreateInfo = {};
     imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageCreateInfo.imageType = osg_image->r()>1 ? VK_IMAGE_TYPE_3D : (osg_image->t()>1 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_1D);
+    imageCreateInfo.imageType = imageType;
     imageCreateInfo.extent.width = osg_image->s();
     imageCreateInfo.extent.height = osg_image->t();
     imageCreateInfo.extent.depth = osg_image->r();
@@ -226,7 +228,7 @@ vsg::ImageData readImageFile(vsg::Device* device, vsg::CommandPool* commandPool,
     osg_image = 0;
 
     vsg::ref_ptr<vsg::Sampler> textureSampler = vsg::Sampler::create(device);
-    vsg::ref_ptr<vsg::ImageView> textureImageView = vsg::ImageView::create(device, textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
+    vsg::ref_ptr<vsg::ImageView> textureImageView = vsg::ImageView::create(device, textureImage, imageViewType, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
 
     std::cout<<"textureSampler = "<<textureSampler.get()<<std::endl;
     std::cout<<"textureImageView = "<<textureImageView.get()<<std::endl;
