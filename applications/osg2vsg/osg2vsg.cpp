@@ -217,9 +217,6 @@ int main(int argc, char** argv)
     viewer->addWindow(window);
 
 
-    // camera related state
-    auto viewport = vsg::ViewportState::create(window->extent2D());
-
     // compute the bounds of the scene graph to help position camera
     vsg::ComputeBounds computeBounds;
     vsg_scene->accept(computeBounds);
@@ -229,38 +226,16 @@ int main(int argc, char** argv)
     // set up the camera
     vsg::ref_ptr<vsg::Perspective> perspective(new vsg::Perspective(30.0, static_cast<double>(window->extent2D().width) / static_cast<double>(window->extent2D().height), 0.1, radius * 4.5));
     vsg::ref_ptr<vsg::LookAt> lookAt(new vsg::LookAt(centre+vsg::dvec3(0.0, -radius*3.5, 0.0), centre, vsg::dvec3(0.0, 0.0, 1.0)));
-    vsg::ref_ptr<vsg::Camera> camera(new vsg::Camera(perspective, lookAt, viewport));
+    vsg::ref_ptr<vsg::Camera> camera(new vsg::Camera(perspective, lookAt, vsg::ViewportState::create(window->extent2D())));
 
-
-    // create graphics stage
-    auto stage = vsg::GraphicsStage::create(vsg_scene, camera);
-
-    {
-        // compile the Vulkan objects
-        // create high level Vulkan objects associated the main window
-        vsg::ref_ptr<vsg::PhysicalDevice> physicalDevice(window->physicalDevice());
-        vsg::ref_ptr<vsg::Device> device(window->device());
-
-        vsg::CompileTraversal compile;
-        compile.context.device = window->device();
-        compile.context.commandPool = vsg::CommandPool::create(device, physicalDevice->getGraphicsFamily());
-        compile.context.renderPass = window->renderPass();
-        compile.context.viewport = viewport;
-        compile.context.graphicsQueue = device->getQueue(physicalDevice->getGraphicsFamily());
-        compile.context.projMatrix = stage->_projMatrix;
-        compile.context.viewMatrix = stage->_viewMatrix;
-
-        vsg_scene->accept(compile);
-    }
 
     // add a GraphicsStage tp the Window to do dispatch of the command graph to the commnad buffer(s)
-    window->addStage(stage);
+    window->addStage(vsg::GraphicsStage::create(vsg_scene, camera));
 
-    //
-    // end of initialize vulkan
-    //
-    /////////////////////////////////////////////////////////////////////
+    // compile the Vulkan objects
+    viewer->compile();
 
+    // add close handler to respond the close window button and pressing esape
     viewer->addEventHandler(vsg::CloseHandler::create(viewer));
 
     if (pathFilename.empty())
