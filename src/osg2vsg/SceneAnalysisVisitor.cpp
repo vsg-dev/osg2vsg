@@ -451,6 +451,9 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createCoreVSG(vsg::Paths& searchPa
         uint32_t geometrymask = (masks.second | overrideGeomAttributes) & supportedGeometryAttributes;
         uint32_t shaderModeMask = (masks.first | overrideShaderModeMask) & supportedShaderModeMask;
 
+        shaderModeMask |= LIGHTING; // force lighting on
+        if (shaderModeMask & NORMAL_MAP) geometrymask |= TANGENT; // mesh propably won't have tangets so force them on if we want Normal mapping
+
         std::cout<<"  about to call createStateSetWithGraphicsPipeline("<<shaderModeMask<<", "<<geometrymask<<", "<<maxNumDescriptors<<")"<<std::endl;
 
         auto graphicsPipelineGroup = vsg::StateGroup::create(createStateSetWithGraphicsPipeline(shaderModeMask, geometrymask, maxNumDescriptors));

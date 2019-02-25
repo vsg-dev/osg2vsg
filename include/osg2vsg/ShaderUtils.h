@@ -19,7 +19,7 @@ namespace osg2vsg
         AMBIENT_MAP = 8,
         NORMAL_MAP = 16,
         SPECULAR_MAP = 32,
-        ALL_SHADER_MODE_MASK = LIGHTING | DIFFUSE_MAP | OPACITY_MAP | AMBIENT_MAP | SPECULAR_MAP
+        ALL_SHADER_MODE_MASK = LIGHTING | DIFFUSE_MAP | OPACITY_MAP | AMBIENT_MAP | NORMAL_MAP | SPECULAR_MAP
     };
 
     // taken from osg fbx plugin
@@ -38,12 +38,8 @@ namespace osg2vsg
     extern OSG2VSG_DECLSPEC uint32_t calculateShaderModeMask(osg::StateSet* stateSet);
 
     // create vertex shader source using statemask to determine type of shader to build and geometryattributes to determine attribute binding locations
-    extern OSG2VSG_DECLSPEC std::string createVertexSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes, bool osgCompatible);
-
-    extern OSG2VSG_DECLSPEC std::string createFragmentSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes, bool osgCompatible, bool setPerTexture);
-
     extern OSG2VSG_DECLSPEC std::string createVertexSourcePSC(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
-    extern OSG2VSG_DECLSPEC std::string createFragmentSourePSC(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
+    extern OSG2VSG_DECLSPEC std::string createFragmentSourcePSC(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
 
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Shader> compileSourceToSPV(const std::string& source, bool isvert);
 

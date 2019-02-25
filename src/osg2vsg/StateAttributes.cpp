@@ -164,13 +164,15 @@ void Texture::compile(Context& context)
         return;
     }
 
+#if defined(USE_DESCRIPTOR_STATESET)
     _descriptor = vsg::DescriptorImage::create(_bindingIndex, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, vsg::ImageDataList{ imageData });
+#else
+    // this is going to just keep overwriting set 0, we could use the binding index to chose a different descriptorSetLayouts and ensure all the descriptor sets are in the vsg::DescriptorSets created for the bindDescriptorSets
+    // (if a descriptor has the same layout do we need different DescriptorSetLayouts or do we just pass one that matches here)
 
-    /*
-    // set up DescriptorSet (at the mo theres a descriptor set per texture, use the binding index to determine set number so we can find in the shader) 
-    vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = vsg::DescriptorSet::create(context.device, context.descriptorPool, context.descriptorSetLayouts[_bindingIndex],
+    vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = vsg::DescriptorSet::create(context.device, context.descriptorPool, context.descriptorSetLayouts[0],
     {
-        vsg::DescriptorImage::create(0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, vsg::ImageDataList{imageData})
+        vsg::DescriptorImage::create(_bindingIndex, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, vsg::ImageDataList{imageData})
     });
 
     if (descriptorSet)
@@ -191,17 +193,26 @@ void Texture::compile(Context& context)
         DEBUG_OUTPUT<<"   imageData._imageLayout = "<<imageData._imageLayout<<std::endl;
         DEBUG_OUTPUT<<"   _textureData = "<<_textureData->width()<<", "<<_textureData->height()<<", "<<_textureData->depth()<<", "<<std::endl;
     }
-    */
+#endif
 }
 
 void Texture::pushTo(State& state) const
 {
+#if !defined(USE_DESCRIPTOR_STATESET)
+    if (_bindDescriptorSets) _bindDescriptorSets->pushTo(state);
+#endif
 }
 
 void Texture::popFrom(State& state) const
 {
+#if !defined(USE_DESCRIPTOR_STATESET)
+    if (_bindDescriptorSets) _bindDescriptorSets->popFrom(state);
+#endif
 }
 
 void Texture::dispatch(CommandBuffer& commandBuffer) const
 {
+#if !defined(USE_DESCRIPTOR_STATESET)
+    if (_bindDescriptorSets) _bindDescriptorSets->dispatch(commandBuffer);
+#endif
 }

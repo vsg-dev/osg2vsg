@@ -338,8 +338,8 @@ namespace osg2vsg
         ShaderCompiler shaderCompiler;
 
         vsg::GraphicsPipelineGroup::Shaders shaders{
-            vsg::Shader::create(VK_SHADER_STAGE_VERTEX_BIT, "main", createVertexSource(shaderModeMask, geometryAttributesMask, false)),
-            vsg::Shader::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", createFragmentSource(shaderModeMask, geometryAttributesMask, false, false)),
+            vsg::Shader::create(VK_SHADER_STAGE_VERTEX_BIT, "main", createVertexSourcePSC(shaderModeMask, geometryAttributesMask)),
+            vsg::Shader::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", createFragmentSourcePSC(shaderModeMask, geometryAttributesMask)),
         };
 
         if (!shaderCompiler.compile(shaders)) return vsg::ref_ptr<vsg::GraphicsPipelineGroup>();
@@ -451,7 +451,11 @@ namespace osg2vsg
     {
         if (!stateset) return vsg::ref_ptr<vsg::StateSet>();
 
+#if defined(USE_DESCRIPTOR_STATESET)
         auto vsg_stateset = vsg::DescriptorSetStateSet::create();
+#else
+        auto vsg_stateset = vsg::StateSet::create();
+#endif
 
         unsigned int units = stateset->getNumTextureAttributeLists();
         uint32_t texcount = 0;
@@ -497,8 +501,8 @@ namespace osg2vsg
         ShaderCompiler shaderCompiler;
 
         vsg::GraphicsPipelineAttribute::Shaders shaders{
-            vsg::Shader::create(VK_SHADER_STAGE_VERTEX_BIT, "main", createVertexSource(shaderModeMask, geometryAttributesMask, false)),
-            vsg::Shader::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", createFragmentSource(shaderModeMask, geometryAttributesMask, false, false)),
+            vsg::Shader::create(VK_SHADER_STAGE_VERTEX_BIT, "main", createVertexSourcePSC(shaderModeMask, geometryAttributesMask)),
+            vsg::Shader::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", createFragmentSourcePSC(shaderModeMask, geometryAttributesMask)),
         };
 
         if (!shaderCompiler.compile(shaders)) return vsg::ref_ptr<vsg::StateSet>();
@@ -525,8 +529,10 @@ namespace osg2vsg
         vsg::DescriptorSetLayoutBindings descriptorBindings;
 
         // VkDescriptorSetLayoutBinding { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
-        if (shaderModeMask & DIFFUSE_MAP) descriptorBindings.push_back( { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr } );
-        if (shaderModeMask & NORMAL_MAP) descriptorBindings.push_back( { 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr  } );
+        if (shaderModeMask & DIFFUSE_MAP) descriptorBindings.push_back( { DIFFUSE_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr } );
+        if (shaderModeMask & NORMAL_MAP) descriptorBindings.push_back( { NORMAL_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr  } );
+
+        gp->descriptorSetLayoutBindings.push_back(descriptorBindings);
 
         vsg::DescriptorPoolSizes descriptorPoolSizes = vsg::DescriptorPoolSizes();
 

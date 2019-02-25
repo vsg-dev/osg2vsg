@@ -10,8 +10,11 @@
 #include <vsg/nodes/StateGroup.h>
 #include <vsg/traversals/CompileTraversal.h>
 
+//#define USE_DESCRIPTOR_STATESET
+
 namespace vsg
 {
+#if defined(USE_DESCRIPTOR_STATESET)
     class DescriptorStateComponent : public Inherit<StateComponent, DescriptorStateComponent>
     {
     public:
@@ -65,6 +68,7 @@ namespace vsg
         ref_ptr<vsg::BindDescriptorSets> _bindDescriptorSets;
     };
     VSG_type_name(vsg::DescriptorSetStateSet)
+#endif
 
     class GraphicsPipelineAttribute : public Inherit<StateComponent, GraphicsPipelineAttribute>
     {
@@ -103,7 +107,12 @@ namespace vsg
     };
     VSG_type_name(vsg::GraphicsPipelineAttribute)
 
-    class Texture : public Inherit<DescriptorStateComponent, Texture>
+    class Texture :
+#if defined(USE_DESCRIPTOR_STATESET)
+        public Inherit<DescriptorStateComponent, Texture>
+#else
+        public Inherit<StateComponent, Texture>
+#endif
     {
     public:
         Texture(Allocator* allocator = nullptr);
@@ -121,7 +130,9 @@ namespace vsg
         ref_ptr<Data> _textureData;
 
         // compiled objects
-        //ref_ptr<vsg::BindDescriptorSets> _bindDescriptorSets;
+#if !defined(USE_DESCRIPTOR_STATESET)
+        ref_ptr<vsg::BindDescriptorSets> _bindDescriptorSets;
+#endif
     };
     VSG_type_name(vsg::Texture)
 

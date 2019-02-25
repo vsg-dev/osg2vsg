@@ -65,7 +65,7 @@ namespace osg2vsg
         bool writeToFileProgramAndDataSetSets = false;
         ShaderCompiler shaderCompiler;
 
-        uint32_t supportedGeometryAttributes = GeometryAttributes::STANDARD_ATTS;
+        uint32_t supportedGeometryAttributes = GeometryAttributes::STANDARD_ATTS | GeometryAttributes::TANGENT;
         uint32_t supportedShaderModeMask = ShaderModeMask::ALL_SHADER_MODE_MASK;
         uint32_t overrideGeomAttributes = GeometryAttributes::STANDARD_ATTS;
         uint32_t overrideShaderModeMask = ShaderModeMask::NONE;
