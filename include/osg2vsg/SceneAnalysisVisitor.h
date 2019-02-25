@@ -13,6 +13,7 @@
 
 #include <osg2vsg/GraphicsNodes.h>
 #include <osg2vsg/ShaderUtils.h>
+#include <osg2vsg/GeometryUtils.h>
 
 namespace osg2vsg
 {
@@ -63,6 +64,11 @@ namespace osg2vsg
         MasksTransformStateMap masksTransformStateMap;
         bool writeToFileProgramAndDataSetSets = false;
         ShaderCompiler shaderCompiler;
+
+        uint32_t supportedGeometryAttributes = GeometryAttributes::STANDARD_ATTS;
+        uint32_t supportedShaderModeMask = ShaderModeMask::ALL_SHADER_MODE_MASK;
+        uint32_t overrideGeomAttributes = GeometryAttributes::STANDARD_ATTS;
+        uint32_t overrideShaderModeMask = ShaderModeMask::NONE;
 
         osg::ref_ptr<osg::StateSet> uniqueState(osg::ref_ptr<osg::StateSet> stateset, bool programStateSet);
 

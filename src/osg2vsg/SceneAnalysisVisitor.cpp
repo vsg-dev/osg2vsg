@@ -433,22 +433,6 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createCoreVSG(vsg::Paths& searchPa
 {
     std::cout<<"SceneAnalysisVisitor::createCoreVSG(vsg::Paths& searchPaths)"<<std::endl;
 
-#if 0
-    uint32_t supportedGeometryAttributes = GeometryAttributes::STANDARD_ATTS;
-    uint32_t supportedShaderModeMask = ShaderModeMask::ALL_SHADER_MODE_MASK;
-#else
-    uint32_t supportedGeometryAttributes = GeometryAttributes::VERTEX | GeometryAttributes::NORMAL | GeometryAttributes::TEXCOORD0;
-    uint32_t supportedShaderModeMask = ShaderModeMask::LIGHTING | ShaderModeMask::DIFFUSE_MAP;
-#endif
-
-#if 0
-    uint32_t forceGeomAttributes = GeometryAttributes::STANDARD_ATTS;
-    uint32_t forceShaderModeMask = ShaderModeMask::LIGHTING;
-#else
-    uint32_t forceGeomAttributes = GeometryAttributes::STANDARD_ATTS;
-    uint32_t forceShaderModeMask = ShaderModeMask::NONE;
-#endif
-
     vsg::ref_ptr<vsg::Group> group = vsg::Group::create();
 
     for (auto[masks, transformStatePair] : masksTransformStateMap)
@@ -464,8 +448,8 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createCoreVSG(vsg::Paths& searchPa
             std::cout<<"  maxNumDescriptors = "<<maxNumDescriptors<<std::endl;
         }
 
-        uint32_t geometrymask = (masks.second | forceGeomAttributes) & supportedGeometryAttributes;
-        uint32_t shaderModeMask = (masks.first | forceShaderModeMask) & supportedShaderModeMask;
+        uint32_t geometrymask = (masks.second | overrideGeomAttributes) & supportedGeometryAttributes;
+        uint32_t shaderModeMask = (masks.first | overrideShaderModeMask) & supportedShaderModeMask;
 
         std::cout<<"  about to call createStateSetWithGraphicsPipeline("<<shaderModeMask<<", "<<geometrymask<<", "<<maxNumDescriptors<<")"<<std::endl;
 

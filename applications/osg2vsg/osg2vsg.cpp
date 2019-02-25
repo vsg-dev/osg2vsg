@@ -102,6 +102,7 @@ int main(int argc, char** argv)
     }
     std::cout<<std::endl;
 
+    osg2vsg::SceneAnalysisVisitor sceneAnalysis;
     auto windowTraits = vsg::Window::Traits::create();
     windowTraits->windowTitle = "osg2vsg";
 
@@ -123,6 +124,8 @@ int main(int argc, char** argv)
     auto outputFilename = arguments.value(std::string(), "-o");
     auto pathFilename = arguments.value(std::string(),"-p");
     arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height);
+    arguments.read({"--support-mask", "--sm"}, sceneAnalysis.supportedShaderModeMask);
+    arguments.read({"--override-mask", "--om"}, sceneAnalysis.overrideShaderModeMask);
     if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
 
     // read shaders
@@ -163,7 +166,6 @@ int main(int argc, char** argv)
 
 
     // Collect stats about the loaded scene
-    osg2vsg::SceneAnalysisVisitor sceneAnalysis;
     sceneAnalysis.writeToFileProgramAndDataSetSets = writeToFileProgramAndDataSetSets;
     osg_scene->accept(sceneAnalysis);
 
