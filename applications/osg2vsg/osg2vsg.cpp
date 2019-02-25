@@ -216,22 +216,6 @@ int main(int argc, char** argv)
 
     viewer->addWindow(window);
 
-    // create high level Vulkan objects associated the main window
-    vsg::ref_ptr<vsg::PhysicalDevice> physicalDevice(window->physicalDevice());
-    vsg::ref_ptr<vsg::Device> device(window->device());
-    vsg::ref_ptr<vsg::Surface> surface(window->surface());
-    vsg::ref_ptr<vsg::RenderPass> renderPass(window->renderPass());
-
-
-    VkQueue graphicsQueue = device->getQueue(physicalDevice->getGraphicsFamily());
-    VkQueue presentQueue = device->getQueue(physicalDevice->getPresentFamily());
-    if (!graphicsQueue || !presentQueue)
-    {
-        std::cout<<"Required graphics/present queue not available!"<<std::endl;
-        return 1;
-    }
-
-    vsg::ref_ptr<vsg::CommandPool> commandPool = vsg::CommandPool::create(device, physicalDevice->getGraphicsFamily());
 
     // camera related state
     auto viewport = vsg::ViewportState::create(window->extent2D());
@@ -251,17 +235,23 @@ int main(int argc, char** argv)
     // create graphics stage
     auto stage = vsg::GraphicsStage::create(vsg_scene, camera);
 
-    // compile the Vulkan objects
-    vsg::CompileTraversal compile;
-    compile.context.device = device;
-    compile.context.commandPool = commandPool;
-    compile.context.renderPass = renderPass;
-    compile.context.viewport = viewport;
-    compile.context.graphicsQueue = graphicsQueue;
-    compile.context.projMatrix = stage->_projMatrix;
-    compile.context.viewMatrix = stage->_viewMatrix;
+    {
+        // compile the Vulkan objects
+        // create high level Vulkan objects associated the main window
+        vsg::ref_ptr<vsg::PhysicalDevice> physicalDevice(window->physicalDevice());
+        vsg::ref_ptr<vsg::Device> device(window->device());
 
-    vsg_scene->accept(compile);
+        vsg::CompileTraversal compile;
+        compile.context.device = window->device();
+        compile.context.commandPool = vsg::CommandPool::create(device, physicalDevice->getGraphicsFamily());
+        compile.context.renderPass = window->renderPass();
+        compile.context.viewport = viewport;
+        compile.context.graphicsQueue = device->getQueue(physicalDevice->getGraphicsFamily());
+        compile.context.projMatrix = stage->_projMatrix;
+        compile.context.viewMatrix = stage->_viewMatrix;
+
+        vsg_scene->accept(compile);
+    }
 
     // add a GraphicsStage tp the Window to do dispatch of the command graph to the commnad buffer(s)
     window->addStage(stage);
