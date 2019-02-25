@@ -338,8 +338,8 @@ namespace osg2vsg
         ShaderCompiler shaderCompiler;
 
         vsg::GraphicsPipelineGroup::Shaders shaders{
-            vsg::Shader::create(VK_SHADER_STAGE_VERTEX_BIT, "main", createVertexSource(shaderModeMask, geometryAttributesMask, false)),
-            vsg::Shader::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", createFragmentSource(shaderModeMask, geometryAttributesMask, false)),
+            vsg::Shader::create(VK_SHADER_STAGE_VERTEX_BIT, "main", createVertexSource(shaderModeMask, geometryAttributesMask)),
+            vsg::Shader::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", createFragmentSource(shaderModeMask, geometryAttributesMask)),
         };
 
         if (!shaderCompiler.compile(shaders)) return vsg::ref_ptr<vsg::GraphicsPipelineGroup>();
@@ -496,8 +496,8 @@ namespace osg2vsg
         ShaderCompiler shaderCompiler;
 
         vsg::GraphicsPipelineAttribute::Shaders shaders{
-            vsg::Shader::create(VK_SHADER_STAGE_VERTEX_BIT, "main", createVertexSource(shaderModeMask, geometryAttributesMask, false)),
-            vsg::Shader::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", createFragmentSource(shaderModeMask, geometryAttributesMask, false)),
+            vsg::Shader::create(VK_SHADER_STAGE_VERTEX_BIT, "main", createVertexSource(shaderModeMask, geometryAttributesMask)),
+            vsg::Shader::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", createFragmentSource(shaderModeMask, geometryAttributesMask)),
         };
 
         if (!shaderCompiler.compile(shaders)) return vsg::ref_ptr<vsg::StateSet>();
