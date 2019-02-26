@@ -127,7 +127,7 @@ void GraphicsPipelineAttribute::compile(Context& context)
 
 /////////////////////////////////////////////////////////////////////////////////////////
 //
-// TextureAttribut
+// Texture
 //
 Texture::Texture(ref_ptr<SharedBindDescriptorSets> sharedBindDescriptorSets, Allocator* allocator) :
     Inherit(allocator)
