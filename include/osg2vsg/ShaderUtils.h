@@ -19,7 +19,7 @@ namespace osg2vsg
         AMBIENT_MAP = 8,
         NORMAL_MAP = 16,
         SPECULAR_MAP = 32,
-        ALL_SHADER_MODE_MASK = LIGHTING | DIFFUSE_MAP | OPACITY_MAP | AMBIENT_MAP | SPECULAR_MAP
+        ALL_SHADER_MODE_MASK = LIGHTING | DIFFUSE_MAP | OPACITY_MAP | AMBIENT_MAP | NORMAL_MAP | SPECULAR_MAP
     };
 
     // taken from osg fbx plugin

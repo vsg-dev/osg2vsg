@@ -349,7 +349,7 @@ namespace osg2vsg
         //
         vsg::ref_ptr<vsg::GraphicsPipelineGroup> gp = vsg::GraphicsPipelineGroup::create();
         gp->shaders = shaders;
-        gp->maxSets = std::max<unsigned int>(maxNumDescriptors, 1);
+        gp->maxSets = std::max<unsigned int>(maxNumDescriptors, 1); // total sets
 
         vsg::DescriptorSetLayoutBindings descriptorBindings  = vsg::DescriptorSetLayoutBindings();
 
@@ -366,7 +366,7 @@ namespace osg2vsg
 
         if (descriptorBindings.size() > 0)
         {
-            descriptorPoolSizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(descriptorBindings.size()) }); // type, descriptorCount
+            descriptorPoolSizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(descriptorBindings.size()) }); // type, descriptorCount // total descriptors of a type across all sets
         };
 
         gp->descriptorPoolSizes = descriptorPoolSizes;
@@ -453,6 +453,8 @@ namespace osg2vsg
 
         auto vsg_stateset = vsg::StateSet::create();
 
+        vsg::ref_ptr<vsg::SharedBindDescriptorSets> sharedDescriptorSetBinding = vsg::SharedBindDescriptorSets::create();
+
         unsigned int units = stateset->getNumTextureAttributeLists();
         uint32_t texcount = 0;
 
@@ -465,7 +467,15 @@ namespace osg2vsg
                 vsg::ref_ptr<vsg::Texture> vsgtex = convertToVsgTexture(osgtex);
                 if (vsgtex)
                 {
-                    vsgtex->_bindingIndex = texcount++; // i
+                    // shaders are looking for textures in original units
+                    vsgtex->_bindingIndex = i;
+                    // use a shared descriptor set binding
+                    if (sharedDescriptorSetBinding.valid())
+                    {
+                        vsgtex->_ownsBindDescriptorSets = false;
+                        vsgtex->_bindDescriptorSets = sharedDescriptorSetBinding;
+                    }
+                    texcount++; //
                     vsg_stateset->add(vsgtex);
                 }
                 else
@@ -482,6 +492,9 @@ namespace osg2vsg
         if (shaderModeMask & ShaderModeMask::SPECULAR_MAP) addTexture(SPECULAR_TEXTURE_UNIT);
 
         if (texcount==0) return vsg::ref_ptr<vsg::StateSet>();
+
+        // add the shared binding at the end so that the textures will compile first and add their descriptors to the shared binding
+        if(sharedDescriptorSetBinding.valid()) vsg_stateset->add(sharedDescriptorSetBinding);
 
         return vsg_stateset;
     }
@@ -510,13 +523,13 @@ namespace osg2vsg
         //
         vsg::ref_ptr<vsg::GraphicsPipelineAttribute> gp = vsg::GraphicsPipelineAttribute::create();
         gp->shaders = shaders;
-        gp->maxSets = maxNumDescriptors;
+        gp->maxSets = maxNumDescriptors; //  total sets
 
         if (maxNumDescriptors > 0)
         {
             gp->descriptorPoolSizes = vsg::DescriptorPoolSizes
             {
-                {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxNumDescriptors} // type, descriptorCount
+                {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxNumDescriptors} // type, descriptorCount // total descriptors of a type across all sets
             };
         }
 
@@ -525,9 +538,13 @@ namespace osg2vsg
 
         vsg::DescriptorSetLayoutBindings descriptorBindings;
 
+        // these need to go in incremental order by texture unit value as that how they will have been added to the desctiptor set
         // VkDescriptorSetLayoutBinding { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
-        if (shaderModeMask & DIFFUSE_MAP) descriptorBindings.push_back( { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr } );
-        if (shaderModeMask & NORMAL_MAP) descriptorBindings.push_back( { 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr  } );
+        if (shaderModeMask & DIFFUSE_MAP) descriptorBindings.push_back({ DIFFUSE_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr }); // { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
+        if (shaderModeMask & OPACITY_MAP) descriptorBindings.push_back({ OPACITY_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
+        if (shaderModeMask & AMBIENT_MAP) descriptorBindings.push_back({ AMBIENT_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
+        if (shaderModeMask & NORMAL_MAP) descriptorBindings.push_back({ NORMAL_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
+        if (shaderModeMask & SPECULAR_MAP) descriptorBindings.push_back({ SPECULAR_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
 
         gp->descriptorSetLayoutBindings.push_back(descriptorBindings);
 
