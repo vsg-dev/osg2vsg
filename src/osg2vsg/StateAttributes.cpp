@@ -85,6 +85,9 @@ void GraphicsPipelineAttribute::compile(Context& context)
     if (!descriptorPoolSizes.empty()) context.descriptorPool = DescriptorPool::create(context.device, maxSets, descriptorPoolSizes);
     DEBUG_OUTPUT<<"  context.descriptorPool = "<<context.descriptorPool.get()<<std::endl;
 
+    // prevent previous GraphicsPipelineAttribute::compile(Context& context) calls during the current compile traversal accumulating into this GraphicsPipeline setup.
+    context.descriptorSetLayouts.clear();
+
     for (unsigned int i = 0; i < descriptorSetLayoutBindings.size(); i++)
     {
         context.descriptorSetLayouts.push_back(DescriptorSetLayout::create(context.device, descriptorSetLayoutBindings[i]));
