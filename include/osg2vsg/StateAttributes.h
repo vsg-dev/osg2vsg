@@ -87,7 +87,7 @@ namespace vsg
         using DescriptorSetBindingsMap = std::map<uint32_t, Descriptors>;
         DescriptorSetBindingsMap _descriptorSetBindingsMap;
     };
-    VSG_type_name(vsg::SharedBindDescriptorSets);
+    VSG_type_name(vsg::SharedBindDescriptorSets)
 
     class Texture : public Inherit<StateComponent, Texture>
     {
