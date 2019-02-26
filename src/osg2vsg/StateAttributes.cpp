@@ -129,7 +129,7 @@ void GraphicsPipelineAttribute::compile(Context& context)
 //
 // TextureAttribut
 //
-Texture::Texture(Allocator* allocator) :
+Texture::Texture(ref_ptr<SharedBindDescriptorSets> sharedBindDescriptorSets, Allocator* allocator) :
     Inherit(allocator)
 {
     // set default sampler info
@@ -151,6 +151,12 @@ Texture::Texture(Allocator* allocator) :
     _samplerInfo.unnormalizedCoordinates = VK_FALSE;
     _samplerInfo.compareEnable = VK_FALSE;
     _samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+
+    if (sharedBindDescriptorSets.valid())
+    {
+        _bindDescriptorSets = sharedBindDescriptorSets;
+        _ownsBindDescriptorSets = false;
+    }
 }
 
 void Texture::compile(Context& context)
@@ -163,43 +169,51 @@ void Texture::compile(Context& context)
         return;
     }
 
-    // set up DescriptorSet
-    vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = vsg::DescriptorSet::create(context.device, context.descriptorPool, context.descriptorSetLayouts[0],
+    if(_ownsBindDescriptorSets)
     {
-        vsg::DescriptorImage::create(_bindingIndex, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, vsg::ImageDataList{imageData})
-    });
+        // set up DescriptorSet
+        vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = vsg::DescriptorSet::create(context.device, context.descriptorPool, context.descriptorSetLayouts[0],
+        {
+            vsg::DescriptorImage::create(_bindingIndex, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, vsg::ImageDataList{imageData})
+        });
 
-    if (descriptorSet)
-    {
-        // setup binding of descriptors
-        _bindDescriptorSets = vsg::BindDescriptorSets::create(VK_PIPELINE_BIND_POINT_GRAPHICS, context.pipelineLayout, vsg::DescriptorSets{descriptorSet}); // device dependent
+        if (descriptorSet)
+        {
+            // setup binding of descriptors
+            _bindDescriptorSets = vsg::BindDescriptorSets::create(VK_PIPELINE_BIND_POINT_GRAPHICS, context.pipelineLayout, vsg::DescriptorSets{descriptorSet}); // device dependent
 
-        DEBUG_OUTPUT<<"Texture::compile(() succeeded."<<std::endl;
-        DEBUG_OUTPUT<<"   imageData._sampler = "<<imageData._sampler.get()<<std::endl;
-        DEBUG_OUTPUT<<"   imageData._imageView = "<<imageData._imageView.get()<<std::endl;
-        DEBUG_OUTPUT<<"   imageData._imageLayout = "<<imageData._imageLayout<<std::endl;
+            DEBUG_OUTPUT<<"Texture::compile(() succeeded."<<std::endl;
+            DEBUG_OUTPUT<<"   imageData._sampler = "<<imageData._sampler.get()<<std::endl;
+            DEBUG_OUTPUT<<"   imageData._imageView = "<<imageData._imageView.get()<<std::endl;
+            DEBUG_OUTPUT<<"   imageData._imageLayout = "<<imageData._imageLayout<<std::endl;
+        }
+        else
+        {
+            DEBUG_OUTPUT<<"Texture::compile(() failed, descriptorSet not created."<<std::endl;
+            DEBUG_OUTPUT<<"   imageData._sampler = "<<imageData._sampler.get()<<std::endl;
+            DEBUG_OUTPUT<<"   imageData._imageView = "<<imageData._imageView.get()<<std::endl;
+            DEBUG_OUTPUT<<"   imageData._imageLayout = "<<imageData._imageLayout<<std::endl;
+            DEBUG_OUTPUT<<"   _textureData = "<<_textureData->width()<<", "<<_textureData->height()<<", "<<_textureData->depth()<<", "<<std::endl;
+        }
     }
     else
     {
-        DEBUG_OUTPUT<<"Texture::compile(() failed, descriptorSet not created."<<std::endl;
-        DEBUG_OUTPUT<<"   imageData._sampler = "<<imageData._sampler.get()<<std::endl;
-        DEBUG_OUTPUT<<"   imageData._imageView = "<<imageData._imageView.get()<<std::endl;
-        DEBUG_OUTPUT<<"   imageData._imageLayout = "<<imageData._imageLayout<<std::endl;
-        DEBUG_OUTPUT<<"   _textureData = "<<_textureData->width()<<", "<<_textureData->height()<<", "<<_textureData->depth()<<", "<<std::endl;
+        SharedBindDescriptorSets* asShared = dynamic_cast<SharedBindDescriptorSets*>(_bindDescriptorSets.get());
+        asShared->addDescriptor(vsg::DescriptorImage::create(_bindingIndex, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, vsg::ImageDataList{ imageData }), 0);
     }
 }
 
 void Texture::pushTo(State& state) const
 {
-    if (_bindDescriptorSets) _bindDescriptorSets->pushTo(state);
+    if (_bindDescriptorSets && _ownsBindDescriptorSets) _bindDescriptorSets->pushTo(state);
 }
 
 void Texture::popFrom(State& state) const
 {
-    if (_bindDescriptorSets) _bindDescriptorSets->popFrom(state);
+    if (_bindDescriptorSets && _ownsBindDescriptorSets) _bindDescriptorSets->popFrom(state);
 }
 
 void Texture::dispatch(CommandBuffer& commandBuffer) const
 {
-    if (_bindDescriptorSets) _bindDescriptorSets->dispatch(commandBuffer);
+    if (_bindDescriptorSets && _ownsBindDescriptorSets) _bindDescriptorSets->dispatch(commandBuffer);
 }

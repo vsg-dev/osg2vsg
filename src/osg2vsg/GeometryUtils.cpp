@@ -453,6 +453,8 @@ namespace osg2vsg
 
         auto vsg_stateset = vsg::StateSet::create();
 
+        vsg::ref_ptr<vsg::SharedBindDescriptorSets> sharedDescriptorSetBinding = vsg::SharedBindDescriptorSets::create();
+
         unsigned int units = stateset->getNumTextureAttributeLists();
         uint32_t texcount = 0;
 
@@ -467,6 +469,12 @@ namespace osg2vsg
                 {
                     // shaders are looking for textures in original units
                     vsgtex->_bindingIndex = i;
+                    // use a shared descriptor set binding
+                    if (sharedDescriptorSetBinding.valid())
+                    {
+                        vsgtex->_ownsBindDescriptorSets = false;
+                        vsgtex->_bindDescriptorSets = sharedDescriptorSetBinding;
+                    }
                     texcount++; //
                     vsg_stateset->add(vsgtex);
                 }
@@ -484,6 +492,9 @@ namespace osg2vsg
         if (shaderModeMask & ShaderModeMask::SPECULAR_MAP) addTexture(SPECULAR_TEXTURE_UNIT);
 
         if (texcount==0) return vsg::ref_ptr<vsg::StateSet>();
+
+        // add the shared binding at the end so that the textures will compile first and add their descriptors to the shared binding
+        if(sharedDescriptorSetBinding.valid()) vsg_stateset->add(sharedDescriptorSetBinding);
 
         return vsg_stateset;
     }
