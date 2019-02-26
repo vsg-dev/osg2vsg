@@ -36,7 +36,7 @@ namespace vsg
         uint32_t maxSets = 0;
         DescriptorPoolSizes descriptorPoolSizes; // need to accumulate descriptorPoolSizes by looking at scene graph
         // descriptorSetLayout ..
-        DescriptorSetLayoutBindings descriptorSetLayoutBindings;
+        std::vector<DescriptorSetLayoutBindings> descriptorSetLayoutBindings;
         PushConstantRanges pushConstantRanges;
         VertexInputState::Bindings vertexBindingsDescriptions;
         VertexInputState::Attributes vertexAttributeDescriptions;
