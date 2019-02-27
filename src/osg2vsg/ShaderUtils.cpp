@@ -41,7 +41,7 @@ uint32_t osg2vsg::calculateShaderModeMask(osg::StateSet* stateSet)
     return stateMask;
 }
 
-// create vertex shader source using statemask to determine type of shader to build and geometryattributes to determine attribute binding locations
+// create defines string based of shader mask
 
 std::string createPSCDefinesString(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
 {
@@ -64,6 +64,57 @@ std::string createPSCDefinesString(const uint32_t& shaderModeMask, const uint32_
 
     return defines;
 }
+
+// insert defines string after the version in source
+
+std::string insertDefinesInShaderSource(const std::string& source, const std::string& defines)
+{
+    // trim leading spaces
+    auto trimLeading = [](std::string& str)
+    {
+        size_t startpos = str.find_first_not_of(" \t");
+        if (std::string::npos != startpos)
+        {
+            str = str.substr(startpos);
+        }
+    };
+
+    std::istringstream iss(source);
+    std::ostringstream oss;
+    bool foundversion = false;
+    //loop till we have a version then insert defines after
+    for (std::string line; std::getline(iss, line);)
+    {
+        trimLeading(line);
+        if(line.compare(0, 8, "#version") == 0)
+        {
+            oss << line << "\n";
+            oss << defines;
+        }
+        else
+        {
+            oss << line << "\n";
+        }
+    }
+    return oss.str();
+}
+
+// read a glsl file and inject defines based on shadermodemask and geometryatts
+std::string osg2vsg::readGLSLShader(const std::string& filename, const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
+{
+    std::string sourceBuffer;
+    if (!vsg::readFile(sourceBuffer, filename))
+    {
+        DEBUG_OUTPUT << "readGLSLShader: Failed to read file '" << filename << std::endl;
+        return std::string();
+    }
+
+    std::string defines = createPSCDefinesString(shaderModeMask, geometryAttrbutes);
+    std::string formatedSource = insertDefinesInShaderSource(sourceBuffer, defines);
+    return formatedSource;
+}
+
+// create a default vertex shader
 
 std::string osg2vsg::createVertexSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
 {
@@ -144,6 +195,8 @@ std::string osg2vsg::createVertexSource(const uint32_t& shaderModeMask, const ui
         "}\n";
     return source;
 }
+
+// create a default fragment shader
 
 std::string osg2vsg::createFragmentSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
 {

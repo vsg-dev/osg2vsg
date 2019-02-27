@@ -37,6 +37,9 @@ namespace osg2vsg
 
     extern OSG2VSG_DECLSPEC uint32_t calculateShaderModeMask(osg::StateSet* stateSet);
 
+    // read a glsl file and inject defines based on shadermodemask and geometryatts
+    extern OSG2VSG_DECLSPEC std::string readGLSLShader(const std::string& filename, const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
+
     // create vertex shader source using statemask to determine type of shader to build and geometryattributes to determine attribute binding locations
     extern OSG2VSG_DECLSPEC std::string createVertexSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
 
