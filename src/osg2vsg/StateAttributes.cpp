@@ -132,7 +132,7 @@ void GraphicsPipelineAttribute::compile(Context& context)
 //
 // Texture
 //
-Texture::Texture(ref_ptr<SharedBindDescriptorSets> sharedBindDescriptorSets, Allocator* allocator) :
+Texture::Texture(Allocator* allocator) :
     Inherit(allocator)
 {
     // set default sampler info
@@ -154,69 +154,17 @@ Texture::Texture(ref_ptr<SharedBindDescriptorSets> sharedBindDescriptorSets, All
     _samplerInfo.unnormalizedCoordinates = VK_FALSE;
     _samplerInfo.compareEnable = VK_FALSE;
     _samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-
-    if (sharedBindDescriptorSets.valid())
-    {
-        _bindDescriptorSets = sharedBindDescriptorSets;
-        _ownsBindDescriptorSets = false;
-    }
 }
 
-void Texture::compile(Context& context)
+ref_ptr<vsg::Descriptor> Texture::compile(Context& context)
 {
     ref_ptr<Sampler> sampler = Sampler::create(context.device, _samplerInfo, nullptr);
     vsg::ImageData imageData = vsg::transferImageData(context.device, context.commandPool, context.graphicsQueue, _textureData, sampler);
     if (!imageData.valid())
     {
         DEBUG_OUTPUT<<"Texture not created"<<std::endl;
-        return;
+        return ref_ptr<vsg::Descriptor>();
     }
 
-    if(_ownsBindDescriptorSets)
-    {
-        // set up DescriptorSet
-        vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = vsg::DescriptorSet::create(context.device, context.descriptorPool, context.descriptorSetLayouts,
-        {
-            vsg::DescriptorImage::create(_bindingIndex, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, vsg::ImageDataList{imageData})
-        });
-
-        if (descriptorSet)
-        {
-            // setup binding of descriptors
-            _bindDescriptorSets = vsg::BindDescriptorSets::create(VK_PIPELINE_BIND_POINT_GRAPHICS, context.pipelineLayout, vsg::DescriptorSets{descriptorSet}); // device dependent
-
-            DEBUG_OUTPUT<<"Texture::compile(() succeeded."<<std::endl;
-            DEBUG_OUTPUT<<"   imageData._sampler = "<<imageData._sampler.get()<<std::endl;
-            DEBUG_OUTPUT<<"   imageData._imageView = "<<imageData._imageView.get()<<std::endl;
-            DEBUG_OUTPUT<<"   imageData._imageLayout = "<<imageData._imageLayout<<std::endl;
-        }
-        else
-        {
-            DEBUG_OUTPUT<<"Texture::compile(() failed, descriptorSet not created."<<std::endl;
-            DEBUG_OUTPUT<<"   imageData._sampler = "<<imageData._sampler.get()<<std::endl;
-            DEBUG_OUTPUT<<"   imageData._imageView = "<<imageData._imageView.get()<<std::endl;
-            DEBUG_OUTPUT<<"   imageData._imageLayout = "<<imageData._imageLayout<<std::endl;
-            DEBUG_OUTPUT<<"   _textureData = "<<_textureData->width()<<", "<<_textureData->height()<<", "<<_textureData->depth()<<", "<<std::endl;
-        }
-    }
-    else
-    {
-        SharedBindDescriptorSets* asShared = dynamic_cast<SharedBindDescriptorSets*>(_bindDescriptorSets.get());
-        asShared->addDescriptor(vsg::DescriptorImage::create(_bindingIndex, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, vsg::ImageDataList{ imageData }), 0);
-    }
-}
-
-void Texture::pushTo(State& state) const
-{
-    if (_bindDescriptorSets && _ownsBindDescriptorSets) _bindDescriptorSets->pushTo(state);
-}
-
-void Texture::popFrom(State& state) const
-{
-    if (_bindDescriptorSets && _ownsBindDescriptorSets) _bindDescriptorSets->popFrom(state);
-}
-
-void Texture::dispatch(CommandBuffer& commandBuffer) const
-{
-    if (_bindDescriptorSets && _ownsBindDescriptorSets) _bindDescriptorSets->dispatch(commandBuffer);
+    return vsg::DescriptorImage::create(_bindingIndex, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, vsg::ImageDataList{imageData});
 }

@@ -454,7 +454,8 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createCoreVSG(vsg::Paths& searchPa
 
         std::cout<<"  about to call createStateSetWithGraphicsPipeline("<<shaderModeMask<<", "<<geometrymask<<", "<<maxNumDescriptors<<")"<<std::endl;
 
-        auto graphicsPipelineGroup = vsg::StateGroup::create(createStateSetWithGraphicsPipeline(shaderModeMask, geometrymask, maxNumDescriptors));
+        auto graphicsPipelineGroup = vsg::StateGroup::create();
+        graphicsPipelineGroup->add(createGraphicsPipelineAttribute(shaderModeMask, geometrymask, maxNumDescriptors));
 
         group->addChild(graphicsPipelineGroup);
 
@@ -466,8 +467,10 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createCoreVSG(vsg::Paths& searchPa
             vsg::ref_ptr<vsg::StateSet> vsg_stateset = createVsgStateSet(stateset, shaderModeMask);
             if (vsg_stateset)
             {
-                auto stategroup = vsg::StateGroup::create(vsg_stateset);
+                auto stategroup = vsg::StateGroup::create();
+
                 graphicsPipelineGroup->addChild(stategroup);
+                stategroup->add(vsg_stateset);
                 stategroup->addChild(transformGeometryGraph);
             }
             else

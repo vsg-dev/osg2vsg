@@ -453,8 +453,6 @@ namespace osg2vsg
 
         auto vsg_stateset = vsg::StateSet::create();
 
-        vsg::ref_ptr<vsg::SharedBindDescriptorSets> sharedDescriptorSetBinding = vsg::SharedBindDescriptorSets::create();
-
         unsigned int units = stateset->getNumTextureAttributeLists();
         uint32_t texcount = 0;
 
@@ -469,12 +467,6 @@ namespace osg2vsg
                 {
                     // shaders are looking for textures in original units
                     vsgtex->_bindingIndex = i;
-                    // use a shared descriptor set binding
-                    if (sharedDescriptorSetBinding.valid())
-                    {
-                        vsgtex->_ownsBindDescriptorSets = false;
-                        vsgtex->_bindDescriptorSets = sharedDescriptorSetBinding;
-                    }
                     texcount++; //
                     vsg_stateset->add(vsgtex);
                 }
@@ -493,16 +485,12 @@ namespace osg2vsg
 
         if (texcount==0) return vsg::ref_ptr<vsg::StateSet>();
 
-        // add the shared binding at the end so that the textures will compile first and add their descriptors to the shared binding
-        if(sharedDescriptorSetBinding.valid()) vsg_stateset->add(sharedDescriptorSetBinding);
-
         return vsg_stateset;
     }
 
 
-    vsg::ref_ptr<vsg::StateSet> createStateSetWithGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryAttributesMask, unsigned int maxNumDescriptors)
+    vsg::ref_ptr<vsg::GraphicsPipelineAttribute> createGraphicsPipelineAttribute(uint32_t shaderModeMask, uint32_t geometryAttributesMask, unsigned int maxNumDescriptors)
     {
-        auto stateset = vsg::StateSet::create();
         //
         // load shaders
         //
@@ -513,7 +501,7 @@ namespace osg2vsg
             vsg::Shader::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", createFragmentSource(shaderModeMask, geometryAttributesMask)),
         };
 
-        if (!shaderCompiler.compile(shaders)) return vsg::ref_ptr<vsg::StateSet>();
+        if (!shaderCompiler.compile(shaders)) return vsg::ref_ptr<vsg::GraphicsPipelineAttribute>();
 
         // how many textures
         maxNumDescriptors = maxNumDescriptors * ((shaderModeMask & DIFFUSE_MAP ? 1 : 0) + (shaderModeMask & NORMAL_MAP ? 1 : 0));
@@ -533,7 +521,7 @@ namespace osg2vsg
             };
         }
 
-        std::cout<<"createStateSetWithGraphicsPipeline("<<shaderModeMask<<", "<<geometryAttributesMask<<", "<<maxNumDescriptors<<")"<<std::endl;
+        std::cout<<"createGraphicsPipelineAttribute("<<shaderModeMask<<", "<<geometryAttributesMask<<", "<<maxNumDescriptors<<")"<<std::endl;
 
 
         vsg::DescriptorSetLayoutBindings descriptorBindings;
@@ -604,9 +592,7 @@ namespace osg2vsg
             vsg::DepthStencilState::create()
         };
 
-        stateset->add(gp);
-
-        return stateset;
+        return gp;
     }
 }
 
