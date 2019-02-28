@@ -15,7 +15,7 @@
 namespace vsg
 {
 
-    class GraphicsPipelineAttribute : public Inherit<StateComponent, GraphicsPipelineAttribute>
+    class GraphicsPipelineAttribute : public Inherit<StateCommand, GraphicsPipelineAttribute>
     {
     public:
         GraphicsPipelineAttribute(Allocator* allocator = nullptr);
@@ -89,7 +89,7 @@ namespace vsg
     };
     VSG_type_name(vsg::SharedBindDescriptorSets)
 
-    class Texture : public Inherit<StateComponent, Texture>
+    class Texture : public Inherit<StateCommand, Texture>
     {
     public:
         Texture(ref_ptr<SharedBindDescriptorSets> sharedBindDescriptorSets = ref_ptr<SharedBindDescriptorSets>(), Allocator* allocator = nullptr);

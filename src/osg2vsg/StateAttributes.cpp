@@ -55,7 +55,7 @@ void GraphicsPipelineAttribute::dispatch(CommandBuffer& commandBuffer) const
 
 void GraphicsPipelineAttribute::read(Input& input)
 {
-    StateComponent::read(input);
+    StateCommand::read(input);
 
     shaders.resize(input.readValue<uint32_t>("NumShader"));
     for (auto& shader : shaders)
@@ -66,7 +66,7 @@ void GraphicsPipelineAttribute::read(Input& input)
 
 void GraphicsPipelineAttribute::write(Output& output) const
 {
-    StateComponent::write(output);
+    StateCommand::write(output);
 
     output.writeValue<uint32_t>("NumShader", shaders.size());
     for (auto& shader : shaders)
