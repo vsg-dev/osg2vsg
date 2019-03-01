@@ -127,6 +127,9 @@ int main(int argc, char** argv)
     arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height);
     arguments.read({"--support-mask", "--sm"}, sceneAnalysis.supportedShaderModeMask);
     arguments.read({"--override-mask", "--om"}, sceneAnalysis.overrideShaderModeMask);
+    arguments.read({ "--vertex-shader", "--vert" }, sceneAnalysis.vertexShaderPath);
+    arguments.read({ "--fragment-shader", "--frag" }, sceneAnalysis.fragmentShaderPath);
+
     if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
 
     // read shaders

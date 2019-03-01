@@ -70,6 +70,9 @@ namespace osg2vsg
         uint32_t overrideGeomAttributes = GeometryAttributes::STANDARD_ATTS;
         uint32_t overrideShaderModeMask = ShaderModeMask::NONE;
 
+        std::string vertexShaderPath = "";
+        std::string fragmentShaderPath = "";
+
         osg::ref_ptr<osg::StateSet> uniqueState(osg::ref_ptr<osg::StateSet> stateset, bool programStateSet);
 
         StatePair computeStatePair(osg::StateSet* stateset);
