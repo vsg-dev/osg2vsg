@@ -249,7 +249,7 @@ void AttributesNode::compile(Context& context)
         }
     }
 
-    vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = vsg::DescriptorSet::create(context.device, context.descriptorPool, context.descriptorSetLayouts[0], attributeDescriptors);
+    vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = vsg::DescriptorSet::create(context.device, context.descriptorPool, context.descriptorSetLayouts, attributeDescriptors);
 
     if (descriptorSet)
     {

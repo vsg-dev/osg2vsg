@@ -75,7 +75,7 @@ namespace vsg
             _descriptorSets.clear();
             for (auto& setDescriptorsPair : _descriptorSetBindingsMap)
             {
-                vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = vsg::DescriptorSet::create(context.device, context.descriptorPool, context.descriptorSetLayouts[setDescriptorsPair.first], setDescriptorsPair.second);
+                vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = vsg::DescriptorSet::create(context.device, context.descriptorPool, context.descriptorSetLayouts, setDescriptorsPair.second);
                 _descriptorSets.push_back(descriptorSet);
             }
             update();
