@@ -94,7 +94,13 @@ void GraphicsPipelineAttribute::compile(Context& context)
         DEBUG_OUTPUT << "  context.descriptorSetLayout = " << context.descriptorSetLayouts[i].get() << std::endl;
     }
 
-    context.pipelineLayout = PipelineLayout::create(context.device, context.descriptorSetLayouts, pushConstantRanges);
+#if 1
+    auto pipelineLayout = vsg::PipelineLayout::create(context.descriptorSetLayouts, pushConstantRanges);
+    pipelineLayout->compile(context);
+    context.pipelineLayout = pipelineLayout->implementation();
+#else
+    context.pipelineLayout = PipelineLayout::Implementation::create(context.device, context.descriptorSetLayouts, pushConstantRanges);
+#endif
     DEBUG_OUTPUT<<"  context.pipelineLayout = "<<context.pipelineLayout.get()<<std::endl;
 
 

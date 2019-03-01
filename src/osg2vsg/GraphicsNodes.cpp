@@ -99,7 +99,7 @@ void GraphicsPipelineGroup::compile(Context& context)
         DEBUG_OUTPUT << "  context.descriptorSetLayout = " << context.descriptorSetLayouts[i].get() << std::endl;
     }
 
-    context.pipelineLayout = PipelineLayout::create(context.device, context.descriptorSetLayouts, pushConstantRanges);
+    context.pipelineLayout = PipelineLayout::Implementation::create(context.device, context.descriptorSetLayouts, pushConstantRanges);
     DEBUG_OUTPUT<<"  context.pipelineLayout = "<<context.pipelineLayout.get()<<std::endl;
 
 
