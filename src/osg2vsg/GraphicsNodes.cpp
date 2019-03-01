@@ -95,7 +95,7 @@ void GraphicsPipelineGroup::compile(Context& context)
 
     for (unsigned int i = 0; i < descriptorSetLayoutBindings.size(); i++)
     {
-        context.descriptorSetLayouts.push_back(DescriptorSetLayout::create(context.device, descriptorSetLayoutBindings[i]));
+        context.descriptorSetLayouts.push_back(DescriptorSetLayout::Implementation::create(context.device, descriptorSetLayoutBindings[i]));
         DEBUG_OUTPUT << "  context.descriptorSetLayout = " << context.descriptorSetLayouts[i].get() << std::endl;
     }
 
