@@ -330,7 +330,7 @@ namespace osg2vsg
         return geometry;
     }
 
-    vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGeometryGraphicsPipeline(const uint32_t& shaderModeMask, const uint32_t& geometryAttributesMask, unsigned int maxNumDescriptors)
+    vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGeometryGraphicsPipeline(const uint32_t& shaderModeMask, const uint32_t& geometryAttributesMask, unsigned int maxNumDescriptors, const std::string& vertShaderPath, const std::string& fragShaderPath)
     {
         //
         // load shaders
@@ -338,8 +338,8 @@ namespace osg2vsg
         ShaderCompiler shaderCompiler;
 
         vsg::GraphicsPipelineGroup::Shaders shaders{
-            vsg::Shader::create(VK_SHADER_STAGE_VERTEX_BIT, "main", createVertexSource(shaderModeMask, geometryAttributesMask)),
-            vsg::Shader::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", createFragmentSource(shaderModeMask, geometryAttributesMask)),
+            vsg::Shader::create(VK_SHADER_STAGE_VERTEX_BIT, "main", vertShaderPath.empty() ? createVertexSource(shaderModeMask, geometryAttributesMask) : readGLSLShader(vertShaderPath, shaderModeMask, geometryAttributesMask)),
+            vsg::Shader::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", fragShaderPath.empty() ? createFragmentSource(shaderModeMask, geometryAttributesMask) : readGLSLShader(fragShaderPath, shaderModeMask, geometryAttributesMask))
         };
 
         if (!shaderCompiler.compile(shaders)) return vsg::ref_ptr<vsg::GraphicsPipelineGroup>();
@@ -489,7 +489,7 @@ namespace osg2vsg
     }
 
 
-    vsg::ref_ptr<vsg::GraphicsPipelineAttribute> createGraphicsPipelineAttribute(uint32_t shaderModeMask, uint32_t geometryAttributesMask, unsigned int maxNumDescriptors)
+    vsg::ref_ptr<vsg::GraphicsPipelineAttribute> createGraphicsPipelineAttribute(uint32_t shaderModeMask, uint32_t geometryAttributesMask, unsigned int maxNumDescriptors, const std::string& vertShaderPath, const std::string& fragShaderPath)
     {
         //
         // load shaders
@@ -497,8 +497,8 @@ namespace osg2vsg
         ShaderCompiler shaderCompiler;
 
         vsg::GraphicsPipelineAttribute::Shaders shaders{
-            vsg::Shader::create(VK_SHADER_STAGE_VERTEX_BIT, "main", createVertexSource(shaderModeMask, geometryAttributesMask)),
-            vsg::Shader::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", createFragmentSource(shaderModeMask, geometryAttributesMask)),
+            vsg::Shader::create(VK_SHADER_STAGE_VERTEX_BIT, "main", vertShaderPath.empty() ? createVertexSource(shaderModeMask, geometryAttributesMask) : readGLSLShader(vertShaderPath, shaderModeMask, geometryAttributesMask)),
+            vsg::Shader::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", fragShaderPath.empty() ? createFragmentSource(shaderModeMask, geometryAttributesMask) : readGLSLShader(fragShaderPath, shaderModeMask, geometryAttributesMask))
         };
 
         if (!shaderCompiler.compile(shaders)) return vsg::ref_ptr<vsg::GraphicsPipelineAttribute>();
