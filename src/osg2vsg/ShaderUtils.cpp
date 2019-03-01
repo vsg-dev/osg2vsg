@@ -7,6 +7,8 @@
 
 #include "glsllang/ResourceLimits.h"
 
+#include <algorithm>
+#include <iomanip>
 
 using namespace osg2vsg;
 
@@ -43,33 +45,37 @@ uint32_t osg2vsg::calculateShaderModeMask(osg::StateSet* stateSet)
 
 // create defines string based of shader mask
 
-std::string createPSCDefinesString(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
+std::vector<std::string> createPSCDefineStrings(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
 {
     bool hasnormal = geometryAttrbutes & NORMAL;
     bool hascolor = geometryAttrbutes & COLOR;
     bool hastex0 = geometryAttrbutes & TEXCOORD0;
     bool hastanget = geometryAttrbutes & TANGENT;
 
-    std::string defines = "";
-    if (hasnormal) defines += "#define VSG_NORMAL\n";
-    if (hascolor) defines += "#define VSG_COLOR\n";
-    if (hastex0) defines += "#define VSG_TEXCOORD0\n";
-    if (hastanget) defines += "#define VSG_TANGENT\n";
-    if (hasnormal && (shaderModeMask & LIGHTING)) defines += "#define VSG_LIGHTING\n";
-    if (hastex0 && (shaderModeMask & DIFFUSE_MAP)) defines += "#define VSG_DIFFUSE_MAP\n";
-    if (hastex0 && (shaderModeMask & OPACITY_MAP)) defines += "#define VSG_OPACITY_MAP\n";
-    if (hastex0 && (shaderModeMask & AMBIENT_MAP)) defines += "#define VSG_AMBIENT_MAP\n";
-    if (hastex0 && (shaderModeMask & NORMAL_MAP)) defines += "#define VSG_NORMAL_MAP\n";
-    if (hastex0 && (shaderModeMask & SPECULAR_MAP)) defines += "#define VSG_SPECULAR_MAP\n";
+    std::vector<std::string> defines;
+    
+    // vertx inputs
+    if (hasnormal) defines.push_back("VSG_NORMAL");
+    if (hascolor) defines.push_back("VSG_COLOR");
+    if (hastex0) defines.push_back("VSG_TEXCOORD0");
+    if (hastanget) defines.push_back("VSG_TANGENT");
+
+    // shading modes/maps
+    if (hasnormal && (shaderModeMask & LIGHTING)) defines.push_back("VSG_LIGHTING");
+    if (hastex0 && (shaderModeMask & DIFFUSE_MAP)) defines.push_back("VSG_DIFFUSE_MAP");
+    if (hastex0 && (shaderModeMask & OPACITY_MAP)) defines.push_back("VSG_OPACITY_MAP");
+    if (hastex0 && (shaderModeMask & AMBIENT_MAP)) defines.push_back("VSG_AMBIENT_MAP");
+    if (hastex0 && (shaderModeMask & NORMAL_MAP)) defines.push_back("VSG_NORMAL_MAP");
+    if (hastex0 && (shaderModeMask & SPECULAR_MAP)) defines.push_back("VSG_SPECULAR_MAP");
 
     return defines;
 }
 
 // insert defines string after the version in source
 
-std::string insertDefinesInShaderSource(const std::string& source, const std::string& defines)
+std::string processGLSLShaderSource(const std::string& source, const std::vector<std::string>& defines)
 {
-    // trim leading spaces
+    // trim leading spaces/tabs
     auto trimLeading = [](std::string& str)
     {
         size_t startpos = str.find_first_not_of(" \t");
@@ -79,24 +85,116 @@ std::string insertDefinesInShaderSource(const std::string& source, const std::st
         }
     };
 
+    // trim trailing spaces/tabs/newlines
+    auto trimTrailing = [](std::string& str)
+    {
+        size_t endpos = str.find_last_not_of(" \t\n");
+        if (endpos != std::string::npos)
+        {
+            str = str.substr(0, endpos+1);
+        }
+    };
+
+    // sanitise line by triming leading and trailing characters
+    auto sanitise = [&trimLeading, &trimTrailing](std::string& str)
+    {
+        trimLeading(str);
+        trimTrailing(str);
+    };
+
+    // return true if str starts with match string
+    auto startsWith = [](const std::string& str, const std::string& match)
+    {
+        return str.compare(0, match.length(), match) == 0;
+    };
+
+    // returns the string between the start and end character
+    auto stringBetween = [](const std::string& str, const char& startChar, const char& endChar)
+    {
+        auto start = str.find_first_of(startChar);
+        if (start == std::string::npos) return std::string();
+
+        auto end = str.find_first_of(endChar, start);
+        if (end == std::string::npos) return std::string();
+
+        if((end - start) - 1 == 0) return std::string();
+
+        return str.substr(start+1, (end - start) - 1);
+    };
+
+    auto split = [](const std::string& str, const char& seperator)
+    {
+        std::vector<std::string> elements;
+
+        std::string::size_type prev_pos = 0, pos = 0;
+
+        while ((pos = str.find(seperator, pos)) != std::string::npos)
+        {
+            auto substring = str.substr(prev_pos, pos - prev_pos);
+            elements.push_back(substring);
+            prev_pos = ++pos;
+        }
+
+        elements.push_back(str.substr(prev_pos, pos - prev_pos));
+
+        return elements;
+    };
+
+    auto addLine = [](std::ostringstream& ss, const std::string& line)
+    {
+        ss << line << "\n";
+    };
+
     std::istringstream iss(source);
-    std::ostringstream oss;
+    std::ostringstream headerstream;
+    std::ostringstream sourcestream;
     bool foundversion = false;
-    //loop till we have a version then insert defines after
+
+    const std::string versionmatch = "#version";
+    const std::string importdefinesmatch = "#pragma import_defines";
+
+    std::vector<std::string> finaldefines;
+
     for (std::string line; std::getline(iss, line);)
     {
-        trimLeading(line);
-        if(line.compare(0, 8, "#version") == 0)
+        std::string sanitisedline = line;
+        sanitise(sanitisedline);
+
+        // is it the version
+        if(startsWith(sanitisedline, versionmatch))
         {
-            oss << line << "\n";
-            oss << defines;
+            addLine(headerstream, line);
+        }
+        // is it the defines import
+        else if (startsWith(sanitisedline, importdefinesmatch))
+        {
+            // get the import defines between ()
+            auto csv = stringBetween(sanitisedline, '(', ')');
+            auto importedDefines = split(csv, ',');
+
+            addLine(headerstream, line);
+
+            // loop the imported defines and see if it's also requested in defines, if so insert a define line
+            for (auto importedDef : importedDefines)
+            {
+                auto sanitiesedImportDef = importedDef;
+                sanitise(sanitiesedImportDef);
+
+                auto finditr = std::find(defines.begin(), defines.end(), sanitiesedImportDef);
+                if (finditr != defines.end())
+                {
+                    addLine(headerstream, "#define " + sanitiesedImportDef);
+                }
+            }
         }
         else
         {
-            oss << line << "\n";
+            // standard source line
+            addLine(sourcestream, line);
         }
     }
-    return oss.str();
+
+    return headerstream.str() + sourcestream.str();
 }
 
 // read a glsl file and inject defines based on shadermodemask and geometryatts
@@ -109,8 +207,8 @@ std::string osg2vsg::readGLSLShader(const std::string& filename, const uint32_t&
         return std::string();
     }
 
-    std::string defines = createPSCDefinesString(shaderModeMask, geometryAttrbutes);
-    std::string formatedSource = insertDefinesInShaderSource(sourceBuffer, defines);
+    auto defines = createPSCDefineStrings(shaderModeMask, geometryAttrbutes);
+    std::string formatedSource = processGLSLShaderSource(sourceBuffer, defines);
     return formatedSource;
 }
 
@@ -118,15 +216,10 @@ std::string osg2vsg::readGLSLShader(const std::string& filename, const uint32_t&
 
 std::string osg2vsg::createVertexSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
 {
-    std::string defines = createPSCDefinesString(shaderModeMask, geometryAttrbutes);
-
     std::string source =
         "#version 450\n" \
-        "#extension GL_ARB_separate_shader_objects : enable\n";
-
-    source += defines;
-
-    source +=
+        "#pragma import_defines ( VSG_NORMAL, VSG_TANGENT, VSG_COLOR, VSG_TEXCOORD0, VSG_LIGHTING, VSG_NORMAL_MAP )\n" \
+        "#extension GL_ARB_separate_shader_objects : enable\n" \
         "layout(push_constant) uniform PushConstants {\n" \
         "    mat4 projection;\n" \
         "    mat4 view;\n" \
@@ -193,22 +286,21 @@ std::string osg2vsg::createVertexSource(const uint32_t& shaderModeMask, const ui
         "    vertColor = osg_Color;\n" \
         "#endif\n" \
         "}\n";
-    return source;
+
+    auto defines = createPSCDefineStrings(shaderModeMask, geometryAttrbutes);
+    std::string formatedSource = processGLSLShaderSource(source, defines);
+
+    return formatedSource;
 }
 
 // create a default fragment shader
 
 std::string osg2vsg::createFragmentSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
 {
-    std::string defines = createPSCDefinesString(shaderModeMask, geometryAttrbutes);
-
     std::string source =
         "#version 450\n" \
-        "#extension GL_ARB_separate_shader_objects : enable\n";
-
-    source += defines;
-
-    source +=
+        "#pragma import_defines ( VSG_NORMAL, VSG_COLOR, VSG_TEXCOORD0, VSG_LIGHTING, VSG_DIFFUSE_MAP, VSG_OPACITY_MAP, VSG_AMBIENT_MAP, VSG_NORMAL_MAP, VSG_SPECULAR_MAP )\n" \
+        "#extension GL_ARB_separate_shader_objects : enable\n" \
         "#ifdef VSG_DIFFUSE_MAP\n" \
         "layout(binding = 0) uniform sampler2D diffuseMap; \n" \
         "#endif\n" \
@@ -290,7 +382,11 @@ std::string osg2vsg::createFragmentSource(const uint32_t& shaderModeMask, const 
         "    outColor.a *= texture(opacityMap, texCoord0.st).r;\n" \
         "#endif\n" \
         "}\n";
-    return source;
+
+    auto defines = createPSCDefineStrings(shaderModeMask, geometryAttrbutes);
+    std::string formatedSource = processGLSLShaderSource(source, defines);
+
+    return formatedSource;
 }
 
 ShaderCompiler::ShaderCompiler(vsg::Allocator* allocator):

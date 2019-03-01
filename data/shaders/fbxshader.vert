@@ -1,4 +1,5 @@
 #version 450
+#pragma import_defines ( VSG_NORMAL, VSG_TANGENT, VSG_COLOR, VSG_TEXCOORD0, VSG_LIGHTING, VSG_NORMAL_MAP )
 #extension GL_ARB_separate_shader_objects : enable
 layout(push_constant) uniform PushConstants {
     mat4 projection;
