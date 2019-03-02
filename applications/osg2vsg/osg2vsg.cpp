@@ -173,7 +173,7 @@ int main(int argc, char** argv)
     osg_scene->accept(sceneAnalysis);
 
     // build VSG scene
-    vsg::ref_ptr<vsg::Node> vsg_scene= sceneAnalysis.createCoreVSG(searchPaths);
+    vsg::ref_ptr<vsg::Node> vsg_scene= sceneAnalysis.createVSG(searchPaths);
 
     if (!outputFilename.empty())
     {

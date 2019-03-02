@@ -389,9 +389,9 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createTransformGeometryGraphVSG(Tr
     return group;
 }
 
-vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createCoreVSG(vsg::Paths& searchPaths)
+vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createVSG(vsg::Paths& searchPaths)
 {
-    std::cout<<"SceneAnalysisVisitor::createCoreVSG(vsg::Paths& searchPaths)"<<std::endl;
+    std::cout<<"SceneAnalysisVisitor::createVSG(vsg::Paths& searchPaths)"<<std::endl;
 
     vsg::ref_ptr<vsg::Group> group = vsg::Group::create();
 
