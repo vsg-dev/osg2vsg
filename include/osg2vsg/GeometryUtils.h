@@ -53,11 +53,7 @@ namespace osg2vsg
 
     extern OSG2VSG_DECLSPEC VkSamplerCreateInfo convertToSamplerCreateInfo(const osg::Texture* texture);
 
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::AttributesNode> createTextureAttributesNode(const osg::StateSet* stateset);
-
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Geometry> convertToVsg(osg::Geometry* geometry, uint32_t requiredAttributesMask = 0);
-
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGeometryGraphicsPipeline(const uint32_t& shaderModeMask, const uint32_t& geometryAttributesMask, unsigned int maxNumDescriptors, const std::string& vertShaderPath = "", const std::string& fragShaderPath = "");
 
 
     // core VSG style usage

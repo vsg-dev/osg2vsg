@@ -2,6 +2,7 @@
 
 #include <osg2vsg/Export.h>
 #include <osg2vsg/GraphicsNodes.h>
+#include <osg2vsg/StateAttributes.h>
 
 #include <vsg/all.h>
 
@@ -53,7 +54,7 @@ namespace osg2vsg
         ShaderCompiler(vsg::Allocator* allocator=nullptr);
         virtual ~ShaderCompiler();
 
-        using Shaders = vsg::GraphicsPipelineGroup::Shaders;
+        using Shaders = vsg::Shaders;
 
         bool compile(vsg::Shader* shader);
         bool compile(Shaders& shaders);

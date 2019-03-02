@@ -14,6 +14,7 @@
 
 namespace vsg
 {
+    using Shaders = std::vector<ref_ptr<Shader>>;
 
     class GraphicsPipelineAttribute : public Inherit<StateCommand, GraphicsPipelineAttribute>
     {
@@ -30,8 +31,6 @@ namespace vsg
         void read(Input& input) override;
         void write(Output& output) const override;
 
-
-        using Shaders = std::vector<ref_ptr<Shader>>;
 
         // settings
         // descriptorPool ..
