@@ -301,14 +301,15 @@ namespace osg2vsg
         return texture;
     }
 
-    vsg::ref_ptr<vsg::StateSet> createVsgStateSet(const osg::StateSet* stateset, uint32_t shaderModeMask)
+    vsg::ref_ptr<vsg::DescriptorSet> createVsgStateSet(const vsg::DescriptorSetLayouts& descriptorSetLayouts, const osg::StateSet* stateset, uint32_t shaderModeMask)
     {
-        if (!stateset) return vsg::ref_ptr<vsg::StateSet>();
+        if (!stateset) return vsg::ref_ptr<vsg::DescriptorSet>();
 
-        auto vsg_stateset = vsg::StateSet::create();
 
         unsigned int units = stateset->getNumTextureAttributeLists();
         uint32_t texcount = 0;
+
+        vsg::Descriptors descriptors;
 
         auto addTexture = [&] (unsigned int i)
         {
@@ -320,9 +321,9 @@ namespace osg2vsg
                 if (vsgtex)
                 {
                     // shaders are looking for textures in original units
-                    vsgtex->_bindingIndex = i;
+                    vsgtex->_dstBinding = i;
                     texcount++; //
-                    vsg_stateset->add(vsgtex);
+                    descriptors.push_back(vsgtex);
                 }
                 else
                 {
@@ -337,9 +338,11 @@ namespace osg2vsg
         if (shaderModeMask & ShaderModeMask::NORMAL_MAP) addTexture(NORMAL_TEXTURE_UNIT);
         if (shaderModeMask & ShaderModeMask::SPECULAR_MAP) addTexture(SPECULAR_TEXTURE_UNIT);
 
-        if (texcount==0) return vsg::ref_ptr<vsg::StateSet>();
+        if (texcount==0) return vsg::ref_ptr<vsg::DescriptorSet>();
 
-        return vsg_stateset;
+        auto descriptorSet = vsg::DescriptorSet::create(descriptorSetLayouts, descriptors);
+
+        return descriptorSet;
     }
 
 
@@ -388,7 +391,17 @@ namespace osg2vsg
         if (shaderModeMask & NORMAL_MAP) descriptorBindings.push_back({ NORMAL_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
         if (shaderModeMask & SPECULAR_MAP) descriptorBindings.push_back({ SPECULAR_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
 
-        gp->descriptorSetLayoutBindings.push_back(descriptorBindings);
+#if 1
+        auto descriptorSetLayout = vsg::DescriptorSetLayout::create(descriptorBindings);
+        gp->descriptorSetLayouts.emplace_back(descriptorSetLayout);
+#else
+        for (unsigned int i = 0; i < descriptorBindings.size(); i++)
+        {
+            auto descriptorSetLayout = vsg::DescriptorSetLayout::create({descriptorBindings[i]});
+            gp->descriptorSetLayouts.emplace_back(descriptorSetLayout);
+        }
+#endif
+
 
         gp->pushConstantRanges = vsg::PushConstantRanges
         {
@@ -436,6 +449,8 @@ namespace osg2vsg
 
         gp->vertexBindingsDescriptions = vertexBindingsDescriptions;
         gp->vertexAttributeDescriptions = vertexAttributeDescriptions;
+
+        gp->pipelineLayout = vsg::PipelineLayout::create(gp->descriptorSetLayouts, gp->pushConstantRanges);
 
         gp->pipelineStates = vsg::GraphicsPipelineStates
         {

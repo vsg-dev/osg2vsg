@@ -415,7 +415,8 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createVSG(vsg::Paths& searchPaths)
         std::cout<<"  about to call createStateSetWithGraphicsPipeline("<<shaderModeMask<<", "<<geometrymask<<", "<<maxNumDescriptors<<")"<<std::endl;
 
         auto graphicsPipelineGroup = vsg::StateGroup::create();
-        graphicsPipelineGroup->add(createGraphicsPipelineAttribute(shaderModeMask, geometrymask, maxNumDescriptors, vertexShaderPath, fragmentShaderPath));
+        auto graphicsPipeline = createGraphicsPipelineAttribute(shaderModeMask, geometrymask, maxNumDescriptors, vertexShaderPath, fragmentShaderPath);
+        graphicsPipelineGroup->add(graphicsPipeline);
 
         group->addChild(graphicsPipelineGroup);
 
@@ -424,13 +425,15 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createVSG(vsg::Paths& searchPaths)
             vsg::ref_ptr<vsg::Node> transformGeometryGraph = createTransformGeometryGraphVSG(transformeGeometryMap, searchPaths, geometrymask);
             if (!transformGeometryGraph) continue;
 
-            vsg::ref_ptr<vsg::StateSet> vsg_stateset = createVsgStateSet(stateset, shaderModeMask);
-            if (vsg_stateset)
+            vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = createVsgStateSet(graphicsPipeline->descriptorSetLayouts, stateset, shaderModeMask);
+            if (descriptorSet)
             {
+                auto bindDescriptorSets = vsg::BindDescriptorSets::create(VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->pipelineLayout, 0, vsg::DescriptorSets{descriptorSet});
+
                 auto stategroup = vsg::StateGroup::create();
 
                 graphicsPipelineGroup->addChild(stategroup);
-                stategroup->add(vsg_stateset);
+                stategroup->add(bindDescriptorSets);
                 stategroup->addChild(transformGeometryGraph);
             }
             else

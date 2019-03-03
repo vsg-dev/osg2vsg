@@ -36,8 +36,10 @@ namespace vsg
         // descriptorPool ..
         uint32_t maxSets = 0;
         DescriptorPoolSizes descriptorPoolSizes; // need to accumulate descriptorPoolSizes by looking at scene graph
-        // descriptorSetLayout ..
-        std::vector<DescriptorSetLayoutBindings> descriptorSetLayoutBindings;
+
+        ref_ptr<PipelineLayout> pipelineLayout;
+        vsg::DescriptorSetLayouts descriptorSetLayouts;
+
         PushConstantRanges pushConstantRanges;
         VertexInputState::Bindings vertexBindingsDescriptions;
         VertexInputState::Attributes vertexAttributeDescriptions;
@@ -51,17 +53,20 @@ namespace vsg
     };
     VSG_type_name(vsg::GraphicsPipelineAttribute)
 
-    class Texture : public Inherit<StateAttribute, Texture>
+    class Texture : public Inherit<Descriptor, Texture>
     {
     public:
-        Texture(Allocator* allocator = nullptr);
+        Texture();
 
-        ref_ptr<vsg::Descriptor> compile(Context& context) override;
+        void compile(Context& context) override;
+
+        void assignTo(VkWriteDescriptorSet& wds, VkDescriptorSet descriptorSet) const override;
 
         // settings
-        uint32_t _bindingIndex = 0;
         VkSamplerCreateInfo _samplerInfo;
         ref_ptr<Data> _textureData;
+
+        ref_ptr<vsg::Descriptor> _implementation;
     };
     VSG_type_name(vsg::Texture)
 

@@ -85,30 +85,9 @@ void GraphicsPipelineAttribute::compile(Context& context)
     if (!descriptorPoolSizes.empty()) context.descriptorPool = DescriptorPool::create(context.device, maxSets, descriptorPoolSizes);
     DEBUG_OUTPUT<<"  context.descriptorPool = "<<context.descriptorPool.get()<<std::endl;
 
-    // prevent previous GraphicsPipelineAttribute::compile(Context& context) calls during the current compile traversal accumulating into this GraphicsPipeline setup.
-    context.descriptorSetLayouts.clear();
+    for(auto& descriptorSetLayout : descriptorSetLayouts) descriptorSetLayout->compile(context);
 
-    for (unsigned int i = 0; i < descriptorSetLayoutBindings.size(); i++)
-    {
-#if 1
-        auto descriptorSetLayout = DescriptorSetLayout::create(descriptorSetLayoutBindings[i]);
-        descriptorSetLayout->compile(context);
-        context.descriptorSetLayouts.emplace_back(descriptorSetLayout->implementation());
-#else
-        context.descriptorSetLayouts.push_back(DescriptorSetLayout::Implementation::create(context.device, descriptorSetLayoutBindings[i]));
-#endif
-        DEBUG_OUTPUT << "  context.descriptorSetLayout = " << context.descriptorSetLayouts[i].get() << std::endl;
-    }
-
-#if 1
-    auto pipelineLayout = vsg::PipelineLayout::create(context.descriptorSetLayouts, pushConstantRanges);
     pipelineLayout->compile(context);
-    context.pipelineLayout = pipelineLayout->implementation();
-#else
-    context.pipelineLayout = PipelineLayout::Implementation::create(context.device, context.descriptorSetLayouts, pushConstantRanges);
-#endif
-    DEBUG_OUTPUT<<"  context.pipelineLayout = "<<context.pipelineLayout.get()<<std::endl;
-
 
     ShaderModules shaderModules;
     shaderModules.reserve(shaders.size());
@@ -127,7 +106,7 @@ void GraphicsPipelineAttribute::compile(Context& context)
     full_pipelineStates.emplace_back(VertexInputState::create(vertexBindingsDescriptions, vertexAttributeDescriptions));
 
 
-    ref_ptr<GraphicsPipeline> pipeline = GraphicsPipeline::create(context.device, context.renderPass, context.pipelineLayout, full_pipelineStates);
+    ref_ptr<GraphicsPipeline> pipeline = GraphicsPipeline::create(context.device, context.renderPass, pipelineLayout, full_pipelineStates);
 
     DEBUG_OUTPUT<<"  pipeline = "<<pipeline.get()<<std::endl;
 
@@ -144,8 +123,8 @@ void GraphicsPipelineAttribute::compile(Context& context)
 //
 // Texture
 //
-Texture::Texture(Allocator* allocator) :
-    Inherit(allocator)
+Texture::Texture() :
+    Inherit(0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
 {
     // set default sampler info
     _samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -168,15 +147,20 @@ Texture::Texture(Allocator* allocator) :
     _samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 }
 
-ref_ptr<vsg::Descriptor> Texture::compile(Context& context)
+void Texture::compile(Context& context)
 {
     ref_ptr<Sampler> sampler = Sampler::create(context.device, _samplerInfo, nullptr);
     vsg::ImageData imageData = vsg::transferImageData(context.device, context.commandPool, context.graphicsQueue, _textureData, sampler);
     if (!imageData.valid())
     {
         DEBUG_OUTPUT<<"Texture not created"<<std::endl;
-        return ref_ptr<vsg::Descriptor>();
+        return;
     }
 
-    return vsg::DescriptorImage::create(_bindingIndex, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, vsg::ImageDataList{imageData});
+    _implementation = vsg::DescriptorImage::create(_dstBinding, _dstArrayElement, _descriptorType, vsg::ImageDataList{imageData});
+}
+
+void Texture::assignTo(VkWriteDescriptorSet& wds, VkDescriptorSet descriptorSet) const
+{
+    if (_implementation) _implementation->assignTo(wds, descriptorSet);
 }
