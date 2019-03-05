@@ -46,17 +46,13 @@ namespace osg2vsg
 
     extern OSG2VSG_DECLSPEC std::string createFragmentSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
 
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Shader> compileSourceToSPV(const std::string& source, bool isvert);
-
     class OSG2VSG_DECLSPEC ShaderCompiler : public vsg::Object
     {
     public:
         ShaderCompiler(vsg::Allocator* allocator=nullptr);
         virtual ~ShaderCompiler();
 
-        using Shaders = vsg::Shaders;
-
-        bool compile(vsg::Shader* shader);
-        bool compile(Shaders& shaders);
+        bool compile(vsg::ShaderModule* shader);
+        bool compile(vsg::ShaderModules& shaders);
     };
 }

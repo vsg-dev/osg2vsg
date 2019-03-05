@@ -14,44 +14,6 @@
 
 namespace vsg
 {
-    using Shaders = std::vector<ref_ptr<Shader>>;
-
-    class GraphicsPipelineAttribute : public Inherit<StateCommand, GraphicsPipelineAttribute>
-    {
-    public:
-        GraphicsPipelineAttribute(Allocator* allocator = nullptr);
-
-        void compile(Context& context) override;
-
-        void pushTo(State& state) const override;
-        void popFrom(State& state) const override;
-
-        void dispatch(CommandBuffer& commandBuffer) const override;
-
-        void read(Input& input) override;
-        void write(Output& output) const override;
-
-
-        // settings
-        // descriptorPool ..
-        uint32_t maxSets = 0;
-        DescriptorPoolSizes descriptorPoolSizes; // need to accumulate descriptorPoolSizes by looking at scene graph
-
-        ref_ptr<PipelineLayout> pipelineLayout;
-        vsg::DescriptorSetLayouts descriptorSetLayouts;
-
-        PushConstantRanges pushConstantRanges;
-        VertexInputState::Bindings vertexBindingsDescriptions;
-        VertexInputState::Attributes vertexAttributeDescriptions;
-        Shaders shaders;
-        GraphicsPipelineStates pipelineStates;
-
-        // compiled objects
-        ref_ptr<BindPipeline> _bindPipeline;
-        ref_ptr<PushConstants> _projPushConstant;
-        ref_ptr<PushConstants> _viewPushConstant;
-    };
-    VSG_type_name(vsg::GraphicsPipelineAttribute)
 
     class Texture : public Inherit<Descriptor, Texture>
     {

@@ -53,7 +53,7 @@ std::vector<std::string> createPSCDefineStrings(const uint32_t& shaderModeMask, 
     bool hastanget = geometryAttrbutes & TANGENT;
 
     std::vector<std::string> defines;
-    
+
     // vertx inputs
     if (hasnormal) defines.push_back("VSG_NORMAL");
     if (hascolor) defines.push_back("VSG_COLOR");
@@ -400,9 +400,9 @@ ShaderCompiler::~ShaderCompiler()
     glslang::FinalizeProcess();
 }
 
-bool ShaderCompiler::compile(Shaders& shaders)
+bool ShaderCompiler::compile(vsg::ShaderModules& shaders)
 {
-    using StageShaderMap = std::map<EShLanguage, vsg::ref_ptr<vsg::Shader>>;
+    using StageShaderMap = std::map<EShLanguage, vsg::ref_ptr<vsg::ShaderModule>>;
     using TShaders = std::list<std::unique_ptr<glslang::TShader>>;
     TShaders tshaders;
 
@@ -481,7 +481,7 @@ bool ShaderCompiler::compile(Shaders& shaders)
         auto vsg_shader = stageShaderMap[(EShLanguage)eshl_stage];
         if (vsg_shader && program->getIntermediate((EShLanguage)eshl_stage))
         {
-            vsg::Shader::SPIRV spirv;
+            vsg::ShaderModule::SPIRV spirv;
             std::string warningsErrors;
             spv::SpvBuildLogger logger;
             glslang::SpvOptions spvOptions;

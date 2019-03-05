@@ -415,8 +415,18 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createVSG(vsg::Paths& searchPaths)
         std::cout<<"  about to call createStateSetWithGraphicsPipeline("<<shaderModeMask<<", "<<geometrymask<<", "<<maxNumDescriptors<<")"<<std::endl;
 
         auto graphicsPipelineGroup = vsg::StateGroup::create();
+
+#if 0
         auto graphicsPipeline = createGraphicsPipelineAttribute(shaderModeMask, geometrymask, maxNumDescriptors, vertexShaderPath, fragmentShaderPath);
         graphicsPipelineGroup->add(graphicsPipeline);
+#else
+        auto bindGraphicsPipeline = createBindGraphicsPipeline(shaderModeMask, geometrymask, maxNumDescriptors, vertexShaderPath, fragmentShaderPath);
+        graphicsPipelineGroup->add(bindGraphicsPipeline);
+
+        auto graphicsPipeline = bindGraphicsPipeline->getPipeline();
+        auto& descriptorSetLayouts = graphicsPipeline->getPipelineLayout()->getDescriptorSetLayouts();
+#endif
+
 
         group->addChild(graphicsPipelineGroup);
 
@@ -425,10 +435,10 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createVSG(vsg::Paths& searchPaths)
             vsg::ref_ptr<vsg::Node> transformGeometryGraph = createTransformGeometryGraphVSG(transformeGeometryMap, searchPaths, geometrymask);
             if (!transformGeometryGraph) continue;
 
-            vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = createVsgStateSet(graphicsPipeline->descriptorSetLayouts, stateset, shaderModeMask);
+            vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = createVsgStateSet(descriptorSetLayouts, stateset, shaderModeMask);
             if (descriptorSet)
             {
-                auto bindDescriptorSets = vsg::BindDescriptorSets::create(VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->pipelineLayout, 0, vsg::DescriptorSets{descriptorSet});
+                auto bindDescriptorSets = vsg::BindDescriptorSets::create(VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->getPipelineLayout(), 0, vsg::DescriptorSets{descriptorSet});
 
                 auto stategroup = vsg::StateGroup::create();
 
