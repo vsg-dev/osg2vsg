@@ -1,7 +1,6 @@
 #include <osg2vsg/GeometryUtils.h>
 #include <osg2vsg/ImageUtils.h>
 #include <osg2vsg/ShaderUtils.h>
-#include <osg2vsg/StateAttributes.h>
 
 #include <vsg/nodes/StateGroup.h>
 

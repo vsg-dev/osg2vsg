@@ -2,7 +2,6 @@
 
 #include <osg2vsg/Export.h>
 #include <osg2vsg/GraphicsNodes.h>
-#include <osg2vsg/StateAttributes.h>
 
 #include <vsg/all.h>
 

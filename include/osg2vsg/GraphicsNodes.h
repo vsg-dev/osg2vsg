@@ -11,24 +11,6 @@
 
 namespace vsg
 {
-
-    class MatrixTransform : public Inherit<GraphicsNode, MatrixTransform>
-    {
-    public:
-        MatrixTransform(Allocator* allocator = nullptr);
-
-        void accept(DispatchTraversal& dv) const override;
-
-        void compile(Context& context) override;
-
-        // settings
-        ref_ptr<mat4Value> _matrix;
-
-        // compiled objects
-        ref_ptr<PushConstants> _pushConstant;
-    };
-    VSG_type_name(vsg::MatrixTransform)
-
     class Geometry : public Inherit<GraphicsNode, Geometry>
     {
     public:

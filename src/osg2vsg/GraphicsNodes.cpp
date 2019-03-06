@@ -23,30 +23,6 @@ using namespace vsg;
 #endif
 
 
-/////////////////////////////////////////////////////////////////////////////////////////
-//
-// MatrixTransform
-//
-MatrixTransform::MatrixTransform(Allocator* allocator) :
-    Inherit(allocator)
-{
-    _matrix = new mat4Value;
-}
-
-void MatrixTransform::accept(DispatchTraversal& dv) const
-{
-    if (_pushConstant) _pushConstant->accept(dv);
-
-    traverse(dv);
-
-    // do we restore transforms in parental chain?
-}
-
-void MatrixTransform::compile(Context& /*context*/)
-{
-    _pushConstant = vsg::PushConstants::create(VK_SHADER_STAGE_VERTEX_BIT, 128, _matrix);
-}
-
 //
 //  Geometry node
 //       vertex arrays

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vsg/maths/box.h>
+#include <vsg/nodes/MatrixTransform.h>
 
 #include <osg2vsg/Export.h>
 
@@ -41,7 +42,7 @@ namespace vsg
 
         void apply(const vsg::MatrixTransform& transform)
         {
-            matrixStack.push_back(*transform._matrix);
+            matrixStack.push_back(transform.getMatrix());
 
             transform.traverse(*this);
 
