@@ -18,6 +18,8 @@ using namespace osg2vsg;
 #define DEBUG_OUTPUT if (false) std::cout
 #endif
 
+#define INFO_OUTPUT std::cout
+
 uint32_t osg2vsg::calculateShaderModeMask(osg::StateSet* stateSet)
 {
     uint32_t stateMask = 0;
@@ -197,6 +199,21 @@ std::string processGLSLShaderSource(const std::string& source, const std::vector
     return headerstream.str() + sourcestream.str();
 }
 
+std::string debugFormatShaderSource(const std::string& source)
+{
+    std::istringstream iss(source);
+    std::ostringstream oss;
+
+    uint32_t linecount = 1;
+
+    for (std::string line; std::getline(iss, line);)
+    {
+        oss << std::setw(4) << std::setfill(' ') << linecount << ": " << line << "\n";
+        linecount++;
+    }
+    return oss.str();
+}
+
 // read a glsl file and inject defines based on shadermodemask and geometryatts
 std::string osg2vsg::readGLSLShader(const std::string& filename, const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
 {
@@ -212,9 +229,9 @@ std::string osg2vsg::readGLSLShader(const std::string& filename, const uint32_t&
     return formatedSource;
 }
 
-// create a default vertex shader
+// create an fbx vertex shader
 
-std::string osg2vsg::createVertexSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
+std::string osg2vsg::createFbxVertexSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
 {
     std::string source =
         "#version 450\n" \
@@ -293,9 +310,9 @@ std::string osg2vsg::createVertexSource(const uint32_t& shaderModeMask, const ui
     return formatedSource;
 }
 
-// create a default fragment shader
+// create an fbx fragment shader
 
-std::string osg2vsg::createFragmentSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
+std::string osg2vsg::createFbxFragmentSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
 {
     std::string source =
         "#version 450\n" \
@@ -389,6 +406,136 @@ std::string osg2vsg::createFragmentSource(const uint32_t& shaderModeMask, const 
     return formatedSource;
 }
 
+// create a default vertex shader
+
+std::string osg2vsg::createDefaultVertexSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
+{
+    std::string source =
+        "#version 450\n" \
+        "#pragma import_defines ( VSG_NORMAL, VSG_COLOR, VSG_TEXCOORD0, VSG_LIGHTING )\n" \
+        "#extension GL_ARB_separate_shader_objects : enable\n" \
+        "layout(push_constant) uniform PushConstants {\n" \
+        "    mat4 projection;\n" \
+        "    mat4 view;\n" \
+        "    mat4 model;\n" \
+        "    //mat3 normal;\n" \
+        "} pc; \n" \
+        "layout(location = 0) in vec3 osg_Vertex;\n" \
+        "#ifdef VSG_NORMAL\n" \
+        "layout(location = 1) in vec3 osg_Normal;\n" \
+        "layout(location = 1) out vec3 normalDir;\n" \
+        "#endif\n" \
+        "#ifdef VSG_COLOR\n" \
+        "layout(location = 3) in vec4 osg_Color;\n" \
+        "layout(location = 3) out vec4 vertColor;\n" \
+        "#endif\n"
+        "#ifdef VSG_TEXCOORD0\n" \
+        "layout(location = 4) in vec2 osg_MultiTexCoord0;\n" \
+        "layout(location = 4) out vec2 texCoord0;\n" \
+        "#endif\n"
+        "#ifdef VSG_LIGHTING\n" \
+        "layout(location = 5) out vec3 viewDir;\n" \
+        "layout(location = 6) out vec3 lightDir;\n" \
+        "#endif\n" \
+        "out gl_PerVertex{ vec4 gl_Position; };\n" \
+        "\n" \
+        "void main()\n" \
+        "{\n" \
+        "    gl_Position = (pc.projection * pc.view * pc.model) * vec4(osg_Vertex, 1.0);\n" \
+        "#ifdef VSG_TEXCOORD0\n" \
+        "    texCoord0 = osg_MultiTexCoord0.st;\n" \
+        "#endif\n" \
+        "#ifdef VSG_NORMAL\n" \
+        "    vec3 n = ((pc.view * pc.model) * vec4(osg_Normal, 0.0)).xyz;\n" \
+        "    normalDir = n;\n" \
+        "#endif\n" \
+        "#ifdef VSG_LIGHTING\n" \
+        "    vec4 lpos = /*osg_LightSource.position*/ vec4(0.0, 0.25, 1.0, 0.0);\n" \
+        "    viewDir = -vec3((pc.view * pc.model) * vec4(osg_Vertex, 1.0));\n" \
+        "    if (lpos.w == 0.0)\n" \
+        "        lightDir = lpos.xyz;\n" \
+        "    else\n" \
+        "        lightDir = lpos.xyz + viewDir;\n" \
+        "#endif\n" \
+        "#ifdef VSG_COLOR\n" \
+        "    vertColor = osg_Color;\n" \
+        "#endif\n" \
+        "}\n";
+
+    auto defines = createPSCDefineStrings(shaderModeMask, geometryAttrbutes);
+    std::string formatedSource = processGLSLShaderSource(source, defines);
+
+    return formatedSource;
+}
+
+// create a default fragment shader
+
+std::string osg2vsg::createDefaultFragmentSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
+{
+    std::string source =
+        "#version 450\n" \
+        "#pragma import_defines ( VSG_NORMAL, VSG_COLOR, VSG_TEXCOORD0, VSG_LIGHTING, VSG_DIFFUSE_MAP )\n" \
+        "#extension GL_ARB_separate_shader_objects : enable\n" \
+        "#ifdef VSG_DIFFUSE_MAP\n" \
+        "layout(binding = 0) uniform sampler2D diffuseMap; \n" \
+        "#endif\n" \
+
+        "#ifdef VSG_NORMAL\n" \
+        "layout(location = 1) in vec3 normalDir; \n" \
+        "#endif\n" \
+        "#ifdef VSG_COLOR\n" \
+        "layout(location = 3) in vec4 vertColor; \n" \
+        "#endif\n" \
+        "#ifdef VSG_TEXCOORD0\n" \
+        "layout(location = 4) in vec2 texCoord0;\n" \
+        "#endif\n" \
+        "#ifdef VSG_LIGHTING\n" \
+        "layout(location = 5) in vec3 viewDir; \n" \
+        "layout(location = 6) in vec3 lightDir;\n" \
+        "#endif\n" \
+        "layout(location = 0) out vec4 outColor;\n" \
+        "\n" \
+        "void main()\n" \
+        "{\n" \
+        "#ifdef VSG_DIFFUSE_MAP\n" \
+        "    vec4 base = texture(diffuseMap, texCoord0.st);\n" \
+        "#else\n" \
+        "    vec4 base = vec4(1.0,1.0,1.0,1.0);\n" \
+        "#endif\n" \
+        "#ifdef VSG_COLOR\n" \
+        "    base = base * vertColor;\n" \
+        "#endif\n" \
+        "    float ambientOcclusion = 1.0;\n" \
+        "    vec3 specularColor = vec3(0.2,0.2,0.2);\n" \
+        "#ifdef VSG_LIGHTING\n" \
+        "    vec3 nDir = normalDir;\n" \
+        "    vec3 nd = normalize(nDir);\n" \
+        "    vec3 ld = normalize(lightDir);\n" \
+        "    vec3 vd = normalize(viewDir);\n" \
+        "    vec4 color = vec4(0.01, 0.01, 0.01, 1.0);\n" \
+        "    color += /*osg_Material.ambient*/ vec4(0.1, 0.1, 0.1, 0.0);\n" \
+        "    float diff = max(dot(ld, nd), 0.0);\n" \
+        "    color += /*osg_Material.diffuse*/ vec4(0.8, 0.8, 0.8, 0.0) * diff;\n" \
+        "    color *= ambientOcclusion;\n" \
+        "    color *= base;\n" \
+        "    if (diff > 0.0)\n" \
+        "    {\n" \
+        "        vec3 halfDir = normalize(ld + vd);\n" \
+        "        color.rgb += base.a * specularColor *\n" \
+        "            pow(max(dot(halfDir, nd), 0.0), 16.0/*osg_Material.shine*/);\n" \
+        "    }\n" \
+        "#else\n" \
+        "    vec4 color = base;\n" \
+        "#endif\n" \
+        "    outColor = color;\n" \
+        "}\n";
+
+    auto defines = createPSCDefineStrings(shaderModeMask, geometryAttrbutes);
+    std::string formatedSource = processGLSLShaderSource(source, defines);
+
+    return formatedSource;
+}
+
 ShaderCompiler::ShaderCompiler(vsg::Allocator* allocator):
     vsg::Object(allocator)
 {
@@ -402,6 +549,20 @@ ShaderCompiler::~ShaderCompiler()
 
 bool ShaderCompiler::compile(Shaders& shaders)
 {
+    auto getFriendlyNameForShader = [](const vsg::ref_ptr<vsg::Shader>& vsg_shader)
+    {
+        switch (vsg_shader->stage())
+        {
+            case(VK_SHADER_STAGE_VERTEX_BIT): return "Vertex Shader";
+            case(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT): return "Tessellation Control Shader";
+            case(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT): return "Tessellation Evaluation Shader";
+            case(VK_SHADER_STAGE_GEOMETRY_BIT): return "Geometry Shader";
+            case(VK_SHADER_STAGE_FRAGMENT_BIT): return "Fragment Shader";
+            case(VK_SHADER_STAGE_COMPUTE_BIT): return "Compute Shader";
+        }
+        return "";
+    };
+
     using StageShaderMap = std::map<EShLanguage, vsg::ref_ptr<vsg::Shader>>;
     using TShaders = std::list<std::unique_ptr<glslang::TShader>>;
     TShaders tshaders;
@@ -460,19 +621,38 @@ bool ShaderCompiler::compile(Shaders& shaders)
         }
         else
         {
-            DEBUG_OUTPUT << "glslLang: Error parsing shader: " << shader->getInfoLog() << std::endl;
+            // print error infomation
+            INFO_OUTPUT << std::endl << "----  " << getFriendlyNameForShader(vsg_shader) << "  ----" << std::endl << std::endl;
+            INFO_OUTPUT << debugFormatShaderSource(vsg_shader->source()) << std::endl;
+            INFO_OUTPUT << "Warning: GLSL source failed to parse." << std::endl;
+            INFO_OUTPUT << "glslang info log: " << std::endl << shader->getInfoLog();
+            DEBUG_OUTPUT << "glslang debug info log: " << std::endl << shader->getInfoDebugLog();
+            INFO_OUTPUT << "--------" << std::endl;
         }
     }
 
-    if (stageShaderMap.empty())
+    if (stageShaderMap.empty() || stageShaderMap.size() != shaders.size())
     {
-        DEBUG_OUTPUT<<"ShaderCompiler::compile(Shaders& shaders) stageShaderMap.empty()"<<std::endl;
+        DEBUG_OUTPUT<<"ShaderCompiler::compile(Shaders& shaders) stageShaderMap.size() != shaders.size()"<<std::endl;
         return false;
     }
 
     EShMessages messages = EShMsgDefault;
     if (!program->link(messages))
     {
+        INFO_OUTPUT << std::endl << "----  Program  ----" << std::endl << std::endl;
+
+        for (auto& vsg_shader : shaders)
+        {
+            INFO_OUTPUT << std::endl << getFriendlyNameForShader(vsg_shader) << ":" << std::endl << std::endl;
+            INFO_OUTPUT << debugFormatShaderSource(vsg_shader->source()) << std::endl;
+        }
+        
+        INFO_OUTPUT << "Warning: Program failed to link." << std::endl;
+        INFO_OUTPUT << "glslang info log: " << std::endl << program->getInfoLog();
+        DEBUG_OUTPUT << "glslang debug info log: " << std::endl << program->getInfoDebugLog();
+        INFO_OUTPUT << "--------" << std::endl;
+
         return false;
     }
 
