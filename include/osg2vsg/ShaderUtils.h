@@ -1,7 +1,6 @@
 #pragma once
 
 #include <osg2vsg/Export.h>
-#include <osg2vsg/GraphicsNodes.h>
 
 #include <vsg/all.h>
 

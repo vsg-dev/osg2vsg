@@ -6,7 +6,6 @@ set(HEADERS
     ${HEADER_PATH}/ImageUtils.h
     ${HEADER_PATH}/GeometryUtils.h
     ${HEADER_PATH}/ShaderUtils.h
-    ${HEADER_PATH}/GraphicsNodes.h
     ${HEADER_PATH}/SceneAnalysisVisitor.h
 )
 
@@ -14,7 +13,6 @@ set(SOURCES
     ImageUtils.cpp
     GeometryUtils.cpp
     ShaderUtils.cpp
-    GraphicsNodes.cpp
     SceneAnalysisVisitor.cpp
     glsllang/ResourceLimits.cpp
 )

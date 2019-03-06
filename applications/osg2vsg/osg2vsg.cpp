@@ -15,7 +15,6 @@
 #include <osgUtil/Optimizer>
 #include <osgUtil/MeshOptimizers>
 
-#include <osg2vsg/GraphicsNodes.h>
 #include <osg2vsg/ShaderUtils.h>
 #include <osg2vsg/GeometryUtils.h>
 #include <osg2vsg/SceneAnalysisVisitor.h>
