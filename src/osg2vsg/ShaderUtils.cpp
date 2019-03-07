@@ -12,7 +12,7 @@
 
 using namespace osg2vsg;
 
-#if 0
+#if 1
 #define DEBUG_OUTPUT std::cout
 #else
 #define DEBUG_OUTPUT if (false) std::cout
@@ -366,7 +366,7 @@ std::string osg2vsg::createFragmentSource(const uint32_t& shaderModeMask, const 
         "    vec3 ambientColor = vec3(0.1,0.1,0.1);\n" \
         "    vec3 diffuseColor = vec3(1.0,1.0,1.0);\n" \
         "    vec3 specularColor = vec3(0.3,0.3,0.3);\n" \
-        "    float shine = material.shine;\n" \
+        "    float shine = 16.0;\n" \
         "#endif\n" \
         "#ifdef VSG_AMBIENT_MAP\n" \
         "    ambientColor *= texture(ambientMap, texCoord0.st).r;\n" \
