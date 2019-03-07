@@ -171,6 +171,7 @@ namespace osg2vsg
         matvalue->value().ambientColor = vsg::vec4(ambient.x(), ambient.y(), ambient.z(), ambient.w());
 
         osg::Vec4 diffuse = material->getDiffuse(osg::Material::Face::FRONT);
+        if(diffuse.x() == 0.0f && diffuse.y() == 0.0f && diffuse.z() == 0.0f) diffuse.set(1.0f,1.0f,1.0f,1.0f);
         matvalue->value().diffuseColor = vsg::vec4(diffuse.x(), diffuse.y(), diffuse.z(), diffuse.w());
 
         osg::Vec4 specular = material->getSpecular(osg::Material::Face::FRONT);
