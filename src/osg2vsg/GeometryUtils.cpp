@@ -163,6 +163,25 @@ namespace osg2vsg
         return samplerInfo;
     }
 
+    vsg::ref_ptr<MaterialValue> convertToMaterialValue(const osg::Material* material)
+    {
+        vsg::ref_ptr<MaterialValue> matvalue(new MaterialValue);
+
+        osg::Vec4 ambient = material->getAmbient(osg::Material::Face::FRONT);
+        matvalue->value().ambientColor = vsg::vec4(ambient.x(), ambient.y(), ambient.z(), ambient.w());
+
+        osg::Vec4 diffuse = material->getDiffuse(osg::Material::Face::FRONT);
+        matvalue->value().diffuseColor = vsg::vec4(diffuse.x(), diffuse.y(), diffuse.z(), diffuse.w());
+
+        osg::Vec4 specular = material->getSpecular(osg::Material::Face::FRONT);
+        matvalue->value().specularColor = vsg::vec4(specular.x(), specular.y(), specular.z(), specular.w());
+
+        float shine = material->getShininess(osg::Material::Face::FRONT);
+        matvalue->value().shine = shine;
+
+        return matvalue;
+    }
+
     vsg::ref_ptr<vsg::Geometry> convertToVsg(osg::Geometry* ingeometry, uint32_t requiredAttributesMask)
     {
         bool hasrequirements = requiredAttributesMask != 0;
@@ -331,13 +350,25 @@ namespace osg2vsg
             }
         };
 
+        // add material first
+        const osg::Material* osg_material = dynamic_cast<const osg::Material*>(stateset->getAttribute(osg::StateAttribute::Type::MATERIAL));
+        if (osg_material != nullptr)
+        {
+            vsg::ref_ptr<MaterialValue> matdata = convertToMaterialValue(osg_material);
+            vsg::ref_ptr<vsg::Uniform> vsg_materialUniform = vsg::Uniform::create();
+            vsg_materialUniform->_dataList.push_back(matdata);
+            vsg_materialUniform->_dstBinding = 10; // just use high value for now, should maybe put uniforms into a different descriptor set to simplify binding indexes
+            descriptors.push_back(vsg_materialUniform);
+        }
+
+        // add textures
         if (shaderModeMask & ShaderModeMask::DIFFUSE_MAP) addTexture(DIFFUSE_TEXTURE_UNIT);
         if (shaderModeMask & ShaderModeMask::OPACITY_MAP) addTexture(OPACITY_TEXTURE_UNIT);
         if (shaderModeMask & ShaderModeMask::AMBIENT_MAP) addTexture(AMBIENT_TEXTURE_UNIT);
         if (shaderModeMask & ShaderModeMask::NORMAL_MAP) addTexture(NORMAL_TEXTURE_UNIT);
         if (shaderModeMask & ShaderModeMask::SPECULAR_MAP) addTexture(SPECULAR_TEXTURE_UNIT);
 
-        if (texcount==0) return vsg::ref_ptr<vsg::DescriptorSet>();
+        if (descriptors.size() == 0) return vsg::ref_ptr<vsg::DescriptorSet>();
 
         auto descriptorSet = vsg::DescriptorSet::create(descriptorSetLayouts, descriptors);
 
@@ -478,22 +509,12 @@ namespace osg2vsg
 
         if (!shaderCompiler.compile(shaders)) return vsg::ref_ptr<vsg::BindGraphicsPipeline>();
 
-        // how many textures
-        unsigned int maxSets = maxNumDescriptors * ((shaderModeMask & DIFFUSE_MAP ? 1 : 0) + (shaderModeMask & NORMAL_MAP ? 1 : 0));
-
-        vsg::DescriptorPoolSizes descriptorPoolSizes;
-        if (maxNumDescriptors > 0)
-        {
-            descriptorPoolSizes = vsg::DescriptorPoolSizes
-            {
-                {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxNumDescriptors} // type, descriptorCount // total descriptors of a type across all sets
-            };
-        }
-
         std::cout<<"createGraphicsPipelineAttribute("<<shaderModeMask<<", "<<geometryAttributesMask<<", "<<maxNumDescriptors<<")"<<std::endl;
 
-
         vsg::DescriptorSetLayoutBindings descriptorBindings;
+
+        // add material first if any (for now material is hardcoded to binding 10)
+        if (shaderModeMask & MATERIAL) descriptorBindings.push_back({ 10, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr }); // { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
 
         // these need to go in incremental order by texture unit value as that how they will have been added to the desctiptor set
         // VkDescriptorSetLayoutBinding { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}

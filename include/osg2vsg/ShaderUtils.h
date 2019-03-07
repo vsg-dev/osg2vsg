@@ -13,12 +13,15 @@ namespace osg2vsg
     {
         NONE = 0,
         LIGHTING = 1,
-        DIFFUSE_MAP = 2,
-        OPACITY_MAP = 4,
-        AMBIENT_MAP = 8,
-        NORMAL_MAP = 16,
-        SPECULAR_MAP = 32,
-        ALL_SHADER_MODE_MASK = LIGHTING | DIFFUSE_MAP | OPACITY_MAP | AMBIENT_MAP | NORMAL_MAP | SPECULAR_MAP
+        MATERIAL = 2,
+        BLEND = 4,
+        BILLBOARD = 8,
+        DIFFUSE_MAP = 16,
+        OPACITY_MAP = 32,
+        AMBIENT_MAP = 64,
+        NORMAL_MAP = 128,
+        SPECULAR_MAP = 256,
+        ALL_SHADER_MODE_MASK = LIGHTING | MATERIAL | BLEND | BILLBOARD | DIFFUSE_MAP | OPACITY_MAP | AMBIENT_MAP | NORMAL_MAP | SPECULAR_MAP
     };
 
     // taken from osg fbx plugin
@@ -34,7 +37,7 @@ namespace osg2vsg
         SHININESS_TEXTURE_UNIT
     };
 
-    extern OSG2VSG_DECLSPEC uint32_t calculateShaderModeMask(osg::StateSet* stateSet);
+    extern OSG2VSG_DECLSPEC uint32_t calculateShaderModeMask(const osg::StateSet* stateSet);
 
     // read a glsl file and inject defines based on shadermodemask and geometryatts
     extern OSG2VSG_DECLSPEC std::string readGLSLShader(const std::string& filename, const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);

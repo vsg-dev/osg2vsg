@@ -5,6 +5,7 @@
 
 #include <osg/Array>
 #include <osg/Geometry>
+#include <osg/Material>
 
 namespace osg2vsg
 {
@@ -32,6 +33,16 @@ namespace osg2vsg
         TEXCOORD2_CHANNEL = TEXCOORD0_CHANNEL + 2,
     };
 
+    struct MaterialData
+    {
+        vsg::vec4 ambientColor;
+        vsg::vec4 diffuseColor;
+        vsg::vec4 specularColor;
+        float shine;
+    };
+    
+    using MaterialValue = vsg::UniformValue<MaterialData>;
+
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::vec2Array> convertToVsg(const osg::Vec2Array* inarray, bool duplicate = false, uint32_t dupcount = 0);
 
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::vec3Array> convertToVsg(const osg::Vec3Array* inarray, bool duplicate = false, uint32_t dupcount = 0);
@@ -49,6 +60,8 @@ namespace osg2vsg
     extern OSG2VSG_DECLSPEC std::pair<VkFilter, VkSamplerMipmapMode> convertToFilterAndMipmapMode(osg::Texture::FilterMode filtermode);
 
     extern OSG2VSG_DECLSPEC VkSamplerCreateInfo convertToSamplerCreateInfo(const osg::Texture* texture);
+
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<MaterialValue> convertToMaterialValue(const osg::Material* material);
 
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Geometry> convertToVsg(osg::Geometry* geometry, uint32_t requiredAttributesMask = 0);
 
