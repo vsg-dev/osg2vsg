@@ -59,7 +59,7 @@ void main()
     vec3 ambientColor = vec3(0.1,0.1,0.1);
     vec3 diffuseColor = vec3(1.0,1.0,1.0);
     vec3 specularColor = vec3(0.3,0.3,0.3);
-    float shine = material.shine;
+    float shine = 16.0;
 #endif
 #ifdef VSG_AMBIENT_MAP
     ambientColor *= texture(ambientMap, texCoord0.st).r;
