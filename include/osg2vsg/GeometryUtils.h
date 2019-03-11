@@ -7,22 +7,6 @@
 #include <osg/Geometry>
 #include <osg/Material>
 
-namespace vsg
-{
-    struct MaterialData
-    {
-        vsg::vec4 ambientColor;
-        vsg::vec4 diffuseColor;
-        vsg::vec4 specularColor;
-        float shine;
-    };
-
-    using MaterialValue = Value<MaterialData>;
-
-    template<>
-    constexpr const char* type_name<MaterialValue>() noexcept { return "vsg::MaterialValue"; }
-}
-
 namespace osg2vsg
 {
     enum GeometryAttributes : uint32_t
