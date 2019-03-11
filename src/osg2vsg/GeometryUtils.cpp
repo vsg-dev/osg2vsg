@@ -163,9 +163,9 @@ namespace osg2vsg
         return samplerInfo;
     }
 
-    vsg::ref_ptr<MaterialValue> convertToMaterialValue(const osg::Material* material)
+    vsg::ref_ptr<vsg::MaterialValue> convertToMaterialValue(const osg::Material* material)
     {
-        vsg::ref_ptr<MaterialValue> matvalue(new MaterialValue);
+        vsg::ref_ptr<vsg::MaterialValue> matvalue(new vsg::MaterialValue);
 
         osg::Vec4 ambient = material->getAmbient(osg::Material::Face::FRONT);
         matvalue->value().ambientColor = vsg::vec4(ambient.x(), ambient.y(), ambient.z(), ambient.w());
@@ -355,7 +355,7 @@ namespace osg2vsg
         const osg::Material* osg_material = dynamic_cast<const osg::Material*>(stateset->getAttribute(osg::StateAttribute::Type::MATERIAL));
         if (osg_material != nullptr)
         {
-            vsg::ref_ptr<MaterialValue> matdata = convertToMaterialValue(osg_material);
+            vsg::ref_ptr<vsg::MaterialValue> matdata = convertToMaterialValue(osg_material);
             vsg::ref_ptr<vsg::Uniform> vsg_materialUniform = vsg::Uniform::create();
             vsg_materialUniform->_dataList.push_back(matdata);
             vsg_materialUniform->_dstBinding = 10; // just use high value for now, should maybe put uniforms into a different descriptor set to simplify binding indexes

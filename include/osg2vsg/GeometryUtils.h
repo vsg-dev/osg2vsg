@@ -7,6 +7,22 @@
 #include <osg/Geometry>
 #include <osg/Material>
 
+namespace vsg
+{
+    struct MaterialData
+    {
+        vsg::vec4 ambientColor;
+        vsg::vec4 diffuseColor;
+        vsg::vec4 specularColor;
+        float shine;
+    };
+
+    using MaterialValue = Value<MaterialData>;
+
+    template<>
+    constexpr const char* type_name<MaterialValue>() noexcept { return "vsg::MaterialValue"; }
+}
+
 namespace osg2vsg
 {
     enum GeometryAttributes : uint32_t
@@ -33,15 +49,6 @@ namespace osg2vsg
         TEXCOORD2_CHANNEL = TEXCOORD0_CHANNEL + 2,
     };
 
-    struct MaterialData
-    {
-        vsg::vec4 ambientColor;
-        vsg::vec4 diffuseColor;
-        vsg::vec4 specularColor;
-        float shine;
-    };
-    
-    using MaterialValue = vsg::UniformValue<MaterialData>;
 
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::vec2Array> convertToVsg(const osg::Vec2Array* inarray, bool duplicate = false, uint32_t dupcount = 0);
 
@@ -61,7 +68,7 @@ namespace osg2vsg
 
     extern OSG2VSG_DECLSPEC VkSamplerCreateInfo convertToSamplerCreateInfo(const osg::Texture* texture);
 
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<MaterialValue> convertToMaterialValue(const osg::Material* material);
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::MaterialValue> convertToMaterialValue(const osg::Material* material);
 
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Geometry> convertToVsg(osg::Geometry* geometry, uint32_t requiredAttributesMask = 0);
 
