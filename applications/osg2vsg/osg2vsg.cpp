@@ -165,7 +165,7 @@ int main(int argc, char** argv)
             filename = vsg::findFile(filename, searchPaths);
             if (!filename.empty())
             {
-                std::ifstream fin(filename);
+                std::ifstream fin(filename, std::ios::in | std::ios::binary);
                 vsg::BinaryInput input(fin);
 
                 input.getObjectFactory()->getCreateMap()["vsg::MaterialValue"] = []() { return vsg::ref_ptr<vsg::Object>(new vsg::MaterialValue()); };
@@ -263,11 +263,19 @@ int main(int argc, char** argv)
 
             return 1;
         }
-        else if (vsg_scene.valid() && outputFileExtension.compare(0, 3,"vsg")==0)
+        else if (vsg_scene.valid() && outputFileExtension=="vsga")
         {
             std::cout<<"Writing file to "<<outputFilename<<std::endl;
             std::ofstream fout(outputFilename);
             vsg::AsciiOutput output(fout);
+            output.writeObject("Root", vsg_scene);
+            return 1;
+        }
+        else if (vsg_scene.valid() && outputFileExtension=="vsgb")
+        {
+            std::cout<<"Writing file to "<<outputFilename<<std::endl;
+            std::ofstream fout(outputFilename, std::ios::out | std::ios::binary);
+            vsg::BinaryOutput output(fout);
             output.writeObject("Root", vsg_scene);
             return 1;
         }
