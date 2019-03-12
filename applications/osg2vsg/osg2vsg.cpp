@@ -18,7 +18,7 @@
 #include <osg2vsg/ShaderUtils.h>
 #include <osg2vsg/GeometryUtils.h>
 #include <osg2vsg/SceneAnalysisVisitor.h>
-#include <osg2vsg/ComputeBounds.h>
+#include <vsg/traversals/ComputeBounds.h>
 
 
 namespace vsg
