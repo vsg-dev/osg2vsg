@@ -149,8 +149,6 @@ int main(int argc, char** argv)
                 std::ifstream fin(filename);
                 vsg::AsciiInput input(fin);
 
-                input.getObjectFactory()->getCreateMap()["vsg::MaterialValue"] = []() { return vsg::ref_ptr<vsg::Object>(new vsg::MaterialValue()); };
-
                 vsg::ref_ptr<vsg::Node> loaded_scene = input.readObject<vsg::Node>("Root");
                 if (loaded_scene) vsgNodes.push_back(loaded_scene);
 
@@ -167,8 +165,6 @@ int main(int argc, char** argv)
             {
                 std::ifstream fin(filename, std::ios::in | std::ios::binary);
                 vsg::BinaryInput input(fin);
-
-                input.getObjectFactory()->getCreateMap()["vsg::MaterialValue"] = []() { return vsg::ref_ptr<vsg::Object>(new vsg::MaterialValue()); };
 
                 std::cout<<"vsg binary file "<<filename<<std::endl;
 
