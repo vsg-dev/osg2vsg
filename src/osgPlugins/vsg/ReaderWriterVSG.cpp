@@ -124,7 +124,7 @@ class ReaderWriterVSG : public osgDB::ReaderWriter
             else return WriteResult::FILE_NOT_HANDLED;
         }
 
-        virtual WriteResult writeNode(const osg::Node& node, const std::string& filename, const osgDB::ReaderWriter::Options* options) const
+        virtual WriteResult writeNode(const osg::Node& node, const std::string& filename, const osgDB::ReaderWriter::Options* /*options*/) const
         {
             osg::Node& osg_scene = const_cast<osg::Node&>(node);
 
