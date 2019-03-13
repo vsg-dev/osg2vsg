@@ -1,13 +1,11 @@
 #pragma once
 
 #include <osg2vsg/Export.h>
-#include <osg2vsg/GraphicsNodes.h>
-#include <osg2vsg/StateAttributes.h>
-
 #include <vsg/all.h>
 
 #include <osg/Array>
 #include <osg/Geometry>
+#include <osg/Material>
 
 namespace osg2vsg
 {
@@ -35,6 +33,7 @@ namespace osg2vsg
         TEXCOORD2_CHANNEL = TEXCOORD0_CHANNEL + 2,
     };
 
+
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::vec2Array> convertToVsg(const osg::Vec2Array* inarray, bool duplicate = false, uint32_t dupcount = 0);
 
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::vec3Array> convertToVsg(const osg::Vec3Array* inarray, bool duplicate = false, uint32_t dupcount = 0);
@@ -53,16 +52,15 @@ namespace osg2vsg
 
     extern OSG2VSG_DECLSPEC VkSamplerCreateInfo convertToSamplerCreateInfo(const osg::Texture* texture);
 
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::AttributesNode> createTextureAttributesNode(const osg::StateSet* stateset);
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::MaterialValue> convertToMaterialValue(const osg::Material* material);
 
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Geometry> convertToVsg(osg::Geometry* geometry, uint32_t requiredAttributesMask = 0);
-
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGeometryGraphicsPipeline(const uint32_t& shaderModeMask, const uint32_t& geometryAttributesMask, unsigned int maxNumDescriptors, const std::string& vertShaderPath = "", const std::string& fragShaderPath = "");
 
 
     // core VSG style usage
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Texture> convertToVsgTexture(const osg::Texture* osgtexture);
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::StateSet> createVsgStateSet(const osg::StateSet* stateset, uint32_t shaderModeMask);
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::StateSet> createStateSetWithGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryAttributesMask, unsigned int maxNumDescriptors, const std::string& vertShaderPath = "", const std::string& fragShaderPath = "");
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::DescriptorSet> createVsgStateSet(const vsg::DescriptorSetLayouts& descriptorSetLayouts, const osg::StateSet* stateset, uint32_t shaderModeMask);
+    //extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::GraphicsPipelineAttribute> createGraphicsPipelineAttribute(uint32_t shaderModeMask, uint32_t geometryAttributesMask, unsigned int maxNumDescriptors, const std::string& vertShaderPath = "", const std::string& fragShaderPath = "");
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::BindGraphicsPipeline> createBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryAttributesMask, unsigned int maxNumDescriptors, const std::string& vertShaderPath = "", const std::string& fragShaderPath = "");
 
 }
