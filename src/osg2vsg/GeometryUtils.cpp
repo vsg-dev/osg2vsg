@@ -1,7 +1,6 @@
 #include <osg2vsg/GeometryUtils.h>
 #include <osg2vsg/ImageUtils.h>
 #include <osg2vsg/ShaderUtils.h>
-#include <osg2vsg/StateAttributes.h>
 
 #include <vsg/nodes/StateGroup.h>
 
@@ -164,51 +163,24 @@ namespace osg2vsg
         return samplerInfo;
     }
 
-    vsg::ref_ptr<vsg::TextureAttribute> convertToVsgAttribute(const osg::Texture* osgtexture)
+    vsg::ref_ptr<vsg::MaterialValue> convertToMaterialValue(const osg::Material* material)
     {
-        const osg::Image* image = osgtexture ? osgtexture->getImage(0) : nullptr;
-        auto textureData = convertToVsg(image);
-        if (!textureData)
-        {
-            // DEBUG_OUTPUT << "Could not convert osg image data" << std::endl;
-            return vsg::ref_ptr<vsg::TextureAttribute>();
-        }
-        vsg::ref_ptr<vsg::TextureAttribute> texture = vsg::TextureAttribute::create();
-        texture->_textureData = textureData;
-        texture->_samplerInfo = convertToSamplerCreateInfo(osgtexture);
+        vsg::ref_ptr<vsg::MaterialValue> matvalue(new vsg::MaterialValue);
 
-        return texture;
-    }
+        osg::Vec4 ambient = material->getAmbient(osg::Material::Face::FRONT);
+        matvalue->value().ambientColor = vsg::vec4(ambient.x(), ambient.y(), ambient.z(), ambient.w());
 
-    vsg::ref_ptr<vsg::AttributesNode> createTextureAttributesNode(const osg::StateSet* stateset)
-    {
-        if(!stateset) return vsg::ref_ptr<vsg::AttributesNode>();
+        osg::Vec4 diffuse = material->getDiffuse(osg::Material::Face::FRONT);
+        if(diffuse.x() == 0.0f && diffuse.y() == 0.0f && diffuse.z() == 0.0f) diffuse.set(1.0f,1.0f,1.0f,1.0f);
+        matvalue->value().diffuseColor = vsg::vec4(diffuse.x(), diffuse.y(), diffuse.z(), diffuse.w());
 
-        vsg::ref_ptr<vsg::AttributesNode> attributesNode = vsg::AttributesNode::create();
+        osg::Vec4 specular = material->getSpecular(osg::Material::Face::FRONT);
+        matvalue->value().specularColor = vsg::vec4(specular.x(), specular.y(), specular.z(), specular.w());
 
-        unsigned int units = stateset->getNumTextureAttributeLists();
-        uint32_t texcount = 0;
+        float shine = material->getShininess(osg::Material::Face::FRONT);
+        matvalue->value().shine = shine;
 
-        for(unsigned int i=0; i<units; i++)
-        {
-            const osg::StateAttribute* texatt = stateset->getTextureAttribute(i, osg::StateAttribute::TEXTURE);
-            const osg::Texture* osgtex = dynamic_cast<const osg::Texture*>(texatt);
-            if (osgtex)
-            {
-                vsg::ref_ptr<vsg::TextureAttribute> vsgtex = convertToVsgAttribute(osgtex);
-                if (vsgtex)
-                {
-                    vsgtex->_bindingIndex = i;
-                    attributesNode->_attributesList.push_back(vsgtex);
-                }
-                else
-                {
-                    std::cout<<"createTextureAttributesNode(..) osg::Texture, with i="<<i<<" found but cannot be mapped to vsg::TextureAttribute."<<std::endl;
-                }
-            }
-        }
-
-        return attributesNode->_attributesList.size() > 0 ? attributesNode : vsg::ref_ptr<vsg::AttributesNode>();
+        return matvalue;
     }
 
     vsg::ref_ptr<vsg::Geometry> convertToVsg(osg::Geometry* ingeometry, uint32_t requiredAttributesMask)
@@ -330,105 +302,6 @@ namespace osg2vsg
         return geometry;
     }
 
-    vsg::ref_ptr<vsg::GraphicsPipelineGroup> createGeometryGraphicsPipeline(const uint32_t& shaderModeMask, const uint32_t& geometryAttributesMask, unsigned int maxNumDescriptors, const std::string& vertShaderPath, const std::string& fragShaderPath)
-    {
-        //
-        // load shaders
-        //
-        ShaderCompiler shaderCompiler;
-
-        vsg::GraphicsPipelineGroup::Shaders shaders{
-            vsg::Shader::create(VK_SHADER_STAGE_VERTEX_BIT, "main", vertShaderPath.empty() ? createVertexSource(shaderModeMask, geometryAttributesMask) : readGLSLShader(vertShaderPath, shaderModeMask, geometryAttributesMask)),
-            vsg::Shader::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", fragShaderPath.empty() ? createFragmentSource(shaderModeMask, geometryAttributesMask) : readGLSLShader(fragShaderPath, shaderModeMask, geometryAttributesMask))
-        };
-
-        if (!shaderCompiler.compile(shaders)) return vsg::ref_ptr<vsg::GraphicsPipelineGroup>();
-
-        //
-        // set up graphics pipeline
-        //
-        vsg::ref_ptr<vsg::GraphicsPipelineGroup> gp = vsg::GraphicsPipelineGroup::create();
-        gp->shaders = shaders;
-        gp->maxSets = std::max<unsigned int>(maxNumDescriptors, 1); // total sets
-
-        vsg::DescriptorSetLayoutBindings descriptorBindings  = vsg::DescriptorSetLayoutBindings();
-
-        // these need to go in incremental order by texture unit value as that how they will have been added to the desctiptor set
-        if (shaderModeMask & DIFFUSE_MAP) descriptorBindings.push_back( { DIFFUSE_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr } ); // { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
-        if (shaderModeMask & OPACITY_MAP) descriptorBindings.push_back( { OPACITY_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
-        if (shaderModeMask & AMBIENT_MAP) descriptorBindings.push_back( { AMBIENT_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
-        if (shaderModeMask & NORMAL_MAP) descriptorBindings.push_back( { NORMAL_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
-        if (shaderModeMask & SPECULAR_MAP) descriptorBindings.push_back( { SPECULAR_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
-
-        gp->descriptorSetLayoutBindings.push_back(descriptorBindings);
-
-        vsg::DescriptorPoolSizes descriptorPoolSizes = vsg::DescriptorPoolSizes();
-
-        if (descriptorBindings.size() > 0)
-        {
-            descriptorPoolSizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(descriptorBindings.size()) }); // type, descriptorCount // total descriptors of a type across all sets
-        };
-
-        gp->descriptorPoolSizes = descriptorPoolSizes;
-
-        gp->pushConstantRanges = vsg::PushConstantRanges
-        {
-            {VK_SHADER_STAGE_VERTEX_BIT, 0, 196} // projection view, and model matrices
-        };
-
-        uint32_t vertexBindingIndex = 0;
-
-        vsg::VertexInputState::Bindings vertexBindingsDescriptions = vsg::VertexInputState::Bindings
-        {
-            VkVertexInputBindingDescription{vertexBindingIndex, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX}, // vertex data
-        };
-
-        vsg::VertexInputState::Attributes vertexAttributeDescriptions = vsg::VertexInputState::Attributes
-        {
-            VkVertexInputAttributeDescription{VERTEX_CHANNEL, vertexBindingIndex, VK_FORMAT_R32G32B32_SFLOAT, 0}, // vertex data
-        };
-
-        vertexBindingIndex++;
-
-        if (geometryAttributesMask & NORMAL)
-        {
-            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingIndex, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX});
-            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ NORMAL_CHANNEL, vertexBindingIndex, VK_FORMAT_R32G32B32_SFLOAT, 0 }); // normal as vec3
-            vertexBindingIndex++;
-        }
-        if (geometryAttributesMask & TANGENT)
-        {
-            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingIndex, sizeof(vsg::vec4), VK_VERTEX_INPUT_RATE_VERTEX });
-            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ TANGENT_CHANNEL, vertexBindingIndex, VK_FORMAT_R32G32B32A32_SFLOAT, 0 }); // tanget as vec4
-            vertexBindingIndex++;
-        }
-        if (geometryAttributesMask & COLOR)
-        {
-            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingIndex, sizeof(vsg::vec4), VK_VERTEX_INPUT_RATE_VERTEX });
-            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ COLOR_CHANNEL, vertexBindingIndex, VK_FORMAT_R32G32B32A32_SFLOAT, 0 }); // color as vec4
-            vertexBindingIndex++;
-        }
-        if (geometryAttributesMask & TEXCOORD0)
-        {
-            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingIndex, sizeof(vsg::vec2), VK_VERTEX_INPUT_RATE_VERTEX });
-            vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ TEXCOORD0_CHANNEL, vertexBindingIndex, VK_FORMAT_R32G32_SFLOAT, 0 }); // texcoord as vec2
-            vertexBindingIndex++;
-        }
-
-        gp->vertexBindingsDescriptions = vertexBindingsDescriptions;
-        gp->vertexAttributeDescriptions = vertexAttributeDescriptions;
-
-        gp->pipelineStates = vsg::GraphicsPipelineStates
-        {
-            vsg::InputAssemblyState::create(),
-            vsg::RasterizationState::create(),
-            vsg::MultisampleState::create(),
-            vsg::ColorBlendState::create(),
-            vsg::DepthStencilState::create()
-        };
-
-        return gp;
-    }
 
 
     vsg::ref_ptr<vsg::Texture> convertToVsgTexture(const osg::Texture* osgtexture)
@@ -447,16 +320,15 @@ namespace osg2vsg
         return texture;
     }
 
-    vsg::ref_ptr<vsg::StateSet> createVsgStateSet(const osg::StateSet* stateset, uint32_t shaderModeMask)
+    vsg::ref_ptr<vsg::DescriptorSet> createVsgStateSet(const vsg::DescriptorSetLayouts& descriptorSetLayouts, const osg::StateSet* stateset, uint32_t shaderModeMask)
     {
-        if (!stateset) return vsg::ref_ptr<vsg::StateSet>();
+        if (!stateset) return vsg::ref_ptr<vsg::DescriptorSet>();
 
-        auto vsg_stateset = vsg::StateSet::create();
-
-        vsg::ref_ptr<vsg::SharedBindDescriptorSets> sharedDescriptorSetBinding = vsg::SharedBindDescriptorSets::create();
 
         unsigned int units = stateset->getNumTextureAttributeLists();
         uint32_t texcount = 0;
+
+        vsg::Descriptors descriptors;
 
         auto addTexture = [&] (unsigned int i)
         {
@@ -468,15 +340,9 @@ namespace osg2vsg
                 if (vsgtex)
                 {
                     // shaders are looking for textures in original units
-                    vsgtex->_bindingIndex = i;
-                    // use a shared descriptor set binding
-                    if (sharedDescriptorSetBinding.valid())
-                    {
-                        vsgtex->_ownsBindDescriptorSets = false;
-                        vsgtex->_bindDescriptorSets = sharedDescriptorSetBinding;
-                    }
+                    vsgtex->_dstBinding = i;
                     texcount++; //
-                    vsg_stateset->add(vsgtex);
+                    descriptors.push_back(vsgtex);
                 }
                 else
                 {
@@ -485,58 +351,52 @@ namespace osg2vsg
             }
         };
 
+        // add material first
+        const osg::Material* osg_material = dynamic_cast<const osg::Material*>(stateset->getAttribute(osg::StateAttribute::Type::MATERIAL));
+        if (osg_material != nullptr)
+        {
+            vsg::ref_ptr<vsg::MaterialValue> matdata = convertToMaterialValue(osg_material);
+            vsg::ref_ptr<vsg::Uniform> vsg_materialUniform = vsg::Uniform::create();
+            vsg_materialUniform->_dataList.push_back(matdata);
+            vsg_materialUniform->_dstBinding = 10; // just use high value for now, should maybe put uniforms into a different descriptor set to simplify binding indexes
+            descriptors.push_back(vsg_materialUniform);
+        }
+
+        // add textures
         if (shaderModeMask & ShaderModeMask::DIFFUSE_MAP) addTexture(DIFFUSE_TEXTURE_UNIT);
         if (shaderModeMask & ShaderModeMask::OPACITY_MAP) addTexture(OPACITY_TEXTURE_UNIT);
         if (shaderModeMask & ShaderModeMask::AMBIENT_MAP) addTexture(AMBIENT_TEXTURE_UNIT);
         if (shaderModeMask & ShaderModeMask::NORMAL_MAP) addTexture(NORMAL_TEXTURE_UNIT);
         if (shaderModeMask & ShaderModeMask::SPECULAR_MAP) addTexture(SPECULAR_TEXTURE_UNIT);
 
-        if (texcount==0) return vsg::ref_ptr<vsg::StateSet>();
+        if (descriptors.size() == 0) return vsg::ref_ptr<vsg::DescriptorSet>();
 
-        // add the shared binding at the end so that the textures will compile first and add their descriptors to the shared binding
-        if(sharedDescriptorSetBinding.valid()) vsg_stateset->add(sharedDescriptorSetBinding);
+        auto descriptorSet = vsg::DescriptorSet::create(descriptorSetLayouts, descriptors);
 
-        return vsg_stateset;
+        return descriptorSet;
     }
 
 
-    vsg::ref_ptr<vsg::StateSet> createStateSetWithGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryAttributesMask, unsigned int maxNumDescriptors, const std::string& vertShaderPath, const std::string& fragShaderPath)
+    vsg::ref_ptr<vsg::BindGraphicsPipeline> createBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryAttributesMask, unsigned int maxNumDescriptors, const std::string& vertShaderPath, const std::string& fragShaderPath)
     {
-        auto stateset = vsg::StateSet::create();
         //
         // load shaders
         //
         ShaderCompiler shaderCompiler;
 
-        vsg::GraphicsPipelineAttribute::Shaders shaders{
-            vsg::Shader::create(VK_SHADER_STAGE_VERTEX_BIT, "main", vertShaderPath.empty() ? createVertexSource(shaderModeMask, geometryAttributesMask) : readGLSLShader(vertShaderPath, shaderModeMask, geometryAttributesMask)),
-            vsg::Shader::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", fragShaderPath.empty() ? createFragmentSource(shaderModeMask, geometryAttributesMask) : readGLSLShader(fragShaderPath, shaderModeMask, geometryAttributesMask))
+        vsg::ShaderModules shaders{
+            vsg::ShaderModule::create(VK_SHADER_STAGE_VERTEX_BIT, "main", vertShaderPath.empty() ? createVertexSource(shaderModeMask, geometryAttributesMask) : readGLSLShader(vertShaderPath, shaderModeMask, geometryAttributesMask)),
+            vsg::ShaderModule::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", fragShaderPath.empty() ? createFragmentSource(shaderModeMask, geometryAttributesMask) : readGLSLShader(fragShaderPath, shaderModeMask, geometryAttributesMask))
         };
 
-        if (!shaderCompiler.compile(shaders)) return vsg::ref_ptr<vsg::StateSet>();
+        if (!shaderCompiler.compile(shaders)) return vsg::ref_ptr<vsg::BindGraphicsPipeline>();
 
-        // how many textures
-        maxNumDescriptors = maxNumDescriptors * ((shaderModeMask & DIFFUSE_MAP ? 1 : 0) + (shaderModeMask & NORMAL_MAP ? 1 : 0));
-
-        //
-        // set up graphics pipeline
-        //
-        vsg::ref_ptr<vsg::GraphicsPipelineAttribute> gp = vsg::GraphicsPipelineAttribute::create();
-        gp->shaders = shaders;
-        gp->maxSets = maxNumDescriptors; //  total sets
-
-        if (maxNumDescriptors > 0)
-        {
-            gp->descriptorPoolSizes = vsg::DescriptorPoolSizes
-            {
-                {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxNumDescriptors} // type, descriptorCount // total descriptors of a type across all sets
-            };
-        }
-
-        std::cout<<"createStateSetWithGraphicsPipeline("<<shaderModeMask<<", "<<geometryAttributesMask<<", "<<maxNumDescriptors<<")"<<std::endl;
-
+        std::cout<<"createGraphicsPipelineAttribute("<<shaderModeMask<<", "<<geometryAttributesMask<<", "<<maxNumDescriptors<<")"<<std::endl;
 
         vsg::DescriptorSetLayoutBindings descriptorBindings;
+
+        // add material first if any (for now material is hardcoded to binding 10)
+        if (shaderModeMask & MATERIAL) descriptorBindings.push_back({ 10, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr }); // { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
 
         // these need to go in incremental order by texture unit value as that how they will have been added to the desctiptor set
         // VkDescriptorSetLayoutBinding { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
@@ -546,9 +406,10 @@ namespace osg2vsg
         if (shaderModeMask & NORMAL_MAP) descriptorBindings.push_back({ NORMAL_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
         if (shaderModeMask & SPECULAR_MAP) descriptorBindings.push_back({ SPECULAR_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
 
-        gp->descriptorSetLayoutBindings.push_back(descriptorBindings);
+        auto descriptorSetLayout = vsg::DescriptorSetLayout::create(descriptorBindings);
+        vsg::DescriptorSetLayouts descriptorSetLayouts{descriptorSetLayout};
 
-        gp->pushConstantRanges = vsg::PushConstantRanges
+        vsg::PushConstantRanges pushConstantRanges
         {
             {VK_SHADER_STAGE_VERTEX_BIT, 0, 196} // projection view, and model matrices
         };
@@ -592,11 +453,12 @@ namespace osg2vsg
             vertexBindingIndex++;
         }
 
-        gp->vertexBindingsDescriptions = vertexBindingsDescriptions;
-        gp->vertexAttributeDescriptions = vertexAttributeDescriptions;
+        auto pipelineLayout = vsg::PipelineLayout::create(descriptorSetLayouts, pushConstantRanges);
 
-        gp->pipelineStates = vsg::GraphicsPipelineStates
+        vsg::GraphicsPipelineStates pipelineStates
         {
+            vsg::ShaderStages::create(shaders),
+            vsg::VertexInputState::create(vertexBindingsDescriptions, vertexAttributeDescriptions),
             vsg::InputAssemblyState::create(),
             vsg::RasterizationState::create(),
             vsg::MultisampleState::create(),
@@ -604,10 +466,13 @@ namespace osg2vsg
             vsg::DepthStencilState::create()
         };
 
-        stateset->add(gp);
+        //
+        // set up graphics pipeline
+        //
+        vsg::ref_ptr<vsg::GraphicsPipeline> graphicsPipeline = vsg::GraphicsPipeline::create(pipelineLayout, pipelineStates);
+        auto bindGraphicsPipeline = vsg::BindGraphicsPipeline::create(graphicsPipeline);
 
-        return stateset;
+        return bindGraphicsPipeline;
     }
 }
-
 

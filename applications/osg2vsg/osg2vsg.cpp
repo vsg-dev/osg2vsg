@@ -15,11 +15,10 @@
 #include <osgUtil/Optimizer>
 #include <osgUtil/MeshOptimizers>
 
-#include <osg2vsg/GraphicsNodes.h>
 #include <osg2vsg/ShaderUtils.h>
 #include <osg2vsg/GeometryUtils.h>
 #include <osg2vsg/SceneAnalysisVisitor.h>
-#include <osg2vsg/ComputeBounds.h>
+#include <vsg/traversals/ComputeBounds.h>
 
 
 namespace vsg
@@ -121,7 +120,6 @@ int main(int argc, char** argv)
     auto sleepTime = arguments.value(0.0, "--sleep");
     auto writeToFileProgramAndDataSetSets = arguments.read({"--write-stateset", "--ws"});
     auto optimize = !arguments.read("--no-optimize");
-    auto coreGenerator = arguments.read({"--core-generator", "--core"});
     auto outputFilename = arguments.value(std::string(), "-o");
     auto pathFilename = arguments.value(std::string(),"-p");
     arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height);
@@ -135,48 +133,117 @@ int main(int argc, char** argv)
     // read shaders
     vsg::Paths searchPaths = vsg::getEnvPaths("VSG_FILE_PATH");
 
+    using VsgNodes = std::vector<vsg::ref_ptr<vsg::Node>>;
+    VsgNodes vsgNodes;
+
+    // read any vsg files
+    for (int i=1; i<argc; ++i)
+    {
+        std::string filename = arguments[i];
+        auto ext = vsg::fileExtension(filename);
+        if (ext=="vsga")
+        {
+            filename = vsg::findFile(filename, searchPaths);
+            if (!filename.empty())
+            {
+                std::ifstream fin(filename);
+                vsg::AsciiInput input(fin);
+
+                vsg::ref_ptr<vsg::Node> loaded_scene = input.readObject<vsg::Node>("Root");
+                if (loaded_scene) vsgNodes.push_back(loaded_scene);
+
+                std::cout<<"vsg ascii file "<<filename<<" loaded_scene="<<loaded_scene.get()<<std::endl;
+
+                arguments.remove(i, 1);
+                --i;
+            }
+        }
+        else if (ext=="vsgb")
+        {
+            filename = vsg::findFile(filename, searchPaths);
+            if (!filename.empty())
+            {
+                std::ifstream fin(filename, std::ios::in | std::ios::binary);
+                vsg::BinaryInput input(fin);
+
+                std::cout<<"vsg binary file "<<filename<<std::endl;
+
+                vsg::ref_ptr<vsg::Node> loaded_scene = input.readObject<vsg::Node>("Root");
+                if (loaded_scene) vsgNodes.push_back(loaded_scene);
+
+                arguments.remove(i, 1);
+                --i;
+            }
+        }
+    }
 
     // read osg models.
     osg::ArgumentParser osg_arguments(&argc, argv);
 
     osg::ref_ptr<osg::Node> osg_scene = osgDB::readNodeFiles(osg_arguments);
 
-    if (!osg_scene)
+    if (vsgNodes.empty() && !osg_scene)
     {
         std::cout<<"No model loaded."<<std::endl;
         return 1;
     }
 
-    if (optimize)
+    if (osg_scene.valid())
     {
-        osgUtil::IndexMeshVisitor imv;
-        #if OSG_MIN_VERSION_REQUIRED(3,6,4)
-        imv.setGenerateNewIndicesOnAllGeometries(true);
-        #endif
-        osg_scene->accept(imv);
-        imv.makeMesh();
+        if (optimize)
+        {
+            osgUtil::IndexMeshVisitor imv;
+            #if OSG_MIN_VERSION_REQUIRED(3,6,4)
+            imv.setGenerateNewIndicesOnAllGeometries(true);
+            #endif
+            osg_scene->accept(imv);
+            imv.makeMesh();
 
-        osgUtil::VertexCacheVisitor vcv;
-        osg_scene->accept(vcv);
-        vcv.optimizeVertices();
+            osgUtil::VertexCacheVisitor vcv;
+            osg_scene->accept(vcv);
+            vcv.optimizeVertices();
 
-        osgUtil::VertexAccessOrderVisitor vaov;
-        osg_scene->accept(vaov);
-        vaov.optimizeOrder();
+            osgUtil::VertexAccessOrderVisitor vaov;
+            osg_scene->accept(vaov);
+            vaov.optimizeOrder();
 
-        osgUtil::Optimizer optimizer;
-        optimizer.optimize(osg_scene.get(), osgUtil::Optimizer::DEFAULT_OPTIMIZATIONS);
+            osgUtil::Optimizer optimizer;
+            optimizer.optimize(osg_scene.get(), osgUtil::Optimizer::DEFAULT_OPTIMIZATIONS);
+        }
+
+
+        // Collect stats about the loaded scene
+        sceneAnalysis.writeToFileProgramAndDataSetSets = writeToFileProgramAndDataSetSets;
+        osg_scene->accept(sceneAnalysis);
+
+        // build VSG scene
+        vsg::ref_ptr<vsg::Node> converted_vsg_scene = sceneAnalysis.createVSG(searchPaths);
+
+        if (converted_vsg_scene)
+        {
+            vsgNodes.push_back(converted_vsg_scene);
+        }
+
     }
 
 
-    // Collect stats about the loaded scene
-    sceneAnalysis.writeToFileProgramAndDataSetSets = writeToFileProgramAndDataSetSets;
-    osg_scene->accept(sceneAnalysis);
-
-    // build VSG scene
+    // assign the vsg_scene from the loaded/converted nodes
     vsg::ref_ptr<vsg::Node> vsg_scene;
-    if (coreGenerator) vsg_scene = sceneAnalysis.createCoreVSG(searchPaths);
-    else vsg_scene = sceneAnalysis.createNewVSG(searchPaths);
+    if (vsgNodes.size()>1)
+    {
+        auto vsg_group = vsg::Group::create();
+        for(auto& subgraphs : vsgNodes)
+        {
+            vsg_group->addChild(subgraphs);
+        }
+
+        vsg_scene = vsg_group;
+    }
+    else if (vsgNodes.size()==1)
+    {
+        vsg_scene = vsgNodes.front();
+    }
+
 
     if (!outputFilename.empty())
     {
@@ -192,11 +259,19 @@ int main(int argc, char** argv)
 
             return 1;
         }
-        else if (vsg_scene.valid() && outputFileExtension.compare(0, 3,"vsg")==0)
+        else if (vsg_scene.valid() && outputFileExtension=="vsga")
         {
             std::cout<<"Writing file to "<<outputFilename<<std::endl;
             std::ofstream fout(outputFilename);
             vsg::AsciiOutput output(fout);
+            output.writeObject("Root", vsg_scene);
+            return 1;
+        }
+        else if (vsg_scene.valid() && outputFileExtension=="vsgb")
+        {
+            std::cout<<"Writing file to "<<outputFilename<<std::endl;
+            std::ofstream fout(outputFilename, std::ios::out | std::ios::binary);
+            vsg::BinaryOutput output(fout);
             output.writeObject("Root", vsg_scene);
             return 1;
         }

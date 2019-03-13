@@ -12,29 +12,31 @@
 
 using namespace osg2vsg;
 
-#if 0
+#if 1
 #define DEBUG_OUTPUT std::cout
 #else
 #define DEBUG_OUTPUT if (false) std::cout
 #endif
 
-uint32_t osg2vsg::calculateShaderModeMask(osg::StateSet* stateSet)
+uint32_t osg2vsg::calculateShaderModeMask(const osg::StateSet* stateSet)
 {
     uint32_t stateMask = 0;
     if (stateSet)
     {
-        //if (stateSet->getMode(GL_BLEND) & osg::StateAttribute::ON)
-        //    stateMask |= ShaderGen::BLEND;
+        if (stateSet->getMode(GL_BLEND) & osg::StateAttribute::ON) stateMask |= BLEND;
         if (stateSet->getMode(GL_LIGHTING) & osg::StateAttribute::ON)  stateMask |= LIGHTING;
 
-        auto hasTextureWithImageInChannel = [](osg::StateSet* stateSet, unsigned int channel)
+        auto asMaterial = dynamic_cast<const osg::Material*>(stateSet->getAttribute(osg::StateAttribute::Type::MATERIAL));
+        if (asMaterial) stateMask |= MATERIAL;
+
+        auto hasTextureWithImageInChannel = [](const osg::StateSet* stateSet, unsigned int channel)
         {
-            auto asTex = dynamic_cast<osg::Texture*>(stateSet->getTextureAttribute(channel, osg::StateAttribute::TEXTURE));
+            auto asTex = dynamic_cast<const osg::Texture*>(stateSet->getTextureAttribute(channel, osg::StateAttribute::TEXTURE));
             if (asTex && asTex->getImage(0)) return true;
             return false;
         };
 
-        if (hasTextureWithImageInChannel(stateSet, 0)) stateMask |= DIFFUSE_MAP;
+        if (hasTextureWithImageInChannel(stateSet, DIFFUSE_TEXTURE_UNIT)) stateMask |= DIFFUSE_MAP;
         if (hasTextureWithImageInChannel(stateSet, OPACITY_TEXTURE_UNIT)) stateMask |= OPACITY_MAP;
         if (hasTextureWithImageInChannel(stateSet, AMBIENT_TEXTURE_UNIT)) stateMask |= AMBIENT_MAP;
         if (hasTextureWithImageInChannel(stateSet, NORMAL_TEXTURE_UNIT)) stateMask |= NORMAL_MAP;
@@ -53,7 +55,7 @@ std::vector<std::string> createPSCDefineStrings(const uint32_t& shaderModeMask, 
     bool hastanget = geometryAttrbutes & TANGENT;
 
     std::vector<std::string> defines;
-    
+
     // vertx inputs
     if (hasnormal) defines.push_back("VSG_NORMAL");
     if (hascolor) defines.push_back("VSG_COLOR");
@@ -62,6 +64,9 @@ std::vector<std::string> createPSCDefineStrings(const uint32_t& shaderModeMask, 
 
     // shading modes/maps
     if (hasnormal && (shaderModeMask & LIGHTING)) defines.push_back("VSG_LIGHTING");
+    
+    if(shaderModeMask & MATERIAL) defines.push_back("VSG_MATERIAL");
+
     if (hastex0 && (shaderModeMask & DIFFUSE_MAP)) defines.push_back("VSG_DIFFUSE_MAP");
     if (hastex0 && (shaderModeMask & OPACITY_MAP)) defines.push_back("VSG_OPACITY_MAP");
     if (hastex0 && (shaderModeMask & AMBIENT_MAP)) defines.push_back("VSG_AMBIENT_MAP");
@@ -299,7 +304,7 @@ std::string osg2vsg::createFragmentSource(const uint32_t& shaderModeMask, const 
 {
     std::string source =
         "#version 450\n" \
-        "#pragma import_defines ( VSG_NORMAL, VSG_COLOR, VSG_TEXCOORD0, VSG_LIGHTING, VSG_DIFFUSE_MAP, VSG_OPACITY_MAP, VSG_AMBIENT_MAP, VSG_NORMAL_MAP, VSG_SPECULAR_MAP )\n" \
+        "#pragma import_defines ( VSG_NORMAL, VSG_COLOR, VSG_TEXCOORD0, VSG_LIGHTING, VSG_MATERIAL, VSG_DIFFUSE_MAP, VSG_OPACITY_MAP, VSG_AMBIENT_MAP, VSG_NORMAL_MAP, VSG_SPECULAR_MAP )\n" \
         "#extension GL_ARB_separate_shader_objects : enable\n" \
         "#ifdef VSG_DIFFUSE_MAP\n" \
         "layout(binding = 0) uniform sampler2D diffuseMap; \n" \
@@ -315,6 +320,16 @@ std::string osg2vsg::createFragmentSource(const uint32_t& shaderModeMask, const 
         "#endif\n" \
         "#ifdef VSG_SPECULAR_MAP\n" \
         "layout(binding = 6) uniform sampler2D specularMap; \n" \
+        "#endif\n" \
+
+        "#ifdef VSG_MATERIAL\n" \
+        "layout(binding = 10) uniform MaterialData\n" \
+        "{\n" \
+        "    vec4 ambientColor;\n" \
+        "    vec4 diffuseColor; \n" \
+        "    vec4 specularColor;\n" \
+        "    float shine; \n" \
+        "} material;\n" \
         "#endif\n" \
 
         "#ifdef VSG_NORMAL\n" \
@@ -342,15 +357,22 @@ std::string osg2vsg::createFragmentSource(const uint32_t& shaderModeMask, const 
         "#ifdef VSG_COLOR\n" \
         "    base = base * vertColor;\n" \
         "#endif\n" \
-        "#ifdef VSG_AMBIENT_MAP\n" \
-        "    float ambientOcclusion = texture(ambientMap, texCoord0.st).r;\n" \
+        "#ifdef VSG_MATERIAL\n" \
+        "    vec3 ambientColor = material.ambientColor.rgb;\n" \
+        "    vec3 diffuseColor = material.diffuseColor.rgb;\n" \
+        "    vec3 specularColor = material.specularColor.rgb;\n" \
+        "    float shine = material.shine;\n" \
         "#else\n" \
-        "    float ambientOcclusion = 1.0;\n" \
+        "    vec3 ambientColor = vec3(0.1,0.1,0.1);\n" \
+        "    vec3 diffuseColor = vec3(1.0,1.0,1.0);\n" \
+        "    vec3 specularColor = vec3(0.3,0.3,0.3);\n" \
+        "    float shine = 16.0;\n" \
+        "#endif\n" \
+        "#ifdef VSG_AMBIENT_MAP\n" \
+        "    ambientColor *= texture(ambientMap, texCoord0.st).r;\n" \
         "#endif\n" \
         "#ifdef VSG_SPECULAR_MAP\n" \
-        "    vec3 specularColor = texture(specularMap, texCoord0.st).rgb;\n" \
-        "#else\n" \
-        "    vec3 specularColor = vec3(0.2,0.2,0.2);\n" \
+        "    specularColor = texture(specularMap, texCoord0.st).rrr;\n" \
         "#endif\n" \
         "#ifdef VSG_LIGHTING\n" \
         "#ifdef VSG_NORMAL_MAP\n" \
@@ -363,19 +385,19 @@ std::string osg2vsg::createFragmentSource(const uint32_t& shaderModeMask, const 
         "    vec3 ld = normalize(lightDir);\n" \
         "    vec3 vd = normalize(viewDir);\n" \
         "    vec4 color = vec4(0.01, 0.01, 0.01, 1.0);\n" \
-        "    color += /*osg_Material.ambient*/ vec4(0.1, 0.1, 0.1, 0.0);\n" \
+        "    color.rgb += ambientColor;\n" \
         "    float diff = max(dot(ld, nd), 0.0);\n" \
-        "    color += /*osg_Material.diffuse*/ vec4(0.8, 0.8, 0.8, 0.0) * diff;\n" \
-        "    color *= ambientOcclusion;\n" \
+        "    color.rgb += diffuseColor * diff;\n" \
         "    color *= base;\n" \
         "    if (diff > 0.0)\n" \
         "    {\n" \
         "        vec3 halfDir = normalize(ld + vd);\n" \
         "        color.rgb += base.a * specularColor *\n" \
-        "            pow(max(dot(halfDir, nd), 0.0), 16.0/*osg_Material.shine*/);\n" \
+        "            pow(max(dot(halfDir, nd), 0.0), shine);\n" \
         "    }\n" \
         "#else\n" \
         "    vec4 color = base;\n" \
+        "    color.rgb *= diffuseColor;\n" \
         "#endif\n" \
         "    outColor = color;\n" \
         "#ifdef VSG_OPACITY_MAP\n" \
@@ -400,9 +422,9 @@ ShaderCompiler::~ShaderCompiler()
     glslang::FinalizeProcess();
 }
 
-bool ShaderCompiler::compile(Shaders& shaders)
+bool ShaderCompiler::compile(vsg::ShaderModules& shaders)
 {
-    using StageShaderMap = std::map<EShLanguage, vsg::ref_ptr<vsg::Shader>>;
+    using StageShaderMap = std::map<EShLanguage, vsg::ref_ptr<vsg::ShaderModule>>;
     using TShaders = std::list<std::unique_ptr<glslang::TShader>>;
     TShaders tshaders;
 
@@ -481,7 +503,7 @@ bool ShaderCompiler::compile(Shaders& shaders)
         auto vsg_shader = stageShaderMap[(EShLanguage)eshl_stage];
         if (vsg_shader && program->getIntermediate((EShLanguage)eshl_stage))
         {
-            vsg::Shader::SPIRV spirv;
+            vsg::ShaderModule::SPIRV spirv;
             std::string warningsErrors;
             spv::SpvBuildLogger logger;
             glslang::SpvOptions spvOptions;

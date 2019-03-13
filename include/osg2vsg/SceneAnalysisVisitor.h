@@ -11,7 +11,6 @@
 #include <osg/Billboard>
 #include <osg/MatrixTransform>
 
-#include <osg2vsg/GraphicsNodes.h>
 #include <osg2vsg/ShaderUtils.h>
 #include <osg2vsg/GeometryUtils.h>
 
@@ -96,8 +95,7 @@ namespace osg2vsg
         osg::ref_ptr<osg::Node> createOSG();
 
         vsg::ref_ptr<vsg::Node> createTransformGeometryGraphVSG(TransformGeometryMap& transformGeometryMap, vsg::Paths& searchPaths, uint32_t requiredGeomAttributesMask);
-        vsg::ref_ptr<vsg::Node> createNewVSG(vsg::Paths& searchPaths);
 
-        vsg::ref_ptr<vsg::Node> createCoreVSG(vsg::Paths& searchPaths);
+        vsg::ref_ptr<vsg::Node> createVSG(vsg::Paths& searchPaths);
     };
 }
