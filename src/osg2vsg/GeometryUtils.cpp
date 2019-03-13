@@ -194,7 +194,7 @@ namespace osg2vsg
         unsigned int vertcount = vertices->valueCount();
 
         // normals
-        vsg::ref_ptr<vsg::Data> normals(osg2vsg::convertToVsg(ingeometry->getNormalArray(), ingeometry->getNormalBinding() == osg::Array::Binding::BIND_OVERALL, vertcount));
+        vsg::ref_ptr<vsg::Data> normals(osg2vsg::convertToVsg(ingeometry->getNormalArray(), ingeometry->getNormalBinding() == osg::Geometry::AttributeBinding::BIND_OVERALL, vertcount));
         if ((!normals.valid() || normals->valueCount() == 0) && (requiredAttributesMask & NORMAL)) // if no normals but we've requested them, add them
         {
             vsg::ref_ptr<vsg::vec3Array> defaultnormals(new vsg::vec3Array(vertcount));
@@ -222,7 +222,7 @@ namespace osg2vsg
         }
 
         // colors
-        vsg::ref_ptr<vsg::Data> colors(osg2vsg::convertToVsg(ingeometry->getColorArray(), ingeometry->getColorBinding() == osg::Array::Binding::BIND_OVERALL, vertcount));
+        vsg::ref_ptr<vsg::Data> colors(osg2vsg::convertToVsg(ingeometry->getColorArray(), ingeometry->getColorBinding() == osg::Geometry::AttributeBinding::BIND_OVERALL, vertcount));
         if ((!colors.valid() || colors->valueCount() == 0) && (requiredAttributesMask & COLOR)) // if no colors but we've requested them, add them
         {
             vsg::ref_ptr<vsg::vec4Array> defaultcolors(new vsg::vec4Array(vertcount));
@@ -322,8 +322,6 @@ namespace osg2vsg
     {
         if (!stateset) return vsg::ref_ptr<vsg::DescriptorSet>();
 
-
-        unsigned int units = stateset->getNumTextureAttributeLists();
         uint32_t texcount = 0;
 
         vsg::Descriptors descriptors;
