@@ -31,18 +31,18 @@ uint32_t osg2vsg::calculateShaderModeMask(const osg::StateSet* stateSet)
         auto asMaterial = dynamic_cast<const osg::Material*>(stateSet->getAttribute(osg::StateAttribute::Type::MATERIAL));
         if (asMaterial) stateMask |= MATERIAL;
 
-        auto hasTextureWithImageInChannel = [](const osg::StateSet* stateSet, unsigned int channel)
+        auto hasTextureWithImageInChannel = [stateSet](unsigned int channel)
         {
             auto asTex = dynamic_cast<const osg::Texture*>(stateSet->getTextureAttribute(channel, osg::StateAttribute::TEXTURE));
             if (asTex && asTex->getImage(0)) return true;
             return false;
         };
 
-        if (hasTextureWithImageInChannel(stateSet, DIFFUSE_TEXTURE_UNIT)) stateMask |= DIFFUSE_MAP;
-        if (hasTextureWithImageInChannel(stateSet, OPACITY_TEXTURE_UNIT)) stateMask |= OPACITY_MAP;
-        if (hasTextureWithImageInChannel(stateSet, AMBIENT_TEXTURE_UNIT)) stateMask |= AMBIENT_MAP;
-        if (hasTextureWithImageInChannel(stateSet, NORMAL_TEXTURE_UNIT)) stateMask |= NORMAL_MAP;
-        if (hasTextureWithImageInChannel(stateSet, SPECULAR_TEXTURE_UNIT)) stateMask |= SPECULAR_MAP;
+        if (hasTextureWithImageInChannel(DIFFUSE_TEXTURE_UNIT)) stateMask |= DIFFUSE_MAP;
+        if (hasTextureWithImageInChannel(OPACITY_TEXTURE_UNIT)) stateMask |= OPACITY_MAP;
+        if (hasTextureWithImageInChannel(AMBIENT_TEXTURE_UNIT)) stateMask |= AMBIENT_MAP;
+        if (hasTextureWithImageInChannel(NORMAL_TEXTURE_UNIT)) stateMask |= NORMAL_MAP;
+        if (hasTextureWithImageInChannel(SPECULAR_TEXTURE_UNIT)) stateMask |= SPECULAR_MAP;
     }
     return stateMask;
 }
@@ -155,7 +155,6 @@ std::string processGLSLShaderSource(const std::string& source, const std::vector
     std::istringstream iss(source);
     std::ostringstream headerstream;
     std::ostringstream sourcestream;
-    bool foundversion = false;
 
     const std::string versionmatch = "#version";
     const std::string importdefinesmatch = "#pragma import_defines";
@@ -581,6 +580,7 @@ bool ShaderCompiler::compile(vsg::ShaderModules& shaders)
             case(VK_SHADER_STAGE_GEOMETRY_BIT): return "Geometry Shader";
             case(VK_SHADER_STAGE_FRAGMENT_BIT): return "Fragment Shader";
             case(VK_SHADER_STAGE_COMPUTE_BIT): return "Compute Shader";
+            default: return "Unkown Shader Type";
         }
         return "";
     };
