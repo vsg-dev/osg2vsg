@@ -302,8 +302,6 @@ namespace osg2vsg
         return geometry;
     }
 
-
-
     vsg::ref_ptr<vsg::Texture> convertToVsgTexture(const osg::Texture* osgtexture)
     {
         const osg::Image* image = osgtexture ? osgtexture->getImage(0) : nullptr;
@@ -385,8 +383,8 @@ namespace osg2vsg
         ShaderCompiler shaderCompiler;
 
         vsg::ShaderModules shaders{
-            vsg::ShaderModule::create(VK_SHADER_STAGE_VERTEX_BIT, "main", vertShaderPath.empty() ? createVertexSource(shaderModeMask, geometryAttributesMask) : readGLSLShader(vertShaderPath, shaderModeMask, geometryAttributesMask)),
-            vsg::ShaderModule::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", fragShaderPath.empty() ? createFragmentSource(shaderModeMask, geometryAttributesMask) : readGLSLShader(fragShaderPath, shaderModeMask, geometryAttributesMask))
+            vsg::ShaderModule::create(VK_SHADER_STAGE_VERTEX_BIT, "main", vertShaderPath.empty() ? createFbxVertexSource(shaderModeMask, geometryAttributesMask) : readGLSLShader(vertShaderPath, shaderModeMask, geometryAttributesMask)),
+            vsg::ShaderModule::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", fragShaderPath.empty() ? createFbxFragmentSource(shaderModeMask, geometryAttributesMask) : readGLSLShader(fragShaderPath, shaderModeMask, geometryAttributesMask))
         };
 
         if (!shaderCompiler.compile(shaders)) return vsg::ref_ptr<vsg::BindGraphicsPipeline>();
