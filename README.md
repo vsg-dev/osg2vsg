@@ -1,32 +1,38 @@
-osg2vsg is a small utility library that converts OpenSceneGraph images and 3D modules into [VSG](https://github.com/vsg-dev/VulkanSceneGraphPrototype)/Vulkan equivalents.
+osg2vsg is a small utility library and application that converts OpenSceneGraph images and 3D modules into [VSG](https://github.com/vsg-dev/VulkanSceneGraphPrototype)/Vulkan equivalents.
 
+## osg2vsg application usage
 
-## include/osg2vsg/ImageUtils.h functionality
-Currently only loading and conversion of images are supported, provided by the [include/osg2vsg/ImageUtils.h](include/osg2vsg/ImageUtils.h) header. Three convenience functions are available:
+The osg2vsg application can be used to load OSG models, rendering them using the VSG, and write these converted scene graphs to native VSG ascii or binary files.
 
-To help map OpenGL image formats to Vulkan equivalents use osg2vsg::convertGLImageFormatToVulkan(GLenum dataType, GLenum pixelFormat) method.  Vulkan only supports a subset of formats that OpenGL formats, so make sure they are compatible i.e. you must use RGBA rather than RGB. Typical usage:
+To load an OSG model, convert to VSG and render it with VSG:
 
-```c++
-osg::ref_ptr<osg::Image> image = osgDB::readImageFile("myfile.png");
-GLenum dataType = image->getDataType();
-GLenum pixelFormat = image->getPixelFormat();
-VkFormat format = osg2vsg::convertGLImageFormatToVulkan(dataType, pixelFormat);
-```
+	osg2vsg dumptruck.osgt
 
-If the osg::Image is not a compatible format you can use the  osg2vsg::formatImage(osg::Image* image, GLenum pixelFormat) function to convert the image to a new pixel format.  typical usage:
+To load an OpenSceneGraph and convert to VSG, and write out to VSG binary file:
 
-```c++
-osg::ref_ptr<osg::Image> image = osgDB::readImageFile("myfile.png");
-if (image->getPixelFormat()!=GL_RGBA) image = formatImage(image.get(), GL_RGBA);
-```
+	osg2vsg lz.osgt -o lz.vsgb
 
-To provide a convenient way to load images and create a VSG/Vulkan compatible image the readImageFile(..) function, this uses the OpenSceneGraph to load an image, converts to a compatible Vulkan format if the image isn't already compatible, then sets and copies the image data to the Vulkan memory.
+To view a generated VSG file you can use the vsgviewer from vsgExamples:
 
-```c++
-vsg::ImageData imageData = osg2vsg::readImageFile(device, commandPool, graphicsQueue, "myfile.png")
-```
+	vsgviewer lz.vsgb
 
-An example of osg2vsg::readImageFile(..) being used be be found in the [vsgExamples](https://github.com/vsg-dev/vsgExamples) repository's [vsgdraw](https://github.com/vsg-dev/vsgExamples/tree/master/examples_osg2vsg/vsgdraw).
+To aid performance comparisons between the OSG and VSG you can record animation paths using osgviewer and then run osg2vsg or vsgviewer to render them and follow the animation path.  To record in osgviewer press 'z' to start recording, press 'Z' to complete recording and will write out a saved_animation.path file.  This file then can be used in both osgviewer, osg2vsg and vsgviewer:
+
+	osgviewer lz.osgt -p saved_animation.path
+	osg2vsg lz.osgt -p saved_animation.path
+	vsgviewer lz.vsgb -p saved_animation.path
+
+The osg2vsg command line options to help control the loading and rendering:
+
+    -o file.ext       # write out loaded/converted models to OSG or VSG (.vsga, .vsgb) files
+	--fs              # select fullscreen
+	-w width height   # select window of width and height dimensions
+	--IMMEDIATE       # select presentation IMMEDIATE mode to switch frame wait for vysnc
+    -p animation.path # load an OSG animation path and animate the viewer camera along path
+                      # average framerate is written to the console, in the same manner
+                      # that osgviewer does when following the path to allow 1:1 comparison
+    -d 				  # enable Vulkan debug layer which outputs errors to console
+    -a 				  # enable Vulkan API layer which outputs Vulkan API calls to console
 
 ## Quick build instructions for Unix from the command line
 
