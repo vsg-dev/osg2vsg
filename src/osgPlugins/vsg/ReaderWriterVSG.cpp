@@ -10,10 +10,7 @@
 #include <osgUtil/Optimizer>
 #include <osgUtil/MeshOptimizers>
 
-#include <vsg/io/AsciiInput.h>
-#include <vsg/io/AsciiOutput.h>
-#include <vsg/io/BinaryInput.h>
-#include <vsg/io/BinaryOutput.h>
+#include <vsg/io/ReaderWriter.h>
 #include <vsg/io/FileSystem.h>
 
 #include <vsg/nodes/Group.h>
@@ -45,27 +42,8 @@ class ReaderWriterVSG : public osgDB::ReaderWriter
             std::string filename = osgDB::findDataFile( file, options );
             if (filename.empty()) return ReadResult::FILE_NOT_FOUND;
 
-            vsg::ref_ptr<vsg::Object> object;
-            try
-            {
-                if (ext=="vsga")
-                {
-                    std::ifstream fin(filename);
-                    vsg::AsciiInput input(fin);
-                    object = input.readObject("Root");
-                }
-                else if (ext=="vsga")
-                {
-                    std::ifstream fin(filename, std::ios::in | std::ios::binary);
-                    vsg::BinaryInput input(fin);
-                    object = input.readObject("Root");
-                }
-            }
-            catch(std::string message)
-            {
-                OSG_NOTICE<<"Warning : attempt to read "<<filename<<" failed. mssage="<<message<<std::endl;
-                return ReadResult::ERROR_IN_READING_FILE;
-            }
+            vsg::vsgReaderWriter io;
+            vsg::ref_ptr<vsg::Object> object = io.readFile(filename);
 
             OSG_NOTICE<<"VSG data loaded "<<object->className()<<", need to implement a converter."<<std::endl;
 
@@ -94,18 +72,9 @@ class ReaderWriterVSG : public osgDB::ReaderWriter
             std::string ext = osgDB::getFileExtension(filename);
             if (!acceptsExtension(ext)) return WriteResult::FILE_NOT_HANDLED;
 
-            if (ext=="vsga")
+            vsg::vsgReaderWriter io;
+            if (io.writeFile(object, filename))
             {
-                std::ofstream fout(filename);
-                vsg::AsciiOutput output(fout);
-                output.writeObject("Root", object);
-                return WriteResult::FILE_SAVED;
-            }
-            else if (ext=="vsgb")
-            {
-                std::ofstream fout(filename, std::ios::out | std::ios::binary);
-                vsg::BinaryOutput output(fout);
-                output.writeObject("Root", object);
                 return WriteResult::FILE_SAVED;
             }
 
@@ -124,7 +93,7 @@ class ReaderWriterVSG : public osgDB::ReaderWriter
             else return WriteResult::FILE_NOT_HANDLED;
         }
 
-        virtual WriteResult writeNode(const osg::Node& node, const std::string& filename, const osgDB::ReaderWriter::Options* /*options*/) const
+        virtual WriteResult writeNode(const osg::Node& node, const std::string& filename, const osgDB::ReaderWriter::Options* options) const
         {
             osg::Node& osg_scene = const_cast<osg::Node&>(node);
 
@@ -167,22 +136,8 @@ class ReaderWriterVSG : public osgDB::ReaderWriter
 
             if (converted_vsg_scene)
             {
-                if (ext=="vsga")
-                {
-                    std::ofstream fout(filename);
-                    vsg::AsciiOutput output(fout);
-                    output.writeObject("Root", converted_vsg_scene);
-                    return WriteResult::FILE_SAVED;
-                }
-                else if (ext=="vsgb")
-                {
-                    std::ofstream fout(filename, std::ios::out | std::ios::binary);
-                    vsg::BinaryOutput output(fout);
-                    output.writeObject("Root", converted_vsg_scene);
-                    return WriteResult::FILE_SAVED;
-                }
+                return write(converted_vsg_scene, filename, options);
             }
-
             return WriteResult::FILE_NOT_HANDLED;
 
         }

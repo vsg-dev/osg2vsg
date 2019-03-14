@@ -18,7 +18,6 @@
 #include <osg2vsg/ShaderUtils.h>
 #include <osg2vsg/GeometryUtils.h>
 #include <osg2vsg/SceneAnalysisVisitor.h>
-#include <vsg/traversals/ComputeBounds.h>
 
 
 namespace vsg
@@ -137,43 +136,18 @@ int main(int argc, char** argv)
     VsgNodes vsgNodes;
 
     // read any vsg files
+    vsg::vsgReaderWriter io;
+
     for (int i=1; i<argc; ++i)
     {
         std::string filename = arguments[i];
-        auto ext = vsg::fileExtension(filename);
-        if (ext=="vsga")
+
+        auto loaded_scene = io.read<vsg::Node>(filename);
+        if (loaded_scene)
         {
-            filename = vsg::findFile(filename, searchPaths);
-            if (!filename.empty())
-            {
-                std::ifstream fin(filename);
-                vsg::AsciiInput input(fin);
-
-                vsg::ref_ptr<vsg::Node> loaded_scene = input.readObject<vsg::Node>("Root");
-                if (loaded_scene) vsgNodes.push_back(loaded_scene);
-
-                std::cout<<"vsg ascii file "<<filename<<" loaded_scene="<<loaded_scene.get()<<std::endl;
-
-                arguments.remove(i, 1);
-                --i;
-            }
-        }
-        else if (ext=="vsgb")
-        {
-            filename = vsg::findFile(filename, searchPaths);
-            if (!filename.empty())
-            {
-                std::ifstream fin(filename, std::ios::in | std::ios::binary);
-                vsg::BinaryInput input(fin);
-
-                std::cout<<"vsg binary file "<<filename<<std::endl;
-
-                vsg::ref_ptr<vsg::Node> loaded_scene = input.readObject<vsg::Node>("Root");
-                if (loaded_scene) vsgNodes.push_back(loaded_scene);
-
-                arguments.remove(i, 1);
-                --i;
-            }
+            vsgNodes.push_back(loaded_scene);
+            arguments.remove(i, 1);
+            --i;
         }
     }
 
@@ -259,21 +233,13 @@ int main(int argc, char** argv)
 
             return 1;
         }
-        else if (vsg_scene.valid() && outputFileExtension=="vsga")
+
+        else if (vsg_scene.valid())
         {
-            std::cout<<"Writing file to "<<outputFilename<<std::endl;
-            std::ofstream fout(outputFilename);
-            vsg::AsciiOutput output(fout);
-            output.writeObject("Root", vsg_scene);
-            return 1;
-        }
-        else if (vsg_scene.valid() && outputFileExtension=="vsgb")
-        {
-            std::cout<<"Writing file to "<<outputFilename<<std::endl;
-            std::ofstream fout(outputFilename, std::ios::out | std::ios::binary);
-            vsg::BinaryOutput output(fout);
-            output.writeObject("Root", vsg_scene);
-            return 1;
+            if (io.writeFile(vsg_scene, outputFilename))
+            {
+                return 1;
+            }
         }
     }
 
