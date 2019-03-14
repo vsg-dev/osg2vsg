@@ -142,9 +142,16 @@ int main(int argc, char** argv)
     {
         std::string filename = arguments[i];
 
+        auto start_point = std::chrono::steady_clock::now();
+
         auto loaded_scene = io.read<vsg::Node>(filename);
+
+        auto vsg_loadTime = std::chrono::duration<double, std::chrono::milliseconds::period>(std::chrono::steady_clock::now() - start_point).count();
+
         if (loaded_scene)
         {
+            std::cout<<"VSG loadTime = "<<vsg_loadTime<<"ms"<<std::endl;
+
             vsgNodes.push_back(loaded_scene);
             arguments.remove(i, 1);
             --i;
@@ -154,7 +161,11 @@ int main(int argc, char** argv)
     // read osg models.
     osg::ArgumentParser osg_arguments(&argc, argv);
 
+    auto start_point = std::chrono::steady_clock::now();
+
     osg::ref_ptr<osg::Node> osg_scene = osgDB::readNodeFiles(osg_arguments);
+
+    auto osg_loadTime = std::chrono::duration<double, std::chrono::milliseconds::period>(std::chrono::steady_clock::now() - start_point).count();
 
     if (vsgNodes.empty() && !osg_scene)
     {
@@ -164,6 +175,8 @@ int main(int argc, char** argv)
 
     if (osg_scene.valid())
     {
+        std::cout<<"OSG loadTime = "<<osg_loadTime<<"ms"<<std::endl;
+
         if (optimize)
         {
             osgUtil::IndexMeshVisitor imv;
