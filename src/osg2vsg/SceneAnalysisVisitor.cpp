@@ -391,7 +391,7 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createTransformGeometryGraphVSG(Tr
 
 vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createVSG(vsg::Paths& searchPaths)
 {
-    std::cout<<"SceneAnalysisVisitor::createVSG(vsg::Paths& searchPaths)"<<std::endl;
+    DEBUG_OUTPUT<<"SceneAnalysisVisitor::createVSG(vsg::Paths& searchPaths)"<<std::endl;
 
     vsg::ref_ptr<vsg::Group> group = vsg::Group::create();
 
@@ -400,32 +400,27 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createVSG(vsg::Paths& searchPaths)
         unsigned int maxNumDescriptors = transformStatePair.stateTransformMap.size();
         if (maxNumDescriptors==0)
         {
-            std::cout<<"  Skipping empty transformStatePair"<<std::endl;
+            DEBUG_OUTPUT<<"  Skipping empty transformStatePair"<<std::endl;
             continue;
         }
         else
         {
-            std::cout<<"  maxNumDescriptors = "<<maxNumDescriptors<<std::endl;
+            DEBUG_OUTPUT<<"  maxNumDescriptors = "<<maxNumDescriptors<<std::endl;
         }
 
         uint32_t geometrymask = (masks.second | overrideGeomAttributes) & supportedGeometryAttributes;
         uint32_t shaderModeMask = (masks.first | overrideShaderModeMask) & supportedShaderModeMask;
         if (shaderModeMask & NORMAL_MAP) geometrymask |= TANGENT; // mesh propably won't have tangets so force them on if we want Normal mapping
 
-        std::cout<<"  about to call createStateSetWithGraphicsPipeline("<<shaderModeMask<<", "<<geometrymask<<", "<<maxNumDescriptors<<")"<<std::endl;
+        DEBUG_OUTPUT<<"  about to call createStateSetWithGraphicsPipeline("<<shaderModeMask<<", "<<geometrymask<<", "<<maxNumDescriptors<<")"<<std::endl;
 
         auto graphicsPipelineGroup = vsg::StateGroup::create();
 
-#if 0
-        auto graphicsPipeline = createGraphicsPipelineAttribute(shaderModeMask, geometrymask, maxNumDescriptors, vertexShaderPath, fragmentShaderPath);
-        graphicsPipelineGroup->add(graphicsPipeline);
-#else
-        auto bindGraphicsPipeline = createBindGraphicsPipeline(shaderModeMask, geometrymask, maxNumDescriptors, vertexShaderPath, fragmentShaderPath);
+        auto bindGraphicsPipeline = createBindGraphicsPipeline(shaderModeMask, geometrymask, vertexShaderPath, fragmentShaderPath);
         graphicsPipelineGroup->add(bindGraphicsPipeline);
 
         auto graphicsPipeline = bindGraphicsPipeline->getPipeline();
         auto& descriptorSetLayouts = graphicsPipeline->getPipelineLayout()->getDescriptorSetLayouts();
-#endif
 
 
         group->addChild(graphicsPipelineGroup);

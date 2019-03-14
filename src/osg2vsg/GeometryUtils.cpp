@@ -373,7 +373,7 @@ namespace osg2vsg
     }
 
 
-    vsg::ref_ptr<vsg::BindGraphicsPipeline> createBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryAttributesMask, unsigned int maxNumDescriptors, const std::string& vertShaderPath, const std::string& fragShaderPath)
+    vsg::ref_ptr<vsg::BindGraphicsPipeline> createBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryAttributesMask, const std::string& vertShaderPath, const std::string& fragShaderPath)
     {
         //
         // load shaders
@@ -387,7 +387,7 @@ namespace osg2vsg
 
         if (!shaderCompiler.compile(shaders)) return vsg::ref_ptr<vsg::BindGraphicsPipeline>();
 
-        std::cout<<"createGraphicsPipelineAttribute("<<shaderModeMask<<", "<<geometryAttributesMask<<", "<<maxNumDescriptors<<")"<<std::endl;
+        // std::cout<<"createBindGraphicsPipeline("<<shaderModeMask<<", "<<geometryAttributesMask<<")"<<std::endl;
 
         vsg::DescriptorSetLayoutBindings descriptorBindings;
 
