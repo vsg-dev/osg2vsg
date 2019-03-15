@@ -72,13 +72,30 @@ namespace osg2vsg
     {
         uint32_t mask = 0;
         if(!geometry) return mask;
+
         if (geometry->getVertexArray() != nullptr) mask |= VERTEX;
-        if (geometry->getNormalArray() != nullptr) mask |= NORMAL;
-        if (geometry->getColorArray() != nullptr) mask |= COLOR;
-        if (geometry->getVertexAttribArray(6) != nullptr) mask |= TANGENT;
+
+        if (geometry->getNormalArray() != nullptr)
+        {
+            mask |= NORMAL;
+            if(geometry->getNormalBinding() == osg::Geometry::AttributeBinding::BIND_OVERALL) mask |= NORMAL_OVERALL;
+        }
+
+        if (geometry->getColorArray() != nullptr)
+        {
+            mask |= COLOR;
+            if (geometry->getColorBinding() == osg::Geometry::AttributeBinding::BIND_OVERALL) mask |= COLOR_OVERALL;
+        }
+
+        if (geometry->getVertexAttribArray(6) != nullptr)
+        {
+            mask |= TANGENT;
+            if ( geometry->getVertexAttribBinding(6) == osg::Geometry::AttributeBinding::BIND_OVERALL) mask |= TANGENT_OVERALL;
+        }
+
         if (geometry->getTexCoordArray(0) != nullptr) mask |= TEXCOORD0;
-        if (geometry->getTexCoordArray(1) != nullptr) mask |= TEXCOORD0;
-        if (geometry->getTexCoordArray(2) != nullptr) mask |= TEXCOORD0;
+        if (geometry->getTexCoordArray(1) != nullptr) mask |= TEXCOORD1;
+        if (geometry->getTexCoordArray(2) != nullptr) mask |= TEXCOORD2;
         return mask;
     }
 
@@ -168,10 +185,11 @@ namespace osg2vsg
         vsg::ref_ptr<vsg::MaterialValue> matvalue(new vsg::MaterialValue);
 
         osg::Vec4 ambient = material->getAmbient(osg::Material::Face::FRONT);
+        if (ambient.x() == 1.0f && ambient.y() == 1.0f && ambient.z() == 1.0f) ambient.set(0.1f, 0.1f, 0.1f, 1.0f); // ambient sanity check (shouldn't be needed but models seem to have bad material values)
         matvalue->value().ambientColor = vsg::vec4(ambient.x(), ambient.y(), ambient.z(), ambient.w());
 
         osg::Vec4 diffuse = material->getDiffuse(osg::Material::Face::FRONT);
-        if(diffuse.x() == 0.0f && diffuse.y() == 0.0f && diffuse.z() == 0.0f) diffuse.set(1.0f,1.0f,1.0f,1.0f);
+        if(diffuse.x() == 0.0f && diffuse.y() == 0.0f && diffuse.z() == 0.0f) diffuse.set(1.0f,1.0f,1.0f,1.0f); // diffuse sanity check (shouldn't be needed but models seem to have bad material values)
         matvalue->value().diffuseColor = vsg::vec4(diffuse.x(), diffuse.y(), diffuse.z(), diffuse.w());
 
         osg::Vec4 specular = material->getSpecular(osg::Material::Face::FRONT);
@@ -185,8 +203,6 @@ namespace osg2vsg
 
     vsg::ref_ptr<vsg::Geometry> convertToVsg(osg::Geometry* ingeometry, uint32_t requiredAttributesMask)
     {
-        bool hasrequirements = requiredAttributesMask != 0;
-
         // convert attribute arrays, create defaults for any requested that don't exist for now to ensure pipline gets required data
         vsg::ref_ptr<vsg::Data> vertices(osg2vsg::convertToVsg(ingeometry->getVertexArray()));
         if (!vertices.valid() || vertices->valueCount() == 0) return vsg::ref_ptr<vsg::Geometry>();
@@ -194,16 +210,10 @@ namespace osg2vsg
         unsigned int vertcount = vertices->valueCount();
 
         // normals
-        vsg::ref_ptr<vsg::Data> normals(osg2vsg::convertToVsg(ingeometry->getNormalArray(), ingeometry->getNormalBinding() == osg::Geometry::AttributeBinding::BIND_OVERALL, vertcount));
-        if ((!normals.valid() || normals->valueCount() == 0) && (requiredAttributesMask & NORMAL)) // if no normals but we've requested them, add them
-        {
-            vsg::ref_ptr<vsg::vec3Array> defaultnormals(new vsg::vec3Array(vertcount));
-            for (unsigned int i = 0; i < vertcount; i++) defaultnormals->set(i, vsg::vec3(0.0f,1.0f,0.0f));
-            normals = defaultnormals;
-        }
+        vsg::ref_ptr<vsg::Data> normals(osg2vsg::convertToVsg(ingeometry->getNormalArray()));
 
         // tangents
-        vsg::ref_ptr<vsg::Data> tangents(osg2vsg::convertToVsg(ingeometry->getVertexAttribArray(6), ingeometry->getVertexAttribBinding(6), vertcount));
+        vsg::ref_ptr<vsg::Data> tangents(osg2vsg::convertToVsg(ingeometry->getVertexAttribArray(6)));
         if ((!tangents.valid() || tangents->valueCount() == 0) && (requiredAttributesMask & TANGENT))
         {
             osg::ref_ptr<osgUtil::TangentSpaceGenerator> tangentSpaceGenerator = new osgUtil::TangentSpaceGenerator();
@@ -222,29 +232,17 @@ namespace osg2vsg
         }
 
         // colors
-        vsg::ref_ptr<vsg::Data> colors(osg2vsg::convertToVsg(ingeometry->getColorArray(), ingeometry->getColorBinding() == osg::Geometry::AttributeBinding::BIND_OVERALL, vertcount));
-        if ((!colors.valid() || colors->valueCount() == 0) && (requiredAttributesMask & COLOR)) // if no colors but we've requested them, add them
-        {
-            vsg::ref_ptr<vsg::vec4Array> defaultcolors(new vsg::vec4Array(vertcount));
-            for (unsigned int i = 0; i < vertcount; i++) defaultcolors->set(i, vsg::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-            colors = defaultcolors;
-        }
+        vsg::ref_ptr<vsg::Data> colors(osg2vsg::convertToVsg(ingeometry->getColorArray()));
 
         // tex0
         vsg::ref_ptr<vsg::Data> texcoord0(osg2vsg::convertToVsg(ingeometry->getTexCoordArray(0)));
-        if ((!texcoord0.valid() || texcoord0->valueCount() == 0) && (requiredAttributesMask & TEXCOORD0)) // if no texcoord but we've requested them, add them
-        {
-            vsg::ref_ptr<vsg::vec2Array> defaulttex0(new vsg::vec2Array(vertcount));
-            for (unsigned int i = 0; i < vertcount; i++) defaulttex0->set(i, vsg::vec2(0.0f, 0.0f));
-            texcoord0 = defaulttex0;
-        }
 
         // fill arrays data list THE ORDER HERE IS IMPORTANT
         auto attributeArrays = vsg::DataList{ vertices }; // always have verticies
-        if ((normals.valid() && normals->valueCount() > 0) && (!hasrequirements || (requiredAttributesMask & NORMAL))) attributeArrays.push_back(normals);
-        if ((tangents.valid() && tangents->valueCount() > 0) && (!hasrequirements || (requiredAttributesMask & TANGENT))) attributeArrays.push_back(tangents);
-        if ((colors.valid() && colors->valueCount() > 0) && (!hasrequirements || (requiredAttributesMask & COLOR))) attributeArrays.push_back(colors);
-        if ((texcoord0.valid() && texcoord0->valueCount() > 0) && (!hasrequirements || (requiredAttributesMask & TEXCOORD0))) attributeArrays.push_back(texcoord0);
+        if (normals.valid() && normals->valueCount() > 0) attributeArrays.push_back(normals);
+        if (tangents.valid() && tangents->valueCount() > 0) attributeArrays.push_back(tangents);
+        if (colors.valid() && colors->valueCount() > 0) attributeArrays.push_back(colors);
+        if (texcoord0.valid() && texcoord0->valueCount() > 0) attributeArrays.push_back(texcoord0);
 
         // convert indicies
 
@@ -349,7 +347,7 @@ namespace osg2vsg
 
         // add material first
         const osg::Material* osg_material = dynamic_cast<const osg::Material*>(stateset->getAttribute(osg::StateAttribute::Type::MATERIAL));
-        if (osg_material != nullptr)
+        if (osg_material != nullptr && stateset->getMode(GL_COLOR_MATERIAL) == osg::StateAttribute::Values::ON)
         {
             vsg::ref_ptr<vsg::MaterialValue> matdata = convertToMaterialValue(osg_material);
             vsg::ref_ptr<vsg::Uniform> vsg_materialUniform = vsg::Uniform::create();
@@ -426,19 +424,22 @@ namespace osg2vsg
 
         if (geometryAttributesMask & NORMAL)
         {
-            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingIndex, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX});
+            VkVertexInputRate nrate = geometryAttributesMask & NORMAL_OVERALL ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
+            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingIndex, sizeof(vsg::vec3), nrate});
             vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ NORMAL_CHANNEL, vertexBindingIndex, VK_FORMAT_R32G32B32_SFLOAT, 0 }); // normal as vec3
             vertexBindingIndex++;
         }
         if (geometryAttributesMask & TANGENT)
         {
-            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingIndex, sizeof(vsg::vec4), VK_VERTEX_INPUT_RATE_VERTEX });
+            VkVertexInputRate trate = geometryAttributesMask & TANGENT_OVERALL ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
+            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingIndex, sizeof(vsg::vec4), trate });
             vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ TANGENT_CHANNEL, vertexBindingIndex, VK_FORMAT_R32G32B32A32_SFLOAT, 0 }); // tanget as vec4
             vertexBindingIndex++;
         }
         if (geometryAttributesMask & COLOR)
         {
-            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingIndex, sizeof(vsg::vec4), VK_VERTEX_INPUT_RATE_VERTEX });
+            VkVertexInputRate crate = geometryAttributesMask & COLOR_OVERALL ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
+            vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingIndex, sizeof(vsg::vec4), crate });
             vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ COLOR_CHANNEL, vertexBindingIndex, VK_FORMAT_R32G32B32A32_SFLOAT, 0 }); // color as vec4
             vertexBindingIndex++;
         }

@@ -13,13 +13,16 @@ namespace osg2vsg
     {
         VERTEX = 1,
         NORMAL = 2,
-        TANGENT = 4,
-        COLOR = 8,
-        TEXCOORD0 = 16,
-        TEXCOORD1 = 32,
-        TEXCOORD2 = 64,
-        STANDARD_ATTS = VERTEX | NORMAL | COLOR | TEXCOORD0,
-        ALL_ATTS = VERTEX | NORMAL | COLOR | TEXCOORD0 | TEXCOORD1 | TEXCOORD2 | TANGENT
+        NORMAL_OVERALL = 4,
+        TANGENT = 8,
+        TANGENT_OVERALL = 16,
+        COLOR = 32,
+        COLOR_OVERALL = 64,
+        TEXCOORD0 = 128,
+        TEXCOORD1 = 256,
+        TEXCOORD2 = 512,
+        STANDARD_ATTS = VERTEX | NORMAL | TANGENT | COLOR | TEXCOORD0,
+        ALL_ATTS = VERTEX | NORMAL | NORMAL_OVERALL | TANGENT | TANGENT_OVERALL | COLOR | COLOR_OVERALL | TEXCOORD0 | TEXCOORD1 | TEXCOORD2
     };
 
     enum AttributeChannels : uint32_t
