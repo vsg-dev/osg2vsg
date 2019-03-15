@@ -64,9 +64,9 @@ namespace osg2vsg
         bool writeToFileProgramAndDataSetSets = false;
         ShaderCompiler shaderCompiler;
 
-        uint32_t supportedGeometryAttributes = GeometryAttributes::STANDARD_ATTS;
+        uint32_t supportedGeometryAttributes = GeometryAttributes::ALL_ATTS;
         uint32_t supportedShaderModeMask = ShaderModeMask::ALL_SHADER_MODE_MASK;
-        uint32_t overrideGeomAttributes = GeometryAttributes::STANDARD_ATTS;
+        uint32_t overrideGeomAttributes = 0;
         uint32_t overrideShaderModeMask = ShaderModeMask::NONE;
 
         std::string vertexShaderPath = "";

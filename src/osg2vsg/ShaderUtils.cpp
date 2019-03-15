@@ -29,7 +29,7 @@ uint32_t osg2vsg::calculateShaderModeMask(const osg::StateSet* stateSet)
         if (stateSet->getMode(GL_LIGHTING) & osg::StateAttribute::ON)  stateMask |= LIGHTING;
 
         auto asMaterial = dynamic_cast<const osg::Material*>(stateSet->getAttribute(osg::StateAttribute::Type::MATERIAL));
-        if (asMaterial) stateMask |= MATERIAL;
+        if (asMaterial && stateSet->getMode(GL_COLOR_MATERIAL) == osg::StateAttribute::Values::ON) stateMask |= MATERIAL;
 
         auto hasTextureWithImageInChannel = [stateSet](unsigned int channel)
         {
@@ -52,9 +52,9 @@ uint32_t osg2vsg::calculateShaderModeMask(const osg::StateSet* stateSet)
 std::vector<std::string> createPSCDefineStrings(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
 {
     bool hasnormal = geometryAttrbutes & NORMAL;
+    bool hastanget = geometryAttrbutes & TANGENT;
     bool hascolor = geometryAttrbutes & COLOR;
     bool hastex0 = geometryAttrbutes & TEXCOORD0;
-    bool hastanget = geometryAttrbutes & TANGENT;
 
     std::vector<std::string> defines;
 
