@@ -142,11 +142,11 @@ int main(int argc, char** argv)
     {
         std::string filename = arguments[i];
 
-        auto start_point = std::chrono::steady_clock::now();
+        auto before_vsg_load = std::chrono::steady_clock::now();
 
         auto loaded_scene = io.read<vsg::Node>(filename);
 
-        auto vsg_loadTime = std::chrono::duration<double, std::chrono::milliseconds::period>(std::chrono::steady_clock::now() - start_point).count();
+        auto vsg_loadTime = std::chrono::duration<double, std::chrono::milliseconds::period>(std::chrono::steady_clock::now() - before_vsg_load).count();
 
         if (loaded_scene)
         {
@@ -161,11 +161,11 @@ int main(int argc, char** argv)
     // read osg models.
     osg::ArgumentParser osg_arguments(&argc, argv);
 
-    auto start_point = std::chrono::steady_clock::now();
+    auto before_osg_load = std::chrono::steady_clock::now();
 
     osg::ref_ptr<osg::Node> osg_scene = osgDB::readNodeFiles(osg_arguments);
 
-    auto osg_loadTime = std::chrono::duration<double, std::chrono::milliseconds::period>(std::chrono::steady_clock::now() - start_point).count();
+    auto osg_loadTime = std::chrono::duration<double, std::chrono::milliseconds::period>(std::chrono::steady_clock::now() - before_osg_load).count();
 
     if (vsgNodes.empty() && !osg_scene)
     {
@@ -212,7 +212,6 @@ int main(int argc, char** argv)
         }
 
     }
-
 
     // assign the vsg_scene from the loaded/converted nodes
     vsg::ref_ptr<vsg::Node> vsg_scene;
@@ -290,8 +289,12 @@ int main(int argc, char** argv)
     // add a GraphicsStage tp the Window to do dispatch of the command graph to the commnad buffer(s)
     window->addStage(vsg::GraphicsStage::create(vsg_scene, camera));
 
+    auto before_compile = std::chrono::steady_clock::now();
+
     // compile the Vulkan objects
     viewer->compile();
+
+    std::cout<<"Compile traversal time "<<std::chrono::duration<double, std::chrono::milliseconds::period>(std::chrono::steady_clock::now() - before_compile).count()<<"ms"<<std::endl;;
 
     // add close handler to respond the close window button and pressing esape
     viewer->addEventHandler(vsg::CloseHandler::create(viewer));
