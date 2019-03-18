@@ -6,14 +6,14 @@ set(HEADERS
     ${HEADER_PATH}/ImageUtils.h
     ${HEADER_PATH}/GeometryUtils.h
     ${HEADER_PATH}/ShaderUtils.h
-    ${HEADER_PATH}/SceneAnalysisVisitor.h
+    ${HEADER_PATH}/SceneBuilder.h
 )
 
 set(SOURCES
     ImageUtils.cpp
     GeometryUtils.cpp
     ShaderUtils.cpp
-    SceneAnalysisVisitor.cpp
+    SceneBuilder.cpp
     glsllang/ResourceLimits.cpp
 )
 

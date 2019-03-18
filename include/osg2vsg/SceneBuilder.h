@@ -17,10 +17,10 @@
 namespace osg2vsg
 {
 
-    class SceneAnalysisVisitor : public osg::NodeVisitor
+    class SceneBuilder : public osg::NodeVisitor
     {
     public:
-        SceneAnalysisVisitor();
+        SceneBuilder();
 
         using Geometries = std::vector<osg::ref_ptr<osg::Geometry>>;
         using StateGeometryMap = std::map<osg::ref_ptr<osg::StateSet>, Geometries>;

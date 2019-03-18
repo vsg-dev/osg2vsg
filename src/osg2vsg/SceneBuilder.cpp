@@ -1,4 +1,4 @@
-#include <osg2vsg/SceneAnalysisVisitor.h>
+#include <osg2vsg/SceneBuilder.h>
 
 #include <osg2vsg/ImageUtils.h>
 #include <osg2vsg/GeometryUtils.h>
@@ -14,10 +14,10 @@ using namespace osg2vsg;
 #define DEBUG_OUTPUT if (false) std::cout
 #endif
 
-SceneAnalysisVisitor::SceneAnalysisVisitor():
+SceneBuilder::SceneBuilder():
     osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN) {}
 
-osg::ref_ptr<osg::StateSet> SceneAnalysisVisitor::uniqueState(osg::ref_ptr<osg::StateSet> stateset, bool programStateSet)
+osg::ref_ptr<osg::StateSet> SceneBuilder::uniqueState(osg::ref_ptr<osg::StateSet> stateset, bool programStateSet)
 {
     if (auto itr = uniqueStateSets.find(stateset); itr != uniqueStateSets.end())
     {
@@ -38,7 +38,7 @@ osg::ref_ptr<osg::StateSet> SceneAnalysisVisitor::uniqueState(osg::ref_ptr<osg::
     return stateset;
 }
 
-SceneAnalysisVisitor::StatePair SceneAnalysisVisitor::computeStatePair(osg::StateSet* stateset)
+SceneBuilder::StatePair SceneBuilder::computeStatePair(osg::StateSet* stateset)
 {
     if (!stateset) return StatePair();
 
@@ -67,7 +67,7 @@ SceneAnalysisVisitor::StatePair SceneAnalysisVisitor::computeStatePair(osg::Stat
     return StatePair(uniqueState(programState, true), uniqueState(dataState, false));
 }
 
-void SceneAnalysisVisitor::apply(osg::Node& node)
+void SceneBuilder::apply(osg::Node& node)
 {
     DEBUG_OUTPUT<<"Visiting "<<node.className()<<" "<<node.getStateSet()<<std::endl;
 
@@ -78,7 +78,7 @@ void SceneAnalysisVisitor::apply(osg::Node& node)
     if (node.getStateSet()) popStateSet();
 }
 
-void SceneAnalysisVisitor::apply(osg::Group& group)
+void SceneBuilder::apply(osg::Group& group)
 {
     DEBUG_OUTPUT<<"Group "<<group.className()<<" "<<group.getStateSet()<<std::endl;
 
@@ -89,7 +89,7 @@ void SceneAnalysisVisitor::apply(osg::Group& group)
     if (group.getStateSet()) popStateSet();
 }
 
-void SceneAnalysisVisitor::apply(osg::Transform& transform)
+void SceneBuilder::apply(osg::Transform& transform)
 {
     DEBUG_OUTPUT<<"Transform "<<transform.className()<<" "<<transform.getStateSet()<<std::endl;
 
@@ -108,7 +108,7 @@ void SceneAnalysisVisitor::apply(osg::Transform& transform)
     if (transform.getStateSet()) popStateSet();
 }
 
-void SceneAnalysisVisitor::apply(osg::Billboard& billboard)
+void SceneBuilder::apply(osg::Billboard& billboard)
 {
     DEBUG_OUTPUT<<"apply(osg::Billboard& billboard)"<<std::endl;
 
@@ -125,23 +125,23 @@ void SceneAnalysisVisitor::apply(osg::Billboard& billboard)
     }
 }
 
-void SceneAnalysisVisitor::apply(osg::Geometry& geometry)
+void SceneBuilder::apply(osg::Geometry& geometry)
 {
     if (!geometry.getVertexArray())
     {
-        DEBUG_OUTPUT<<"SceneAnalysisVisitor::apply(osg::Geometry& geometry), ignoring geometry with null geometry.getVertexArray()"<<std::endl;
+        DEBUG_OUTPUT<<"SceneBuilder::apply(osg::Geometry& geometry), ignoring geometry with null geometry.getVertexArray()"<<std::endl;
         return;
     }
 
     if (geometry.getVertexArray()->getNumElements()==0)
     {
-        DEBUG_OUTPUT<<"SceneAnalysisVisitor::apply(osg::Geometry& geometry), ignoring geometry with empty geometry.getVertexArray()"<<std::endl;
+        DEBUG_OUTPUT<<"SceneBuilder::apply(osg::Geometry& geometry), ignoring geometry with empty geometry.getVertexArray()"<<std::endl;
         return;
     }
 
     if (geometry.getNumPrimitiveSets()==0)
     {
-        DEBUG_OUTPUT<<"SceneAnalysisVisitor::apply(osg::Geometry& geometry), ignoring geometry with empty PrimitiveSetList."<<std::endl;
+        DEBUG_OUTPUT<<"SceneBuilder::apply(osg::Geometry& geometry), ignoring geometry with empty PrimitiveSetList."<<std::endl;
         return;
     }
 
@@ -149,7 +149,7 @@ void SceneAnalysisVisitor::apply(osg::Geometry& geometry)
     {
         if (primitive->getNumPrimitives()==0)
         {
-            DEBUG_OUTPUT<<"SceneAnalysisVisitor::apply(osg::Geometry& geometry), ignoring geometry with as it contains an empty PrimitiveSet : "<<primitive->className()<<std::endl;
+            DEBUG_OUTPUT<<"SceneBuilder::apply(osg::Geometry& geometry), ignoring geometry with as it contains an empty PrimitiveSet : "<<primitive->className()<<std::endl;
             return;
         }
     }
@@ -225,27 +225,27 @@ void SceneAnalysisVisitor::apply(osg::Geometry& geometry)
     if (geometry.getStateSet()) popStateSet();
 }
 
-void SceneAnalysisVisitor::pushStateSet(osg::StateSet& stateset)
+void SceneBuilder::pushStateSet(osg::StateSet& stateset)
 {
     statestack.push_back(&stateset);
 }
 
-void SceneAnalysisVisitor::popStateSet()
+void SceneBuilder::popStateSet()
 {
     statestack.pop_back();
 }
 
-void SceneAnalysisVisitor::SceneAnalysisVisitor::pushMatrix(const osg::Matrix& matrix)
+void SceneBuilder::SceneBuilder::pushMatrix(const osg::Matrix& matrix)
 {
     matrixstack.push_back(matrix);
 }
 
-void SceneAnalysisVisitor::popMatrix()
+void SceneBuilder::popMatrix()
 {
     matrixstack.pop_back();
 }
 
-void SceneAnalysisVisitor::print()
+void SceneBuilder::print()
 {
     DEBUG_OUTPUT<<"\nprint()\n";
     DEBUG_OUTPUT<<"   programTransformStateMap.size() = "<<programTransformStateMap.size()<<std::endl;
@@ -257,7 +257,7 @@ void SceneAnalysisVisitor::print()
     }
 }
 
-osg::ref_ptr<osg::Node> SceneAnalysisVisitor::createStateGeometryGraphOSG(StateGeometryMap& stateGeometryMap)
+osg::ref_ptr<osg::Node> SceneBuilder::createStateGeometryGraphOSG(StateGeometryMap& stateGeometryMap)
 {
     DEBUG_OUTPUT<<"createStateGeometryGraph()"<<stateGeometryMap.size()<<std::endl;
 
@@ -283,7 +283,7 @@ osg::ref_ptr<osg::Node> SceneAnalysisVisitor::createStateGeometryGraphOSG(StateG
     return group;
 }
 
-osg::ref_ptr<osg::Node> SceneAnalysisVisitor::createTransformGeometryGraphOSG(TransformGeometryMap& transformGeometryMap)
+osg::ref_ptr<osg::Node> SceneBuilder::createTransformGeometryGraphOSG(TransformGeometryMap& transformGeometryMap)
 {
     DEBUG_OUTPUT<<"createStateGeometryGraph()"<<transformGeometryMap.size()<<std::endl;
 
@@ -309,7 +309,7 @@ osg::ref_ptr<osg::Node> SceneAnalysisVisitor::createTransformGeometryGraphOSG(Tr
     return group;
 }
 
-osg::ref_ptr<osg::Node> SceneAnalysisVisitor::createOSG()
+osg::ref_ptr<osg::Node> SceneBuilder::createOSG()
 {
     osg::ref_ptr<osg::Group> group = new osg::Group;
 
@@ -359,7 +359,7 @@ osg::ref_ptr<osg::Node> SceneAnalysisVisitor::createOSG()
     return group;
 }
 
-vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createTransformGeometryGraphVSG(TransformGeometryMap& transformGeometryMap, vsg::Paths& /*searchPaths*/, uint32_t requiredGeomAttributesMask)
+vsg::ref_ptr<vsg::Node> SceneBuilder::createTransformGeometryGraphVSG(TransformGeometryMap& transformGeometryMap, vsg::Paths& /*searchPaths*/, uint32_t requiredGeomAttributesMask)
 {
     DEBUG_OUTPUT << "createStateGeometryGraph()" << transformGeometryMap.size() << std::endl;
 
@@ -389,9 +389,9 @@ vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createTransformGeometryGraphVSG(Tr
     return group;
 }
 
-vsg::ref_ptr<vsg::Node> SceneAnalysisVisitor::createVSG(vsg::Paths& searchPaths)
+vsg::ref_ptr<vsg::Node> SceneBuilder::createVSG(vsg::Paths& searchPaths)
 {
-    DEBUG_OUTPUT<<"SceneAnalysisVisitor::createVSG(vsg::Paths& searchPaths)"<<std::endl;
+    DEBUG_OUTPUT<<"SceneBuilder::createVSG(vsg::Paths& searchPaths)"<<std::endl;
 
     vsg::ref_ptr<vsg::Group> group = vsg::Group::create();
 

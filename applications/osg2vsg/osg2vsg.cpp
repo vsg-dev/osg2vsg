@@ -17,7 +17,7 @@
 
 #include <osg2vsg/ShaderUtils.h>
 #include <osg2vsg/GeometryUtils.h>
-#include <osg2vsg/SceneAnalysisVisitor.h>
+#include <osg2vsg/SceneBuilder.h>
 
 
 namespace vsg
@@ -100,7 +100,7 @@ int main(int argc, char** argv)
     }
     std::cout<<std::endl;
 
-    osg2vsg::SceneAnalysisVisitor sceneAnalysis;
+    osg2vsg::SceneBuilder sceneAnalysis;
     auto windowTraits = vsg::Window::Traits::create();
     windowTraits->windowTitle = "osg2vsg";
 

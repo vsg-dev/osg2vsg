@@ -18,7 +18,7 @@
 #include <osg2vsg/ImageUtils.h>
 #include <osg2vsg/ShaderUtils.h>
 #include <osg2vsg/GeometryUtils.h>
-#include <osg2vsg/SceneAnalysisVisitor.h>
+#include <osg2vsg/SceneBuilder.h>
 
 
 class ReaderWriterVSG : public osgDB::ReaderWriter
@@ -127,7 +127,7 @@ class ReaderWriterVSG : public osgDB::ReaderWriter
 
 
             // Collect stats about the loaded scene
-            osg2vsg::SceneAnalysisVisitor sceneAnalysis;
+            osg2vsg::SceneBuilder sceneAnalysis;
             sceneAnalysis.writeToFileProgramAndDataSetSets = writeToFileProgramAndDataSetSets;
             osg_scene.accept(sceneAnalysis);
 
