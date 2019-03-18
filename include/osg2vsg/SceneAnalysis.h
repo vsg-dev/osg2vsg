@@ -53,7 +53,7 @@ namespace osg2vsg
         VsgSceneAnalysis();
         VsgSceneAnalysis(SceneStats* sceneStats);
 
-        void apply(const vsg::Node& node) override;
+        void apply(const vsg::Object& object) override;
         void apply(const vsg::Geometry& geometry) override;
         void apply(const vsg::StateGroup& stategroup) override;
         //void apply(const vsg::Commands& commands) override;

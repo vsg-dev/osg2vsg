@@ -132,11 +132,11 @@ VsgSceneAnalysis::VsgSceneAnalysis() :
 VsgSceneAnalysis::VsgSceneAnalysis(SceneStats* sceneStats) :
     _sceneStats(sceneStats) {}
 
-void VsgSceneAnalysis::apply(const vsg::Node& node)
+void VsgSceneAnalysis::apply(const vsg::Object& object)
 {
-    _sceneStats->insert(&node);
+    _sceneStats->insert(&object);
 
-    node.traverse(*this);
+    object.traverse(*this);
 }
 
 void VsgSceneAnalysis::apply(const vsg::Geometry& geometry)
@@ -150,8 +150,7 @@ void VsgSceneAnalysis::apply(const vsg::Geometry& geometry)
 
     for(auto& command : geometry._commands)
     {
-        _sceneStats->insert(command.get());
-        command->traverse(*this);
+        command->accept(*this);
     }
 }
 
@@ -161,8 +160,7 @@ void VsgSceneAnalysis::apply(const vsg::StateGroup& stategroup)
 
     for(auto& command : stategroup.getStateCommands())
     {
-        _sceneStats->insert(command.get());
-        command->traverse(*this);
+        command->accept(*this);
     }
 
     stategroup.traverse(*this);
