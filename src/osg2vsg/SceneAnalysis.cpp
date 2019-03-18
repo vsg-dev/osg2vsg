@@ -58,7 +58,10 @@ void SceneStats::print(std::ostream& out)
 }
 
 
-
+///////////////////////////////////////////////////////////////////////////////////
+//
+// OsgSceneAnalysis
+//
 OsgSceneAnalysis::OsgSceneAnalysis() :
     osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN),
     _sceneStats(new SceneStats) {}
@@ -118,3 +121,61 @@ void OsgSceneAnalysis::apply(osg::StateSet& stateset)
         _sceneStats->insert(uniform.second.first.get());
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////////
+//
+// VsgSceneAnalysis
+//
+VsgSceneAnalysis::VsgSceneAnalysis() :
+    _sceneStats(new SceneStats) {}
+
+VsgSceneAnalysis::VsgSceneAnalysis(SceneStats* sceneStats) :
+    _sceneStats(sceneStats) {}
+
+void VsgSceneAnalysis::apply(const vsg::Node& node)
+{
+    _sceneStats->insert(&node);
+
+    node.traverse(*this);
+}
+
+void VsgSceneAnalysis::apply(const vsg::Geometry& geometry)
+{
+    _sceneStats->insert(&geometry);
+
+    for(auto& array : geometry._arrays)
+    {
+        _sceneStats->insert(array.get());
+    }
+
+    for(auto& command : geometry._commands)
+    {
+        _sceneStats->insert(command.get());
+        command->traverse(*this);
+    }
+}
+
+void VsgSceneAnalysis::apply(const vsg::StateGroup& stategroup)
+{
+    _sceneStats->insert(&stategroup);
+
+    for(auto& command : stategroup.getStateCommands())
+    {
+        _sceneStats->insert(command.get());
+        command->traverse(*this);
+    }
+
+    stategroup.traverse(*this);
+}
+
+#if 0
+void VsgSceneAnalysis::apply(const vsg::Commands& commands) override
+{
+    _sceneStats->insert(&commands);
+    for(auto& command : stategroup.getChildren())
+    {
+        _sceneStats->insert(command.get());
+    }
+}
+#endif
+

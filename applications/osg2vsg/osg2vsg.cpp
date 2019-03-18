@@ -266,6 +266,10 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    osg2vsg::VsgSceneAnalysis vsgSceneAnalysis;
+    vsg_scene->accept(vsgSceneAnalysis);
+    vsgSceneAnalysis._sceneStats->print(std::cout);
+
     // create the viewer and assign window(s) to it
     auto viewer = vsg::Viewer::create();
 

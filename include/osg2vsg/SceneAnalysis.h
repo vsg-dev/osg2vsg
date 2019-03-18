@@ -11,13 +11,13 @@ namespace osg2vsg
 {
     struct SceneStats : public vsg::Object
     {
-        using ObjectFrequencyMap = std::map<void*, uint32_t>;
+        using ObjectFrequencyMap = std::map<const void*, uint32_t>;
         using TypeFrequencyMap = std::map<const char*, ObjectFrequencyMap>;
 
         TypeFrequencyMap typeFrequencyMap;
 
         template<typename T>
-        void insert(T* object)
+        void insert(const T* object)
         {
             if (object)
             {
@@ -42,6 +42,21 @@ namespace osg2vsg
         void apply(osg::Node& node);
         void apply(osg::Geometry& geometry);
         void apply(osg::StateSet& stateset);
+    };
+
+    class VsgSceneAnalysis : public vsg::ConstVisitor
+    {
+    public:
+
+        vsg::ref_ptr<SceneStats> _sceneStats;
+
+        VsgSceneAnalysis();
+        VsgSceneAnalysis(SceneStats* sceneStats);
+
+        void apply(const vsg::Node& node) override;
+        void apply(const vsg::Geometry& geometry) override;
+        void apply(const vsg::StateGroup& stategroup) override;
+        //void apply(const vsg::Commands& commands) override;
     };
 
 }
