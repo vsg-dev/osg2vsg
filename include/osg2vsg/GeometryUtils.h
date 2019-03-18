@@ -37,13 +37,13 @@ namespace osg2vsg
     };
 
 
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::vec2Array> convertToVsg(const osg::Vec2Array* inarray, bool duplicate = false, uint32_t dupcount = 0);
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::vec2Array> convertToVsg(const osg::Vec2Array* inarray);
 
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::vec3Array> convertToVsg(const osg::Vec3Array* inarray, bool duplicate = false, uint32_t dupcount = 0);
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::vec3Array> convertToVsg(const osg::Vec3Array* inarray);
 
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::vec4Array> convertToVsg(const osg::Vec4Array* inarray, bool duplicate = false, uint32_t dupcount = 0);
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::vec4Array> convertToVsg(const osg::Vec4Array* inarray);
 
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Data> convertToVsg(const osg::Array* inarray, bool duplicate = false, uint32_t dupcount = 0);
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Data> convertToVsg(const osg::Array* inarray);
 
     extern OSG2VSG_DECLSPEC uint32_t calculateAttributesMask(const osg::Geometry* geometry);
 

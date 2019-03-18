@@ -10,60 +10,45 @@
 namespace osg2vsg
 {
 
-    vsg::ref_ptr<vsg::vec2Array> convertToVsg(const osg::Vec2Array* inarray, bool duplicate, uint32_t dupcount)
+    vsg::ref_ptr<vsg::vec2Array> convertToVsg(const osg::Vec2Array* inarray)
     {
         if (!inarray) return vsg::ref_ptr<vsg::vec2Array>();
 
-        uint32_t count = duplicate ? dupcount : inarray->size();
+        uint32_t count = inarray->size();
         vsg::ref_ptr<vsg::vec2Array> outarray(new vsg::vec2Array(count));
-        for (unsigned int i = 0; i < count; i++)
-        {
-            const osg::Vec2& osg2 = inarray->at(duplicate ? 0 : i);
-            vsg::vec2 vsg2(osg2.x(), osg2.y());
-            outarray->set(i, vsg2);
-        }
+        std::memcpy(outarray->dataPointer(), inarray->getDataPointer(), outarray->dataSize());
         return outarray;
     }
 
-    vsg::ref_ptr<vsg::vec3Array> convertToVsg(const osg::Vec3Array* inarray, bool duplicate, uint32_t dupcount)
+    vsg::ref_ptr<vsg::vec3Array> convertToVsg(const osg::Vec3Array* inarray)
     {
         if (!inarray) return vsg::ref_ptr<vsg::vec3Array>();
 
-        uint32_t count = duplicate ? dupcount : inarray->size();
+        uint32_t count = inarray->size();
         vsg::ref_ptr<vsg::vec3Array> outarray(new vsg::vec3Array(count));
-        for (unsigned int i = 0; i < count; i++)
-        {
-            const osg::Vec3& osg3 = inarray->at(duplicate ? 0 : i);
-            vsg::vec3 vsg3(osg3.x(), osg3.y(), osg3.z());
-            outarray->set(i, vsg3);
-        }
+        std::memcpy(outarray->dataPointer(), inarray->getDataPointer(), outarray->dataSize());
         return outarray;
     }
 
-    vsg::ref_ptr<vsg::vec4Array> convertToVsg(const osg::Vec4Array* inarray, bool duplicate, uint32_t dupcount)
+    vsg::ref_ptr<vsg::vec4Array> convertToVsg(const osg::Vec4Array* inarray)
     {
         if (!inarray) return vsg::ref_ptr<vsg::vec4Array>();
 
-        uint32_t count = duplicate ? dupcount : inarray->size();
+        uint32_t count = inarray->size();
         vsg::ref_ptr<vsg::vec4Array> outarray(new vsg::vec4Array(count));
-        for (unsigned int i = 0; i < count; i++)
-        {
-            const osg::Vec4& osg4 = inarray->at(duplicate ? 0 : i);
-            vsg::vec4 vsg4(osg4.x(), osg4.y(), osg4.z(), osg4.w());
-            outarray->set(i, vsg4);
-        }
+        std::memcpy(outarray->dataPointer(), inarray->getDataPointer(), outarray->dataSize());
         return outarray;
     }
 
-    vsg::ref_ptr<vsg::Data> convertToVsg(const osg::Array* inarray, bool duplicate, uint32_t dupcount)
+    vsg::ref_ptr<vsg::Data> convertToVsg(const osg::Array* inarray)
     {
         if (!inarray) return vsg::ref_ptr<vsg::Data>();
 
         switch (inarray->getType())
         {
-            case osg::Array::Type::Vec2ArrayType: return convertToVsg(dynamic_cast<const osg::Vec2Array*>(inarray), duplicate, dupcount);
-            case osg::Array::Type::Vec3ArrayType: return convertToVsg(dynamic_cast<const osg::Vec3Array*>(inarray), duplicate, dupcount);
-            case osg::Array::Type::Vec4ArrayType: return convertToVsg(dynamic_cast<const osg::Vec4Array*>(inarray), duplicate, dupcount);
+            case osg::Array::Type::Vec2ArrayType: return convertToVsg(dynamic_cast<const osg::Vec2Array*>(inarray));
+            case osg::Array::Type::Vec3ArrayType: return convertToVsg(dynamic_cast<const osg::Vec3Array*>(inarray));
+            case osg::Array::Type::Vec4ArrayType: return convertToVsg(dynamic_cast<const osg::Vec4Array*>(inarray));
             default: return vsg::ref_ptr<vsg::Data>();
         }
     }
@@ -106,7 +91,7 @@ namespace osg2vsg
             case osg::PrimitiveSet::Mode::POINTS: return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
             case osg::PrimitiveSet::Mode::LINES: return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
             case osg::PrimitiveSet::Mode::LINE_STRIP: return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
-            case osg::PrimitiveSet::Mode::TRIANGLES: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+            case osg::PrimitiveSet::Mode::TRIANGLES: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
             case osg::PrimitiveSet::Mode::TRIANGLE_STRIP: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
             case osg::PrimitiveSet::Mode::TRIANGLE_FAN: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
             case osg::PrimitiveSet::Mode::LINES_ADJACENCY: return VK_PRIMITIVE_TOPOLOGY_LINE_LIST_WITH_ADJACENCY;
