@@ -7,6 +7,7 @@ set(HEADERS
     ${HEADER_PATH}/GeometryUtils.h
     ${HEADER_PATH}/ShaderUtils.h
     ${HEADER_PATH}/SceneBuilder.h
+    ${HEADER_PATH}/SceneAnalysis.h
 )
 
 set(SOURCES
@@ -14,6 +15,7 @@ set(SOURCES
     GeometryUtils.cpp
     ShaderUtils.cpp
     SceneBuilder.cpp
+    SceneAnalysis.cpp
     glsllang/ResourceLimits.cpp
 )
 

@@ -18,6 +18,7 @@
 #include <osg2vsg/ShaderUtils.h>
 #include <osg2vsg/GeometryUtils.h>
 #include <osg2vsg/SceneBuilder.h>
+#include <osg2vsg/SceneAnalysis.h>
 
 
 namespace vsg
@@ -100,7 +101,7 @@ int main(int argc, char** argv)
     }
     std::cout<<std::endl;
 
-    osg2vsg::SceneBuilder sceneAnalysis;
+    osg2vsg::SceneBuilder sceneBuilder;
     auto windowTraits = vsg::Window::Traits::create();
     windowTraits->windowTitle = "osg2vsg";
 
@@ -122,10 +123,10 @@ int main(int argc, char** argv)
     auto outputFilename = arguments.value(std::string(), "-o");
     auto pathFilename = arguments.value(std::string(),"-p");
     arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height);
-    arguments.read({"--support-mask", "--sm"}, sceneAnalysis.supportedShaderModeMask);
-    arguments.read({"--override-mask", "--om"}, sceneAnalysis.overrideShaderModeMask);
-    arguments.read({ "--vertex-shader", "--vert" }, sceneAnalysis.vertexShaderPath);
-    arguments.read({ "--fragment-shader", "--frag" }, sceneAnalysis.fragmentShaderPath);
+    arguments.read({"--support-mask", "--sm"}, sceneBuilder.supportedShaderModeMask);
+    arguments.read({"--override-mask", "--om"}, sceneBuilder.overrideShaderModeMask);
+    arguments.read({ "--vertex-shader", "--vert" }, sceneBuilder.vertexShaderPath);
+    arguments.read({ "--fragment-shader", "--frag" }, sceneBuilder.fragmentShaderPath);
 
     if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
 
@@ -198,13 +199,17 @@ int main(int argc, char** argv)
             optimizer.optimize(osg_scene.get(), osgUtil::Optimizer::DEFAULT_OPTIMIZATIONS);
         }
 
+        // Collect stats for reporting.
+        osg2vsg::OsgSceneAnalysis osgSceneAnalysis;
+        osg_scene->accept(osgSceneAnalysis);
+        osgSceneAnalysis._sceneStats->print(std::cout);
 
-        // Collect stats about the loaded scene
-        sceneAnalysis.writeToFileProgramAndDataSetSets = writeToFileProgramAndDataSetSets;
-        osg_scene->accept(sceneAnalysis);
+        // Collect stats about the loaded scene for the purpose of rebuild it
+        sceneBuilder.writeToFileProgramAndDataSetSets = writeToFileProgramAndDataSetSets;
+        osg_scene->accept(sceneBuilder);
 
         // build VSG scene
-        vsg::ref_ptr<vsg::Node> converted_vsg_scene = sceneAnalysis.createVSG(searchPaths);
+        vsg::ref_ptr<vsg::Node> converted_vsg_scene = sceneBuilder.createVSG(searchPaths);
 
         if (converted_vsg_scene)
         {
@@ -237,7 +242,7 @@ int main(int argc, char** argv)
 
         if (osg_scene.valid() && outputFileExtension.compare(0, 3,"osg")==0)
         {
-            auto scene = sceneAnalysis.createOSG();
+            auto scene = sceneBuilder.createOSG();
             if (scene.valid())
             {
                 osgDB::writeNodeFile(*scene, outputFilename);
