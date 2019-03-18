@@ -40,6 +40,8 @@ namespace osg2vsg
         using StatePair = std::pair<osg::ref_ptr<osg::StateSet>, osg::ref_ptr<osg::StateSet>>;
         using StateMap = std::map<StateStack, StatePair>;
 
+        using GeometriesMap = std::map<osg::Geometry*, vsg::Geometry*>;
+
         struct UniqueStateSet
         {
             bool operator() ( const osg::ref_ptr<osg::StateSet>& lhs, const osg::ref_ptr<osg::StateSet>& rhs) const
@@ -61,6 +63,7 @@ namespace osg2vsg
         UniqueStats uniqueStateSets;
         ProgramTransformStateMap programTransformStateMap;
         MasksTransformStateMap masksTransformStateMap;
+        GeometriesMap geometriesMap;
         bool writeToFileProgramAndDataSetSets = false;
         ShaderCompiler shaderCompiler;
 

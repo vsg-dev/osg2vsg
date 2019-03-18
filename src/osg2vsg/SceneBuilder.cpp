@@ -311,6 +311,9 @@ osg::ref_ptr<osg::Node> SceneBuilder::createTransformGeometryGraphOSG(TransformG
 
 osg::ref_ptr<osg::Node> SceneBuilder::createOSG()
 {
+    // clear caches
+    geometriesMap.clear();
+
     osg::ref_ptr<osg::Group> group = new osg::Group;
 
     for(auto [programStateSet, transformStatePair] : programTransformStateMap)
@@ -379,8 +382,21 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createTransformGeometryGraphVSG(TransformG
 
         for (auto& geometry : geometries)
         {
-            vsg::ref_ptr<vsg::Geometry> new_geometry = convertToVsg(geometry, requiredGeomAttributesMask); // new osg::Geometry(*geometry);
-            if (new_geometry) transform->addChild(new_geometry);
+            // has the geometry already been converted
+            if(geometriesMap.find(geometry) != geometriesMap.end())
+            {
+                std::cout << "sharing geometry" << std::endl;
+                transform->addChild(vsg::ref_ptr<vsg::Node>(geometriesMap[geometry]));
+            }
+            else
+            {
+                vsg::ref_ptr<vsg::Geometry> new_geometry = convertToVsg(geometry, requiredGeomAttributesMask);
+                if (new_geometry)
+                {
+                    transform->addChild(new_geometry);
+                    geometriesMap[geometry] = new_geometry;
+                }
+            }
         }
     }
 
