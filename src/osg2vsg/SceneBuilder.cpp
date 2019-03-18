@@ -411,6 +411,12 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createVSG(vsg::Paths& searchPaths)
 
     vsg::ref_ptr<vsg::Group> group = vsg::Group::create();
 
+    vsg::ref_ptr<vsg::Group> transparentGroup = vsg::Group::create();
+    group->addChild(transparentGroup);
+
+    vsg::ref_ptr<vsg::Group> opaqueGroup = vsg::Group::create();
+    group->addChild(opaqueGroup);
+
     for (auto[masks, transformStatePair] : masksTransformStateMap)
     {
         unsigned int maxNumDescriptors = transformStatePair.stateTransformMap.size();
@@ -438,8 +444,15 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createVSG(vsg::Paths& searchPaths)
         auto graphicsPipeline = bindGraphicsPipeline->getPipeline();
         auto& descriptorSetLayouts = graphicsPipeline->getPipelineLayout()->getDescriptorSetLayouts();
 
-
-        group->addChild(graphicsPipelineGroup);
+        // attach based on use of transparency
+        if(shaderModeMask & BLEND)
+        {
+            transparentGroup->addChild(graphicsPipelineGroup);
+        }
+        else
+        {
+            opaqueGroup->addChild(graphicsPipelineGroup);
+        }
 
         for (auto[stateset, transformeGeometryMap] : transformStatePair.stateTransformMap)
         {
