@@ -385,7 +385,7 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createTransformGeometryGraphVSG(TransformG
             // has the geometry already been converted
             if(geometriesMap.find(geometry) != geometriesMap.end())
             {
-                std::cout << "sharing geometry" << std::endl;
+                DEBUG_OUTPUT << "sharing geometry" << std::endl;
                 transform->addChild(vsg::ref_ptr<vsg::Node>(geometriesMap[geometry]));
             }
             else

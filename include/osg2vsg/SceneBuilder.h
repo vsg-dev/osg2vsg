@@ -40,7 +40,7 @@ namespace osg2vsg
         using StatePair = std::pair<osg::ref_ptr<osg::StateSet>, osg::ref_ptr<osg::StateSet>>;
         using StateMap = std::map<StateStack, StatePair>;
 
-        using GeometriesMap = std::map<osg::Geometry*, vsg::Geometry*>;
+        using GeometriesMap = std::map<osg::ref_ptr<osg::Geometry>, vsg::ref_ptr<vsg::Geometry>>;
 
         struct UniqueStateSet
         {
