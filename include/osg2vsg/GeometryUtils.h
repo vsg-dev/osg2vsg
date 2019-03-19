@@ -59,10 +59,4 @@ namespace osg2vsg
 
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Geometry> convertToVsg(osg::Geometry* geometry, uint32_t requiredAttributesMask = 0);
 
-
-    // core VSG style usage
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Texture> convertToVsgTexture(const osg::Texture* osgtexture);
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::DescriptorSet> createVsgStateSet(const vsg::DescriptorSetLayouts& descriptorSetLayouts, const osg::StateSet* stateset, uint32_t shaderModeMask);
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::BindGraphicsPipeline> createBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryAttributesMask, const std::string& vertShaderPath = "", const std::string& fragShaderPath = "");
-
 }

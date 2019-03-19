@@ -40,7 +40,8 @@ namespace osg2vsg
         using StatePair = std::pair<osg::ref_ptr<osg::StateSet>, osg::ref_ptr<osg::StateSet>>;
         using StateMap = std::map<StateStack, StatePair>;
 
-        using GeometriesMap = std::map<osg::ref_ptr<osg::Geometry>, vsg::ref_ptr<vsg::Geometry>>;
+        using GeometriesMap = std::map<const osg::Geometry*, vsg::ref_ptr<vsg::Geometry>>;
+        using TexturesMap = std::map<const osg::Texture*, vsg::ref_ptr<vsg::Texture>>;
 
         struct UniqueStateSet
         {
@@ -64,6 +65,7 @@ namespace osg2vsg
         ProgramTransformStateMap programTransformStateMap;
         MasksTransformStateMap masksTransformStateMap;
         GeometriesMap geometriesMap;
+        TexturesMap texturesMap;
         bool writeToFileProgramAndDataSetSets = false;
         ShaderCompiler shaderCompiler;
 
@@ -100,5 +102,10 @@ namespace osg2vsg
         vsg::ref_ptr<vsg::Node> createTransformGeometryGraphVSG(TransformGeometryMap& transformGeometryMap, vsg::Paths& searchPaths, uint32_t requiredGeomAttributesMask);
 
         vsg::ref_ptr<vsg::Node> createVSG(vsg::Paths& searchPaths);
+
+        // core VSG style usage
+        vsg::ref_ptr<vsg::Texture> convertToVsgTexture(const osg::Texture* osgtexture);
+        vsg::ref_ptr<vsg::DescriptorSet> createVsgStateSet(const vsg::DescriptorSetLayouts& descriptorSetLayouts, const osg::StateSet* stateset, uint32_t shaderModeMask);
+        vsg::ref_ptr<vsg::BindGraphicsPipeline> createBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryAttributesMask, const std::string& vertShaderPath = "", const std::string& fragShaderPath = "");
     };
 }
