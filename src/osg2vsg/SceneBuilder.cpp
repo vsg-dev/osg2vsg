@@ -416,6 +416,12 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createVSG(vsg::Paths& searchPaths)
 
     vsg::ref_ptr<vsg::Group> group = vsg::Group::create();
 
+    vsg::ref_ptr<vsg::Group> opaqueGroup = vsg::Group::create();
+    group->addChild(opaqueGroup);
+
+    vsg::ref_ptr<vsg::Group> transparentGroup = vsg::Group::create();
+    group->addChild(transparentGroup);
+
     for (auto[masks, transformStatePair] : masksTransformStateMap)
     {
         unsigned int maxNumDescriptors = transformStatePair.stateTransformMap.size();
@@ -443,8 +449,15 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createVSG(vsg::Paths& searchPaths)
         auto graphicsPipeline = bindGraphicsPipeline->getPipeline();
         auto& descriptorSetLayouts = graphicsPipeline->getPipelineLayout()->getDescriptorSetLayouts();
 
-
-        group->addChild(graphicsPipelineGroup);
+        // attach based on use of transparency
+        if(shaderModeMask & BLEND)
+        {
+            transparentGroup->addChild(graphicsPipelineGroup);
+        }
+        else
+        {
+            opaqueGroup->addChild(graphicsPipelineGroup);
+        }
 
         for (auto[stateset, transformeGeometryMap] : transformStatePair.stateTransformMap)
         {
@@ -622,6 +635,28 @@ vsg::ref_ptr<vsg::BindGraphicsPipeline> SceneBuilder::createBindGraphicsPipeline
 
     auto pipelineLayout = vsg::PipelineLayout::create(descriptorSetLayouts, pushConstantRanges);
 
+    // if blending is requested setup appropriate colorblendstate
+    vsg::ColorBlendState::ColorBlendAttachments colorBlendAttachments;
+    VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
+    colorBlendAttachment.blendEnable = VK_FALSE;
+    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
+        VK_COLOR_COMPONENT_G_BIT |
+        VK_COLOR_COMPONENT_B_BIT |
+        VK_COLOR_COMPONENT_A_BIT;
+
+    if (shaderModeMask & BLEND)
+    {
+        colorBlendAttachment.blendEnable = VK_TRUE;
+        colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+        colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+    }
+
+    colorBlendAttachments.push_back(colorBlendAttachment);
+
     vsg::GraphicsPipelineStates pipelineStates
     {
         vsg::ShaderStages::create(shaders),
@@ -629,7 +664,7 @@ vsg::ref_ptr<vsg::BindGraphicsPipeline> SceneBuilder::createBindGraphicsPipeline
         vsg::InputAssemblyState::create(),
         vsg::RasterizationState::create(),
         vsg::MultisampleState::create(),
-        vsg::ColorBlendState::create(),
+        vsg::ColorBlendState::create(colorBlendAttachments),
         vsg::DepthStencilState::create()
     };
 

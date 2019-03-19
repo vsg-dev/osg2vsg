@@ -122,6 +122,7 @@ int main(int argc, char** argv)
     auto optimize = !arguments.read("--no-optimize");
     auto outputFilename = arguments.value(std::string(), "-o");
     auto pathFilename = arguments.value(std::string(),"-p");
+    auto printStats = arguments.read({"-s", "--stats"});
     arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height);
     arguments.read({"--support-mask", "--sm"}, sceneBuilder.supportedShaderModeMask);
     arguments.read({"--override-mask", "--om"}, sceneBuilder.overrideShaderModeMask);
@@ -200,9 +201,12 @@ int main(int argc, char** argv)
         }
 
         // Collect stats for reporting.
-        osg2vsg::OsgSceneAnalysis osgSceneAnalysis;
-        osg_scene->accept(osgSceneAnalysis);
-        osgSceneAnalysis._sceneStats->print(std::cout);
+        if (printStats)
+        {
+            osg2vsg::OsgSceneAnalysis osgSceneAnalysis;
+            osg_scene->accept(osgSceneAnalysis);
+            osgSceneAnalysis._sceneStats->print(std::cout);
+        }
 
         // Collect stats about the loaded scene for the purpose of rebuild it
         sceneBuilder.writeToFileProgramAndDataSetSets = writeToFileProgramAndDataSetSets;
@@ -266,9 +270,12 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    osg2vsg::VsgSceneAnalysis vsgSceneAnalysis;
-    vsg_scene->accept(vsgSceneAnalysis);
-    vsgSceneAnalysis._sceneStats->print(std::cout);
+    if (printStats)
+    {
+        osg2vsg::VsgSceneAnalysis vsgSceneAnalysis;
+        vsg_scene->accept(vsgSceneAnalysis);
+        vsgSceneAnalysis._sceneStats->print(std::cout);
+    }
 
     // create the viewer and assign window(s) to it
     auto viewer = vsg::Viewer::create();
