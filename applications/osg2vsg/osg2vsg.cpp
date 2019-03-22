@@ -121,8 +121,9 @@ int main(int argc, char** argv)
     auto writeToFileProgramAndDataSetSets = arguments.read({"--write-stateset", "--ws"});
     auto optimize = !arguments.read("--no-optimize");
     auto outputFilename = arguments.value(std::string(), "-o");
-    auto pathFilename = arguments.value(std::string(),"-p");
     auto printStats = arguments.read({"-s", "--stats"});
+    auto pathFilename = arguments.value(std::string(),"-p");
+    if (arguments.read({"-t", "--test"})) { windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR; windowTraits->fullscreen = true; }
     arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height);
     arguments.read({"--support-mask", "--sm"}, sceneBuilder.supportedShaderModeMask);
     arguments.read({"--override-mask", "--om"}, sceneBuilder.overrideShaderModeMask);
