@@ -91,6 +91,25 @@ namespace vsg
     };
 }
 
+namespace osg2vsg
+{
+    class PopulateCommandGraphHandler : public vsg::Inherit<vsg::Visitor, PopulateCommandGraphHandler>
+    {
+    public:
+
+        bool populateCommandGraph = true;
+
+        PopulateCommandGraphHandler() {}
+
+        void apply(vsg::KeyPressEvent& keyPress) override
+        {
+            if (keyPress.keyBase=='p')
+            {
+                populateCommandGraph = !populateCommandGraph;
+            }
+        }
+    };
+}
 
 int main(int argc, char** argv)
 {
@@ -115,15 +134,16 @@ int main(int argc, char** argv)
     if (arguments.read("--FIFO_RELAXED")) windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_FIFO_RELAXED_KHR;
     if (arguments.read("--MAILBOX")) windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
     if (arguments.read({"--fullscreen", "--fs"})) windowTraits->fullscreen = true;
+    if (arguments.read({"-t", "--test"})) { windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR; windowTraits->fullscreen = true; }
+    if (arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height)) { windowTraits->fullscreen = false; }
     auto numFrames = arguments.value(-1, "-f");
     auto printFrameRate = arguments.read("--fr");
     auto sleepTime = arguments.value(0.0, "--sleep");
     auto writeToFileProgramAndDataSetSets = arguments.read({"--write-stateset", "--ws"});
     auto optimize = !arguments.read("--no-optimize");
     auto outputFilename = arguments.value(std::string(), "-o");
-    auto pathFilename = arguments.value(std::string(),"-p");
     auto printStats = arguments.read({"-s", "--stats"});
-    arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height);
+    auto pathFilename = arguments.value(std::string(),"-p");
     arguments.read({"--support-mask", "--sm"}, sceneBuilder.supportedShaderModeMask);
     arguments.read({"--override-mask", "--om"}, sceneBuilder.overrideShaderModeMask);
     arguments.read({ "--vertex-shader", "--vert" }, sceneBuilder.vertexShaderPath);
@@ -315,6 +335,9 @@ int main(int argc, char** argv)
     // add close handler to respond the close window button and pressing esape
     viewer->addEventHandler(vsg::CloseHandler::create(viewer));
 
+    auto populateCommandGraphHandler = osg2vsg::PopulateCommandGraphHandler::create();
+    viewer->addEventHandler(populateCommandGraphHandler);
+
     if (pathFilename.empty())
     {
         viewer->addEventHandler(vsg::Trackball::create(camera));
@@ -350,7 +373,7 @@ int main(int argc, char** argv)
 
         if (viewer->aquireNextFrame())
         {
-            viewer->populateNextFrame();
+            if (populateCommandGraphHandler->populateCommandGraph) viewer->populateNextFrame();
 
             viewer->submitNextFrame();
         }
