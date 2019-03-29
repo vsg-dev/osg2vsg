@@ -69,6 +69,7 @@ namespace osg2vsg
         bool writeToFileProgramAndDataSetSets = false;
         ShaderCompiler shaderCompiler;
 
+        bool insertCullGroups = true;
         uint32_t supportedGeometryAttributes = GeometryAttributes::ALL_ATTS;
         uint32_t supportedShaderModeMask = ShaderModeMask::ALL_SHADER_MODE_MASK;
         uint32_t overrideGeomAttributes = 0;

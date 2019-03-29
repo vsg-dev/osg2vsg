@@ -365,36 +365,84 @@ osg::ref_ptr<osg::Node> SceneBuilder::createOSG()
 
 vsg::ref_ptr<vsg::Node> SceneBuilder::createTransformGeometryGraphVSG(TransformGeometryMap& transformGeometryMap, vsg::Paths& /*searchPaths*/, uint32_t requiredGeomAttributesMask)
 {
-    DEBUG_OUTPUT << "createStateGeometryGraph()" << transformGeometryMap.size() << std::endl;
+    DEBUG_OUTPUT << "createTransformGeometryGraphVSG() " << transformGeometryMap.size() << std::endl;
 
     if (transformGeometryMap.empty()) return vsg::ref_ptr<vsg::Node>();
 
     vsg::ref_ptr<vsg::Group> group = vsg::Group::create();
     for (auto[matrix, geometries] : transformGeometryMap)
     {
-        vsg::mat4 vsgmatrix = vsg::mat4(matrix(0, 0), matrix(1, 0), matrix(2, 0), matrix(3, 0),
-                                        matrix(0, 1), matrix(1, 1), matrix(2, 1), matrix(3, 1),
-                                        matrix(0, 2), matrix(1, 2), matrix(2, 2), matrix(3, 2),
-                                        matrix(0, 3), matrix(1, 3), matrix(2, 3), matrix(3, 3));
+        vsg::ref_ptr<vsg::Group> localGroup = group;
 
-        vsg::ref_ptr<vsg::MatrixTransform> transform = vsg::MatrixTransform::create(vsgmatrix);
+        bool requiresTransform = !matrix.isIdentity();
+        bool requiresTopCullGroup = insertCullGroups && (requiresTransform || geometries.size()==1);
+        bool requiresLeafCullGroup = insertCullGroups && !requiresTopCullGroup;
 
-        group->addChild(transform);
+        if (requiresTopCullGroup)
+        {
+            osg::BoundingBox overall_bb;
+            for (auto& geometry : geometries)
+            {
+                osg::BoundingBox bb = geometry->getBoundingBox();
+                for(int i=0; i<8; ++i)
+                {
+                    overall_bb.expandBy(bb.corner(i) * matrix);
+                }
+            }
+
+            vsg::vec3 bb_min(overall_bb.xMin(), overall_bb.yMin(), overall_bb.zMin());
+            vsg::vec3 bb_max(overall_bb.xMax(), overall_bb.yMax(), overall_bb.zMax());
+
+            vsg::sphere boundingSphere((bb_min + bb_max)*0.5f, vsg::length(bb_max - bb_min)*0.5f);
+            auto cullGroup = vsg::CullGroup::create(boundingSphere);
+            localGroup->addChild(cullGroup);
+            localGroup = cullGroup;
+        }
+
+
+        if (requiresTransform)
+        {
+            // need to insert a transform
+            vsg::mat4 vsgmatrix = vsg::mat4(matrix(0, 0), matrix(1, 0), matrix(2, 0), matrix(3, 0),
+                                            matrix(0, 1), matrix(1, 1), matrix(2, 1), matrix(3, 1),
+                                            matrix(0, 2), matrix(1, 2), matrix(2, 2), matrix(3, 2),
+                                            matrix(0, 3), matrix(1, 3), matrix(2, 3), matrix(3, 3));
+
+            vsg::ref_ptr<vsg::MatrixTransform> transform = vsg::MatrixTransform::create(vsgmatrix);
+
+            localGroup->addChild(transform);
+
+            localGroup = transform;
+        }
 
         for (auto& geometry : geometries)
         {
+            vsg::ref_ptr<vsg::Group> nestedGroup = localGroup;
+
+            if (requiresLeafCullGroup)
+            {
+                osg::BoundingBox bb = geometry->getBoundingBox();
+                vsg::vec3 bb_min(bb.xMin(), bb.yMin(), bb.zMin());
+                vsg::vec3 bb_max(bb.xMax(), bb.yMax(), bb.zMax());
+
+                vsg::sphere boundingSphere((bb_min + bb_max)*0.5f, vsg::length(bb_max - bb_min)*0.5f);
+                auto cullGroup = vsg::CullGroup::create(boundingSphere);
+                nestedGroup->addChild(cullGroup);
+                nestedGroup = cullGroup;
+            }
+
             // has the geometry already been converted
             if(geometriesMap.find(geometry) != geometriesMap.end())
             {
                 DEBUG_OUTPUT << "sharing geometry" << std::endl;
-                transform->addChild(vsg::ref_ptr<vsg::Node>(geometriesMap[geometry]));
+                nestedGroup->addChild(vsg::ref_ptr<vsg::Node>(geometriesMap[geometry]));
             }
             else
             {
                 vsg::ref_ptr<vsg::Geometry> new_geometry = convertToVsg(geometry, requiredGeomAttributesMask);
                 if (new_geometry)
                 {
-                    transform->addChild(new_geometry);
+                    nestedGroup->addChild(new_geometry);
                     geometriesMap[geometry] = new_geometry;
                 }
             }
@@ -481,6 +529,24 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createVSG(vsg::Paths& searchPaths)
             }
         }
     }
+
+
+    // if we are using CullGroups then place one at the top of the created scene graph
+    if (insertCullGroups)
+    {
+        vsg::ComputeBounds computeBounds;
+        group->accept(computeBounds);
+
+        vsg::sphere boundingSphere((computeBounds.bounds.min+computeBounds.bounds.max)*0.5, vsg::length(computeBounds.bounds.max-computeBounds.bounds.min)*0.5);
+        auto cullGroup = vsg::CullGroup::create(boundingSphere);
+
+        // add the groups children to the cullGroup
+        cullGroup->setChildren(group->getChildren());
+
+        // now use the cullGroup as the root.
+        group = cullGroup;
+    }
+
     return group;
 }
 

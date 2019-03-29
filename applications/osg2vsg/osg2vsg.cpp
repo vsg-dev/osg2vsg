@@ -136,6 +136,7 @@ int main(int argc, char** argv)
     if (arguments.read({"--fullscreen", "--fs"})) windowTraits->fullscreen = true;
     if (arguments.read({"-t", "--test"})) { windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR; windowTraits->fullscreen = true; }
     if (arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height)) { windowTraits->fullscreen = false; }
+    if (arguments.read("--no-culling")) sceneBuilder.insertCullGroups = false;
     auto numFrames = arguments.value(-1, "-f");
     auto printFrameRate = arguments.read("--fr");
     auto sleepTime = arguments.value(0.0, "--sleep");
@@ -258,7 +259,6 @@ int main(int argc, char** argv)
     {
         vsg_scene = vsgNodes.front();
     }
-
 
     if (!outputFilename.empty())
     {
