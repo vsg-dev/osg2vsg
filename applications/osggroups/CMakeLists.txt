@@ -3,7 +3,7 @@ find_package(OpenGL)
 if(WIN32)
     set(OPENGL_LIBRARY ${OPENGL_gl_LIBRARY})
 else()
-    set(OPENGL_LIBRARY OpenGL::OpenGL)
+    set(OPENGL_LIBRARY OpenGL::GL)
 endif()
 
 if(NOT ANDROID)
