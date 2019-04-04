@@ -68,6 +68,7 @@ namespace vsg
             }
 
             osg::Matrixd matrix;
+
             _path->getMatrix(time, matrix);
 
             vsg::dmat4 vsg_matrix(matrix(0,0), matrix(1,0), matrix(2,0), matrix(3,0),
@@ -138,8 +139,6 @@ int main(int argc, char** argv)
     if (arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height)) { windowTraits->fullscreen = false; }
     if (arguments.read("--no-culling")) sceneBuilder.insertCullGroups = false;
     auto numFrames = arguments.value(-1, "-f");
-    auto printFrameRate = arguments.read("--fr");
-    auto sleepTime = arguments.value(0.0, "--sleep");
     auto writeToFileProgramAndDataSetSets = arguments.read({"--write-stateset", "--ws"});
     auto optimize = !arguments.read("--no-optimize");
     auto outputFilename = arguments.value(std::string(), "-o");
@@ -358,29 +357,16 @@ int main(int argc, char** argv)
         viewer->addEventHandler(vsg::AnimationPathHandler::create(camera, animationPath, viewer->start_point()));
     }
 
-    double time = 0.0;
-    while (viewer->active() && (numFrames<0 || (numFrames--)>0))
+    // rendering main loop
+    while (viewer->advanceToNextFrame() && (numFrames<0 || (numFrames--)>0))
     {
-        // poll events and advance frame counters
-        viewer->advance();
-
-        double previousTime = time;
-        time = std::chrono::duration<double, std::chrono::seconds::period>(std::chrono::steady_clock::now()-viewer->start_point()).count();
-        if (printFrameRate) std::cout<<"time = "<<time<<" fps="<<1.0/(time-previousTime)<<std::endl;
-
         // pass any events into EventHandlers assigned to the Viewer
         viewer->handleEvents();
 
-        if (viewer->aquireNextFrame())
-        {
-            if (populateCommandGraphHandler->populateCommandGraph) viewer->populateNextFrame();
+        if (populateCommandGraphHandler->populateCommandGraph) viewer->populateNextFrame();
 
-            viewer->submitNextFrame();
-        }
-
-        std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(sleepTime));
+        viewer->submitNextFrame();
     }
-
 
     // clean up done automatically thanks to ref_ptr<>
     return 0;
