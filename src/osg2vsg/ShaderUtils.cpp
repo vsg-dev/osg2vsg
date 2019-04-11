@@ -75,6 +75,8 @@ std::vector<std::string> createPSCDefineStrings(const uint32_t& shaderModeMask, 
     if (hastex0 && (shaderModeMask & NORMAL_MAP)) defines.push_back("VSG_NORMAL_MAP");
     if (hastex0 && (shaderModeMask & SPECULAR_MAP)) defines.push_back("VSG_SPECULAR_MAP");
 
+    if (shaderModeMask & BILLBOARD) defines.push_back("VSG_BILLBOARD");
+
     return defines;
 }
 
@@ -239,7 +241,7 @@ std::string osg2vsg::createFbxVertexSource(const uint32_t& shaderModeMask, const
 {
     std::string source =
         "#version 450\n" \
-        "#pragma import_defines ( VSG_NORMAL, VSG_TANGENT, VSG_COLOR, VSG_TEXCOORD0, VSG_LIGHTING, VSG_NORMAL_MAP )\n" \
+        "#pragma import_defines ( VSG_NORMAL, VSG_TANGENT, VSG_COLOR, VSG_TEXCOORD0, VSG_LIGHTING, VSG_NORMAL_MAP, VSG_BILLBOARD )\n" \
         "#extension GL_ARB_separate_shader_objects : enable\n" \
         "layout(push_constant) uniform PushConstants {\n" \
         "    mat4 projection;\n" \
@@ -271,20 +273,35 @@ std::string osg2vsg::createFbxVertexSource(const uint32_t& shaderModeMask, const
         "\n" \
         "void main()\n" \
         "{\n" \
-        "    gl_Position = (pc.projection * pc.view * pc.model) * vec4(osg_Vertex, 1.0);\n" \
+        "    mat4 modelView = pc.view * pc.model;\n" \
+        "#ifdef VSG_BILLBOARD\n" \
+        "    // xaxis\n" \
+        "    modelView[0][0] = 1.0;\n" \
+        "    modelView[0][1] = 0.0;\n" \
+        "    modelView[0][2] = 0.0;\n" \
+        "    // yaxis\n" \
+        "    modelView[1][0] = 0.0;\n" \
+        "    modelView[1][1] = 1.0;\n" \
+        "    modelView[1][2] = 0.0;\n" \
+        "    // zaxis\n" \
+        "    //modelView[2][0] = 0.0;\n" \
+        "    //modelView[2][1] = 0.0;\n" \
+        "    //modelView[2][2] = 1.0;\n" \
+        "#endif\n" \
+        "    gl_Position = (pc.projection * modelView) * vec4(osg_Vertex, 1.0);\n" \
         "#ifdef VSG_TEXCOORD0\n" \
         "    texCoord0 = osg_MultiTexCoord0.st;\n" \
         "#endif\n" \
         "#ifdef VSG_NORMAL\n" \
-        "    vec3 n = ((pc.view * pc.model) * vec4(osg_Normal, 0.0)).xyz;\n" \
+        "    vec3 n = (modelView * vec4(osg_Normal, 0.0)).xyz;\n" \
         "    normalDir = n;\n" \
         "#endif\n" \
         "#ifdef VSG_LIGHTING\n" \
         "    vec4 lpos = /*osg_LightSource.position*/ vec4(0.0, 0.25, 1.0, 0.0);\n" \
         "#ifdef VSG_NORMAL_MAP\n" \
-        "    vec3 t = ((pc.view * pc.model) * vec4(osg_Tangent.xyz, 0.0)).xyz;\n" \
+        "    vec3 t = (modelView * vec4(osg_Tangent.xyz, 0.0)).xyz;\n" \
         "    vec3 b = cross(n, t);\n" \
-        "    vec3 dir = -vec3((pc.view * pc.model) * vec4(osg_Vertex, 1.0));\n" \
+        "    vec3 dir = -vec3(modelView) * vec4(osg_Vertex, 1.0));\n" \
         "    viewDir.x = dot(dir, t);\n" \
         "    viewDir.y = dot(dir, b);\n" \
         "    viewDir.z = dot(dir, n);\n" \
@@ -296,7 +313,7 @@ std::string osg2vsg::createFbxVertexSource(const uint32_t& shaderModeMask, const
         "    lightDir.y = dot(dir, b);\n" \
         "    lightDir.z = dot(dir, n); \n" \
         "#else\n" \
-        "    viewDir = -vec3((pc.view * pc.model) * vec4(osg_Vertex, 1.0));\n" \
+        "    viewDir = -vec3(modelView * vec4(osg_Vertex, 1.0));\n" \
         "    if (lpos.w == 0.0)\n" \
         "        lightDir = lpos.xyz;\n" \
         "    else\n" \

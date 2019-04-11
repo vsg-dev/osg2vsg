@@ -1,5 +1,5 @@
 #version 450
-#pragma import_defines ( VSG_NORMAL, VSG_TANGENT, VSG_COLOR, VSG_TEXCOORD0, VSG_LIGHTING, VSG_NORMAL_MAP )
+#pragma import_defines ( VSG_NORMAL, VSG_TANGENT, VSG_COLOR, VSG_TEXCOORD0, VSG_LIGHTING, VSG_NORMAL_MAP, VSG_BILLBOARD )
 #extension GL_ARB_separate_shader_objects : enable
 layout(push_constant) uniform PushConstants {
     mat4 projection;
@@ -31,20 +31,31 @@ out gl_PerVertex{ vec4 gl_Position; };
 
 void main()
 {
-    gl_Position = (pc.projection * pc.view * pc.model) * vec4(osg_Vertex, 1.0);
+	mat4 modelView = pc.view * pc.model;
+#ifdef VSG_BILLBOARD
+	// xaxis
+	modelView[0][0] = 1.0;
+	modelView[0][1] = 0.0;
+	modelView[0][2] = 0.0;
+	// zaxis
+	modelView[2][0] = 0.0;
+	modelView[2][1] = 0.0;
+	modelView[2][2] = 1.0;
+#endif
+	gl_Position = (pc.projection * modelView) * vec4(osg_Vertex, 1.0);
 #ifdef VSG_TEXCOORD0
     texCoord0 = osg_MultiTexCoord0.st;
 #endif
 #ifdef VSG_NORMAL
-    vec3 n = ((pc.view * pc.model) * vec4(osg_Normal, 0.0)).xyz;
+    vec3 n = (modelView * vec4(osg_Normal, 0.0)).xyz;
     normalDir = n;
 #endif
 #ifdef VSG_LIGHTING
     vec4 lpos = /*osg_LightSource.position*/ vec4(0.0, 0.25, 1.0, 0.0);
 #ifdef VSG_NORMAL_MAP
-    vec3 t = ((pc.view * pc.model) * vec4(osg_Tangent.xyz, 0.0)).xyz;
+    vec3 t = (modelView * vec4(osg_Tangent.xyz, 0.0)).xyz;
     vec3 b = cross(n, t);
-    vec3 dir = -vec3((pc.view * pc.model) * vec4(osg_Vertex, 1.0));
+    vec3 dir = -vec3(modelView * vec4(osg_Vertex, 1.0));
     viewDir.x = dot(dir, t);
     viewDir.y = dot(dir, b);
     viewDir.z = dot(dir, n);
@@ -56,7 +67,7 @@ void main()
     lightDir.y = dot(dir, b);
     lightDir.z = dot(dir, n);
 #else
-    viewDir = -vec3((pc.view * pc.model) * vec4(osg_Vertex, 1.0));
+    viewDir = -vec3(modelView * vec4(osg_Vertex, 1.0));
     if (lpos.w == 0.0)
         lightDir = lpos.xyz;
     else
