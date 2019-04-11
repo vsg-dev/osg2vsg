@@ -112,6 +112,8 @@ void SceneBuilder::apply(osg::Billboard& billboard)
 {
     DEBUG_OUTPUT<<"apply(osg::Billboard& billboard)"<<std::endl;
 
+    nodeShaderModeMasks = BILLBOARD;
+
     for(unsigned int i=0; i<billboard.getNumDrawables(); ++i)
     {
         auto translate = osg::Matrixd::translate(billboard.getPosition(i));
@@ -123,6 +125,8 @@ void SceneBuilder::apply(osg::Billboard& billboard)
 
         popMatrix();
     }
+
+    nodeShaderModeMasks = NONE;
 }
 
 void SceneBuilder::apply(osg::Geometry& geometry)
@@ -208,7 +212,7 @@ void SceneBuilder::apply(osg::Geometry& geometry)
     // Build new masksTransformStateMap
     {
         StatePair& statePair = itr->second;
-        Masks masks(calculateShaderModeMask(statePair.first.get()) | calculateShaderModeMask(statePair.second.get()), calculateAttributesMask(&geometry));
+        Masks masks(calculateShaderModeMask(statePair.first.get()) | calculateShaderModeMask(statePair.second.get()) | nodeShaderModeMasks, calculateAttributesMask(&geometry));
 
         DEBUG_OUTPUT<<"populating masks ("<<masks.first<<", "<<masks.second<<")"<<std::endl;
 
