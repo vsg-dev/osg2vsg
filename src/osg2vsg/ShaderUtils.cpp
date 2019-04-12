@@ -301,7 +301,7 @@ std::string osg2vsg::createFbxVertexSource(const uint32_t& shaderModeMask, const
         "#ifdef VSG_NORMAL_MAP\n" \
         "    vec3 t = (modelView * vec4(osg_Tangent.xyz, 0.0)).xyz;\n" \
         "    vec3 b = cross(n, t);\n" \
-        "    vec3 dir = -vec3(modelView) * vec4(osg_Vertex, 1.0));\n" \
+        "    vec3 dir = -vec3(modelView * vec4(osg_Vertex, 1.0));\n" \
         "    viewDir.x = dot(dir, t);\n" \
         "    viewDir.y = dot(dir, b);\n" \
         "    viewDir.z = dot(dir, n);\n" \
