@@ -92,9 +92,13 @@ void main()
     vec4 color = base;
 	color.rgb *= diffuseColor;
 #endif
+
     outColor = color;
 #ifdef VSG_OPACITY_MAP
     outColor.a *= texture(opacityMap, texCoord0.st).r;
 #endif
+
+    // crude version of AlphaFunc
+    if (outColor.a==0.0) discard;
 }
 

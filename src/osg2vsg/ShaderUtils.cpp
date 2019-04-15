@@ -436,6 +436,7 @@ std::string osg2vsg::createFbxFragmentSource(const uint32_t& shaderModeMask, con
         "#ifdef VSG_OPACITY_MAP\n" \
         "    outColor.a *= texture(opacityMap, texCoord0.st).r;\n" \
         "#endif\n" \
+        "    if (outColor.a==0.0) discard;\n" \
         "}\n";
 
     auto defines = createPSCDefineStrings(shaderModeMask, geometryAttrbutes);
@@ -566,6 +567,7 @@ std::string osg2vsg::createDefaultFragmentSource(const uint32_t& shaderModeMask,
         "    vec4 color = base;\n" \
         "#endif\n" \
         "    outColor = color;\n" \
+        "    if (outColor.a==0.0) discard;\n" \
         "}\n";
 
     auto defines = createPSCDefineStrings(shaderModeMask, geometryAttrbutes);
