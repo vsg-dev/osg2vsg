@@ -112,6 +112,8 @@ void SceneBuilder::apply(osg::Billboard& billboard)
 {
     DEBUG_OUTPUT<<"apply(osg::Billboard& billboard)"<<std::endl;
 
+    if (billboard.getStateSet()) pushStateSet(*billboard.getStateSet());
+
     nodeShaderModeMasks = BILLBOARD;
 
     for(unsigned int i=0; i<billboard.getNumDrawables(); ++i)
@@ -127,6 +129,8 @@ void SceneBuilder::apply(osg::Billboard& billboard)
     }
 
     nodeShaderModeMasks = NONE;
+
+    if (billboard.getStateSet()) popStateSet();
 }
 
 void SceneBuilder::apply(osg::Geometry& geometry)
