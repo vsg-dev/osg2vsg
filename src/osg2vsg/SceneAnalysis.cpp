@@ -148,6 +148,11 @@ void VsgSceneAnalysis::apply(const vsg::Geometry& geometry)
         _sceneStats->insert(array.get());
     }
 
+    if (geometry._indices)
+    {
+        _sceneStats->insert(geometry._indices.get());
+    }
+
     for(auto& command : geometry._commands)
     {
         command->accept(*this);
