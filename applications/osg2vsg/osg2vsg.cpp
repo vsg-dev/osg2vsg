@@ -27,10 +27,12 @@ namespace vsg
     class AnimationPathHandler : public Inherit<Visitor, AnimationPathHandler>
     {
     public:
-        AnimationPathHandler(ref_ptr<Camera> camera, osg::ref_ptr<osg::AnimationPath> animationPath, clock::time_point start_point) :
+        AnimationPathHandler(ref_ptr<Camera> camera, osg::ref_ptr<osg::AnimationPath> animationPath, clock::time_point start_point, double simulationStep=0.0) :
             _camera(camera),
             _path(animationPath),
-            _start_point(start_point)
+            _start_point(start_point),
+            _simulationTime(0.0),
+            _simulationStep(simulationStep)
         {
             _lookAt = dynamic_cast<LookAt*>(_camera->getViewMatrix());
 
@@ -54,18 +56,23 @@ namespace vsg
             if (_frameCount==0)
             {
                 _start_point = frame.frameStamp->time;
+                _simulationTime = 0.0;
             }
 
-            double time = std::chrono::duration<double, std::chrono::seconds::period>(frame.frameStamp->time - _start_point).count();
+            double actual_time = std::chrono::duration<double, std::chrono::seconds::period>(frame.frameStamp->time - _start_point).count();
+            double time = _simulationStep>0.0 ? _simulationTime : actual_time;
+
+
             if (time > _path->getPeriod())
             {
-                double average_framerate = double(_frameCount) / time;
+                double average_framerate = double(_frameCount) / actual_time;
                 std::cout<<"Period complete numFrames="<<_frameCount<<", average frame rate = "<<average_framerate<<std::endl;
 
                 // reset time back to start
                 _start_point = frame.frameStamp->time;
-                time = 0.0;
+                _simulationTime = 0.0;
                 _frameCount = 0;
+                time = 0.0;
             }
 
             osg::Matrixd matrix;
@@ -80,6 +87,8 @@ namespace vsg
             _lookAt->set(vsg_matrix);
 
             ++_frameCount;
+
+            _simulationTime += _simulationStep;
         }
 
 
@@ -90,6 +99,10 @@ namespace vsg
         KeySymbol _homeKey = KEY_Space;
         clock::time_point _start_point;
         unsigned int _frameCount = 0;
+
+        double _simulationTime;
+        double _simulationStep;
+
     };
 }
 
@@ -196,10 +209,12 @@ int main(int argc, char** argv)
     auto printStats = arguments.read({"-s", "--stats"});
     auto pathFilename = arguments.value(std::string(),"-p");
     auto batchLeafData = arguments.read("--batch");
+    auto simulationFrameRate = arguments.value(0.0, "--sim-fps");
     arguments.read({"--support-mask", "--sm"}, sceneBuilder.supportedShaderModeMask);
     arguments.read({"--override-mask", "--om"}, sceneBuilder.overrideShaderModeMask);
     arguments.read({ "--vertex-shader", "--vert" }, sceneBuilder.vertexShaderPath);
     arguments.read({ "--fragment-shader", "--frag" }, sceneBuilder.fragmentShaderPath);
+
 
     if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
 
@@ -413,7 +428,8 @@ int main(int argc, char** argv)
         animationPath->setLoopMode(osg::AnimationPath::LOOP);
         animationPath->read(in);
 
-        viewer->addEventHandler(vsg::AnimationPathHandler::create(camera, animationPath, viewer->start_point()));
+        double simulationStep = simulationFrameRate>0.0 ? 1.0/simulationFrameRate : 0.0;
+        viewer->addEventHandler(vsg::AnimationPathHandler::create(camera, animationPath, viewer->start_point(), simulationStep));
     }
 
     // rendering main loop
