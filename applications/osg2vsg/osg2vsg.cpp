@@ -15,6 +15,7 @@
 #include <osgUtil/Optimizer>
 #include <osgUtil/MeshOptimizers>
 
+#include <vsg/core/Objects.h>
 #include <osg2vsg/ShaderUtils.h>
 #include <osg2vsg/GeometryUtils.h>
 #include <osg2vsg/SceneBuilder.h>
@@ -110,6 +111,56 @@ namespace osg2vsg
             }
         }
     };
+
+
+    class LeafDataCollection : public vsg::Visitor
+    {
+    public:
+
+        vsg::ref_ptr<vsg::Objects> objects;
+
+        LeafDataCollection()
+        {
+            objects = new vsg::Objects;
+        }
+
+        void apply(vsg::Object& object) override
+        {
+            if (typeid(object)==typeid(vsg::Texture))
+            {
+                vsg::Texture* texture = static_cast<vsg::Texture*>(&object);
+                if (texture->_textureData)
+                {
+                    objects->addChild(texture->_textureData);
+                }
+            }
+
+            object.traverse(*this);
+        }
+
+        void apply(vsg::Geometry& geometry) override
+        {
+            for(auto& data : geometry._arrays)
+            {
+                objects->addChild(data);
+            }
+            if (geometry._indices)
+            {
+                objects->addChild(geometry._indices);
+            }
+        }
+
+        void apply(vsg::StateGroup& stategroup) override
+        {
+            for(auto& command : stategroup.getStateCommands())
+            {
+                command->accept(*this);
+            }
+
+            stategroup.traverse(*this);
+        }
+    };
+
 }
 
 int main(int argc, char** argv)
@@ -144,6 +195,7 @@ int main(int argc, char** argv)
     auto outputFilename = arguments.value(std::string(), "-o");
     auto printStats = arguments.read({"-s", "--stats"});
     auto pathFilename = arguments.value(std::string(),"-p");
+    auto batchLeafData = arguments.read("--batch");
     arguments.read({"--support-mask", "--sm"}, sceneBuilder.supportedShaderModeMask);
     arguments.read({"--override-mask", "--om"}, sceneBuilder.overrideShaderModeMask);
     arguments.read({ "--vertex-shader", "--vert" }, sceneBuilder.vertexShaderPath);
@@ -273,9 +325,15 @@ int main(int argc, char** argv)
 
             return 1;
         }
-
         else if (vsg_scene.valid())
         {
+            if (batchLeafData)
+            {
+                osg2vsg::LeafDataCollection leafDataCollection;
+                vsg_scene->accept(leafDataCollection);
+                vsg_scene->setObject("batch", leafDataCollection.objects);
+            }
+
             if (io.writeFile(vsg_scene, outputFilename))
             {
                 return 1;
