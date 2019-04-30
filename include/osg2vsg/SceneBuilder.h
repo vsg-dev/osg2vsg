@@ -40,7 +40,7 @@ namespace osg2vsg
         using StatePair = std::pair<osg::ref_ptr<osg::StateSet>, osg::ref_ptr<osg::StateSet>>;
         using StateMap = std::map<StateStack, StatePair>;
 
-        using GeometriesMap = std::map<const osg::Geometry*, vsg::ref_ptr<vsg::Geometry>>;
+        using GeometriesMap = std::map<const osg::Geometry*, vsg::ref_ptr<vsg::Command>>;
         using TexturesMap = std::map<const osg::Texture*, vsg::ref_ptr<vsg::Texture>>;
 
         struct UniqueStateSet
@@ -70,6 +70,9 @@ namespace osg2vsg
         ShaderCompiler shaderCompiler;
 
         bool insertCullGroups = true;
+        bool insertCullNodes = true;
+        bool useBindDescriptorSet = false;
+        bool useVsgGeometryOnly = false;
         uint32_t supportedGeometryAttributes = GeometryAttributes::ALL_ATTS;
         uint32_t supportedShaderModeMask = ShaderModeMask::ALL_SHADER_MODE_MASK;
         uint32_t overrideGeomAttributes = 0;

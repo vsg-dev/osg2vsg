@@ -57,6 +57,6 @@ namespace osg2vsg
 
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::MaterialValue> convertToMaterialValue(const osg::Material* material);
 
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Geometry> convertToVsg(osg::Geometry* geometry, uint32_t requiredAttributesMask = 0);
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Command> convertToVsg(osg::Geometry* geometry, uint32_t requiredAttributesMask, bool useVsgGeometryOnly);
 
 }

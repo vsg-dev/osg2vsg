@@ -5,6 +5,8 @@
 #include <osg2vsg/ShaderUtils.h>
 
 #include <vsg/nodes/MatrixTransform.h>
+#include <vsg/nodes/CullGroup.h>
+#include <vsg/nodes/CullNode.h>
 
 using namespace osg2vsg;
 
@@ -383,9 +385,59 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createTransformGeometryGraphVSG(TransformG
         vsg::ref_ptr<vsg::Group> localGroup = group;
 
         bool requiresTransform = !matrix.isIdentity();
-        bool requiresTopCullGroup = insertCullGroups && (requiresTransform || geometries.size()==1);
-        bool requiresLeafCullGroup = insertCullGroups && !requiresTopCullGroup;
 
+#if 1
+        bool requiresTopCullGroup = (insertCullGroups || insertCullNodes) && (requiresTransform/* || geometries.size()==1*/);
+        bool requiresLeafCullGroup = (insertCullGroups || insertCullNodes) && !requiresTopCullGroup;
+        if (requiresTransform)
+        {
+            // need to insert a transform
+            vsg::mat4 vsgmatrix = vsg::mat4(matrix(0, 0), matrix(1, 0), matrix(2, 0), matrix(3, 0),
+                                            matrix(0, 1), matrix(1, 1), matrix(2, 1), matrix(3, 1),
+                                            matrix(0, 2), matrix(1, 2), matrix(2, 2), matrix(3, 2),
+                                            matrix(0, 3), matrix(1, 3), matrix(2, 3), matrix(3, 3));
+
+            vsg::ref_ptr<vsg::MatrixTransform> transform = vsg::MatrixTransform::create(vsgmatrix);
+
+            localGroup = transform;
+
+
+            if (insertCullGroups || insertCullNodes)
+            {
+                osg::BoundingBox overall_bb;
+                for (auto& geometry : geometries)
+                {
+                    osg::BoundingBox bb = geometry->getBoundingBox();
+                    for(int i=0; i<8; ++i)
+                    {
+                        overall_bb.expandBy(bb.corner(i) * matrix);
+                    }
+                }
+
+                vsg::vec3 bb_min(overall_bb.xMin(), overall_bb.yMin(), overall_bb.zMin());
+                vsg::vec3 bb_max(overall_bb.xMax(), overall_bb.yMax(), overall_bb.zMax());
+                vsg::sphere boundingSphere((bb_min + bb_max)*0.5f, vsg::length(bb_max - bb_min)*0.5f);
+
+                if (insertCullNodes)
+                {
+                    group->addChild(vsg::CullNode::create(boundingSphere, transform));
+                }
+                else
+                {
+                    auto cullGroup = vsg::CullGroup::create(boundingSphere);
+                    cullGroup->addChild(transform);
+                    group->addChild(cullGroup);
+                }
+            }
+            else
+            {
+                group->addChild(transform);
+            }
+
+        }
+#else
+        bool requiresTopCullGroup = (insertCullGroups || insertCullNodes) && (requiresTransform || geometries.size()==1);
+        bool requiresLeafCullGroup = (insertCullGroups || insertCullNodes) && !requiresTopCullGroup;
         if (requiresTopCullGroup)
         {
             osg::BoundingBox overall_bb;
@@ -422,9 +474,51 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createTransformGeometryGraphVSG(TransformG
 
             localGroup = transform;
         }
+#endif
 
         for (auto& geometry : geometries)
         {
+#if 1
+            vsg::ref_ptr<vsg::Command> leaf;
+            if(geometriesMap.find(geometry) != geometriesMap.end())
+            {
+                DEBUG_OUTPUT << "sharing geometry" << std::endl;
+                leaf = geometriesMap[geometry];
+            }
+            else
+            {
+                leaf = convertToVsg(geometry, requiredGeomAttributesMask, useVsgGeometryOnly);
+                if (leaf)
+                {
+                    geometriesMap[geometry] = leaf;
+                }
+            }
+
+            if (requiresLeafCullGroup)
+            {
+                osg::BoundingBox bb = geometry->getBoundingBox();
+                vsg::vec3 bb_min(bb.xMin(), bb.yMin(), bb.zMin());
+                vsg::vec3 bb_max(bb.xMax(), bb.yMax(), bb.zMax());
+
+                vsg::sphere boundingSphere((bb_min + bb_max)*0.5f, vsg::length(bb_max - bb_min)*0.5f);
+                if (insertCullNodes)
+                {
+                    std::cout<<"Using CullNode"<<std::endl;
+                    localGroup->addChild( vsg::CullNode::create(boundingSphere, leaf) );
+                }
+                else
+                {
+                    std::cout<<"Using CullGroupe"<<std::endl;
+                    auto cullGroup = vsg::CullGroup::create(boundingSphere);
+                    cullGroup->addChild(leaf);
+                    localGroup->addChild(cullGroup);
+                }
+            }
+            else
+            {
+                localGroup->addChild(leaf);
+            }
+#else
             vsg::ref_ptr<vsg::Group> nestedGroup = localGroup;
 
             if (requiresLeafCullGroup)
@@ -434,9 +528,12 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createTransformGeometryGraphVSG(TransformG
                 vsg::vec3 bb_max(bb.xMax(), bb.yMax(), bb.zMax());
 
                 vsg::sphere boundingSphere((bb_min + bb_max)*0.5f, vsg::length(bb_max - bb_min)*0.5f);
-                auto cullGroup = vsg::CullGroup::create(boundingSphere);
-                nestedGroup->addChild(cullGroup);
-                nestedGroup = cullGroup;
+                if (insertCullNodes)
+                {
+                    auto cullGroup = vsg::CullGroup::create(boundingSphere);
+                    nestedGroup->addChild(cullGroup);
+                    nestedGroup = cullGroup;
+                }
             }
 
             // has the geometry already been converted
@@ -454,6 +551,7 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createTransformGeometryGraphVSG(TransformG
                     geometriesMap[geometry] = new_geometry;
                 }
             }
+#endif
         }
     }
 
@@ -523,13 +621,20 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createVSG(vsg::Paths& searchPaths)
             vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = createVsgStateSet(descriptorSetLayouts, stateset, shaderModeMask);
             if (descriptorSet)
             {
-                auto bindDescriptorSets = vsg::BindDescriptorSets::create(VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->getPipelineLayout(), 0, vsg::DescriptorSets{descriptorSet});
-
                 auto stategroup = vsg::StateGroup::create();
-
                 graphicsPipelineGroup->addChild(stategroup);
-                stategroup->add(bindDescriptorSets);
                 stategroup->addChild(transformGeometryGraph);
+
+                if (useBindDescriptorSet)
+                {
+                    auto bindDescriptorSet = vsg::BindDescriptorSet::create(VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->getPipelineLayout(), 0, descriptorSet);
+                    stategroup->add(bindDescriptorSet);
+                }
+                else
+                {
+                    auto bindDescriptorSets = vsg::BindDescriptorSets::create(VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->getPipelineLayout(), 0, vsg::DescriptorSets{descriptorSet});
+                    stategroup->add(bindDescriptorSets);
+                }
             }
             else
             {

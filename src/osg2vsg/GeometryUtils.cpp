@@ -3,6 +3,7 @@
 #include <osg2vsg/ShaderUtils.h>
 
 #include <vsg/nodes/StateGroup.h>
+#include <vsg/nodes/VertexIndexDraw.h>
 
 #include <osgUtil/MeshOptimizers>
 #include <osgUtil/TangentSpaceGenerator>
@@ -215,7 +216,7 @@ namespace osg2vsg
         return matvalue;
     }
 
-    vsg::ref_ptr<vsg::Geometry> convertToVsg(osg::Geometry* ingeometry, uint32_t requiredAttributesMask)
+    vsg::ref_ptr<vsg::Command> convertToVsg(osg::Geometry* ingeometry, uint32_t requiredAttributesMask, bool useVsgGeometryOnly)
     {
         // convert attribute arrays, create defaults for any requested that don't exist for now to ensure pipline gets required data
         vsg::ref_ptr<vsg::Data> vertices(osg2vsg::convertToVsg(ingeometry->getVertexArray()));
@@ -261,7 +262,7 @@ namespace osg2vsg
         // asume all the draw elements use the same primitive mode, copy all drawelements indicies into one indicie array and use in single drawindexed command
         // create a draw command per drawarrays primitive set
 
-        vsg::Geometry::Commands drawCommands;
+        vsg::Geometry::DrawCommands drawCommands;
 
         std::vector<uint16_t> indcies; // use to combine indicies from all drawelements
         osg::Geometry::PrimitiveSetList& primitiveSets = ingeometry->getPrimitiveSetList();
@@ -304,10 +305,31 @@ namespace osg2vsg
 
             geometry->_indices = vsgindices;
 
+            if (!useVsgGeometryOnly)
+            {
+                if (drawCommands.empty())
+                {
+                    vsg::ref_ptr<vsg::VertexIndexDraw> vid(new vsg::VertexIndexDraw());
+
+                    vid->_arrays = attributeArrays;
+                    vid->_indices = vsgindices;
+                    vid->_indexType = VK_INDEX_TYPE_UINT16;
+                    vid->indexCount = vsgindices->size();
+                    vid->instanceCount = 1;
+                    vid->firstIndex = 0;
+                    vid->vertexOffset = 0;
+                    vid->firstInstance = 0;
+
+                    return vid;
+                }
+            }
+
             drawCommands.push_back(vsg::DrawIndexed::create(vsgindices->valueCount(), 1, 0, 0, 0));
         }
 
         geometry->_commands = drawCommands;
+
+
 
         return geometry;
     }
