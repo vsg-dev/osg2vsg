@@ -163,6 +163,18 @@ namespace osg2vsg
             }
         }
 
+        void apply(vsg::VertexIndexDraw& vid) override
+        {
+            for(auto& data : vid._arrays)
+            {
+                objects->addChild(data);
+            }
+            if (vid._indices)
+            {
+                objects->addChild(vid._indices);
+            }
+        }
+
         void apply(vsg::StateGroup& stategroup) override
         {
             for(auto& command : stategroup.getStateCommands())
