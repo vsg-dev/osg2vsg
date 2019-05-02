@@ -214,9 +214,9 @@ int main(int argc, char** argv)
     if (arguments.read({"--fullscreen", "--fs"})) windowTraits->fullscreen = true;
     if (arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height)) { windowTraits->fullscreen = false; }
     if (arguments.read({"--no-frame", "--nf"})) windowTraits->decoration = false;
-    if (arguments.read("--no-culling")) sceneBuilder.insertCullGroups = false;
     if (arguments.read("--cull-nodes")) sceneBuilder.insertCullNodes = true;
     if (arguments.read("--no-cull-nodes")) sceneBuilder.insertCullNodes = false;
+    if (arguments.read("--no-culling")) { sceneBuilder.insertCullGroups = false; sceneBuilder.insertCullNodes = false; }
     if (arguments.read({"--bind-single-ds", "--bsds"})) sceneBuilder.useBindDescriptorSet = true;
     auto numFrames = arguments.value(-1, "-f");
     auto writeToFileProgramAndDataSetSets = arguments.read({"--write-stateset", "--ws"});
