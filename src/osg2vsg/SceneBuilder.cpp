@@ -503,12 +503,12 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createTransformGeometryGraphVSG(TransformG
                 vsg::sphere boundingSphere((bb_min + bb_max)*0.5f, vsg::length(bb_max - bb_min)*0.5f);
                 if (insertCullNodes)
                 {
-                    std::cout<<"Using CullNode"<<std::endl;
+                    DEBUG_OUTPUT<<"Using CullNode"<<std::endl;
                     localGroup->addChild( vsg::CullNode::create(boundingSphere, leaf) );
                 }
                 else
                 {
-                    std::cout<<"Using CullGroupe"<<std::endl;
+                    DEBUG_OUTPUT<<"Using CullGroupe"<<std::endl;
                     auto cullGroup = vsg::CullGroup::create(boundingSphere);
                     cullGroup->addChild(leaf);
                     localGroup->addChild(cullGroup);
