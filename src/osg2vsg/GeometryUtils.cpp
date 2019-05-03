@@ -216,7 +216,7 @@ namespace osg2vsg
         return matvalue;
     }
 
-    vsg::ref_ptr<vsg::Command> convertToVsg(osg::Geometry* ingeometry, uint32_t requiredAttributesMask, bool useVsgGeometryOnly)
+    vsg::ref_ptr<vsg::Command> convertToVsg(osg::Geometry* ingeometry, uint32_t requiredAttributesMask, GeometryTarget geometryTarget)
     {
         // convert attribute arrays, create defaults for any requested that don't exist for now to ensure pipline gets required data
         vsg::ref_ptr<vsg::Data> vertices(osg2vsg::convertToVsg(ingeometry->getVertexArray()));
@@ -292,7 +292,50 @@ namespace osg2vsg
             }
         }
 
-        // create the vsg geometry
+        vsg::ref_ptr<vsg::ushortArray> vsgindices;
+        if(indcies.size() > 0)
+        {
+            vsgindices = new vsg::ushortArray(indcies.size());
+            std::copy(indcies.begin(), indcies.end(), reinterpret_cast<uint16_t*>(vsgindices->dataPointer()));
+        }
+
+        if (geometryTarget == VSG_COMMANDS)
+        {
+            vsg::ref_ptr<vsg::Commands> commands(new vsg::Commands);
+
+            commands->addChild( vsg::BindVertexBuffers::create(0, attributeArrays) );
+
+            for(auto& draw : drawCommands)
+            {
+                commands->addChild(draw);
+            }
+
+            if(vsgindices)
+            {
+                commands->addChild( vsg::BindIndexBuffer::create(vsgindices) );
+                commands->addChild( vsg::DrawIndexed::create(vsgindices->valueCount(), 1, 0, 0, 0) );
+            }
+
+            return commands;
+        }
+        else if (geometryTarget == VSG_VERTEXINDEXDRAW && vsgindices && drawCommands.empty())
+        {
+            vsg::ref_ptr<vsg::VertexIndexDraw> vid(new vsg::VertexIndexDraw());
+
+            vid->_arrays = attributeArrays;
+            vid->_indices = vsgindices;
+            vid->_indexType = VK_INDEX_TYPE_UINT16;
+            vid->indexCount = vsgindices->size();
+            vid->instanceCount = 1;
+            vid->firstIndex = 0;
+            vid->vertexOffset = 0;
+            vid->firstInstance = 0;
+
+            return vid;
+        }
+
+
+        // fallback to create the vsg geometry
         auto geometry = vsg::Geometry::create();
 
         geometry->_arrays = attributeArrays;
@@ -300,36 +343,12 @@ namespace osg2vsg
         // copy into ushortArray
         if(indcies.size() > 0)
         {
-            vsg::ref_ptr<vsg::ushortArray> vsgindices(new vsg::ushortArray(indcies.size()));
-            std::copy(indcies.begin(), indcies.end(), reinterpret_cast<uint16_t*>(vsgindices->dataPointer()));
-
             geometry->_indices = vsgindices;
-
-            if (!useVsgGeometryOnly)
-            {
-                if (drawCommands.empty())
-                {
-                    vsg::ref_ptr<vsg::VertexIndexDraw> vid(new vsg::VertexIndexDraw());
-
-                    vid->_arrays = attributeArrays;
-                    vid->_indices = vsgindices;
-                    vid->_indexType = VK_INDEX_TYPE_UINT16;
-                    vid->indexCount = vsgindices->size();
-                    vid->instanceCount = 1;
-                    vid->firstIndex = 0;
-                    vid->vertexOffset = 0;
-                    vid->firstInstance = 0;
-
-                    return vid;
-                }
-            }
 
             drawCommands.push_back(vsg::DrawIndexed::create(vsgindices->valueCount(), 1, 0, 0, 0));
         }
 
         geometry->_commands = drawCommands;
-
-
 
         return geometry;
     }

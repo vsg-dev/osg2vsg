@@ -487,7 +487,7 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createTransformGeometryGraphVSG(TransformG
             }
             else
             {
-                leaf = convertToVsg(geometry, requiredGeomAttributesMask, useVsgGeometryOnly);
+                leaf = convertToVsg(geometry, requiredGeomAttributesMask, geometryTarget);
                 if (leaf)
                 {
                     geometriesMap[geometry] = leaf;

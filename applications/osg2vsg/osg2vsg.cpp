@@ -175,6 +175,22 @@ namespace osg2vsg
             }
         }
 
+        void apply(vsg::BindVertexBuffers& bvb) override
+        {
+            for(auto& data : bvb.getArrays())
+            {
+                objects->addChild(data);
+            }
+        }
+
+        void apply(vsg::BindIndexBuffer& bib) override
+        {
+            if (bib.getIndices())
+            {
+                objects->addChild(vsg::ref_ptr<vsg::Data>(bib.getIndices()));
+            }
+        }
+
         void apply(vsg::StateGroup& stategroup) override
         {
             for(auto& command : stategroup.getStateCommands())
@@ -217,6 +233,9 @@ int main(int argc, char** argv)
     if (arguments.read("--cull-nodes")) sceneBuilder.insertCullNodes = true;
     if (arguments.read("--no-cull-nodes")) sceneBuilder.insertCullNodes = false;
     if (arguments.read("--no-culling")) { sceneBuilder.insertCullGroups = false; sceneBuilder.insertCullNodes = false; }
+    if (arguments.read("--Geometry")) { sceneBuilder.geometryTarget = osg2vsg::VSG_GEOMETRY; }
+    if (arguments.read("--VertexIndexDraw")) { sceneBuilder.geometryTarget = osg2vsg::VSG_VERTEXINDEXDRAW; }
+    if (arguments.read("--Commands")) { sceneBuilder.geometryTarget = osg2vsg::VSG_COMMANDS; }
     if (arguments.read({"--bind-single-ds", "--bsds"})) sceneBuilder.useBindDescriptorSet = true;
     auto numFrames = arguments.value(-1, "-f");
     auto writeToFileProgramAndDataSetSets = arguments.read({"--write-stateset", "--ws"});

@@ -36,6 +36,12 @@ namespace osg2vsg
         TEXCOORD2_CHANNEL = TEXCOORD0_CHANNEL + 2,
     };
 
+    enum GeometryTarget : uint32_t
+    {
+        VSG_GEOMETRY,
+        VSG_VERTEXINDEXDRAW,
+        VSG_COMMANDS
+    };
 
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::vec2Array> convertToVsg(const osg::Vec2Array* inarray);
 
@@ -57,6 +63,6 @@ namespace osg2vsg
 
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::MaterialValue> convertToMaterialValue(const osg::Material* material);
 
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Command> convertToVsg(osg::Geometry* geometry, uint32_t requiredAttributesMask, bool useVsgGeometryOnly);
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Command> convertToVsg(osg::Geometry* geometry, uint32_t requiredAttributesMask, GeometryTarget geometryTarget);
 
 }
