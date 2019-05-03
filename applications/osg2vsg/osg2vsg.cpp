@@ -175,6 +175,22 @@ namespace osg2vsg
             }
         }
 
+        void apply(vsg::BindVertexBuffers& bvb) override
+        {
+            for(auto& data : bvb.getArrays())
+            {
+                objects->addChild(data);
+            }
+        }
+
+        void apply(vsg::BindIndexBuffer& bib) override
+        {
+            if (bib.getIndices())
+            {
+                objects->addChild(vsg::ref_ptr<vsg::Data>(bib.getIndices()));
+            }
+        }
+
         void apply(vsg::StateGroup& stategroup) override
         {
             for(auto& command : stategroup.getStateCommands())
