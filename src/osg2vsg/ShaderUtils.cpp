@@ -245,8 +245,7 @@ std::string osg2vsg::createFbxVertexSource(const uint32_t& shaderModeMask, const
         "#extension GL_ARB_separate_shader_objects : enable\n" \
         "layout(push_constant) uniform PushConstants {\n" \
         "    mat4 projection;\n" \
-        "    mat4 view;\n" \
-        "    mat4 model;\n" \
+        "    mat4 modelview;\n" \
         "    //mat3 normal;\n" \
         "} pc; \n" \
         "layout(location = 0) in vec3 osg_Vertex;\n" \
@@ -273,7 +272,7 @@ std::string osg2vsg::createFbxVertexSource(const uint32_t& shaderModeMask, const
         "\n" \
         "void main()\n" \
         "{\n" \
-        "    mat4 modelView = pc.view * pc.model;\n" \
+        "    mat4 modelView = pc.modelview;\n" \
         "#ifdef VSG_BILLBOARD\n" \
         "    // xaxis\n" \
         "    modelView[0][0] = 1.0;\n" \
@@ -455,8 +454,7 @@ std::string osg2vsg::createDefaultVertexSource(const uint32_t& shaderModeMask, c
         "#extension GL_ARB_separate_shader_objects : enable\n" \
         "layout(push_constant) uniform PushConstants {\n" \
         "    mat4 projection;\n" \
-        "    mat4 view;\n" \
-        "    mat4 model;\n" \
+        "    mat4 moddelview;\n" \
         "    //mat3 normal;\n" \
         "} pc; \n" \
         "layout(location = 0) in vec3 osg_Vertex;\n" \
@@ -480,17 +478,17 @@ std::string osg2vsg::createDefaultVertexSource(const uint32_t& shaderModeMask, c
         "\n" \
         "void main()\n" \
         "{\n" \
-        "    gl_Position = (pc.projection * pc.view * pc.model) * vec4(osg_Vertex, 1.0);\n" \
+        "    gl_Position = (pc.projection * pc.modelview) * vec4(osg_Vertex, 1.0);\n" \
         "#ifdef VSG_TEXCOORD0\n" \
         "    texCoord0 = osg_MultiTexCoord0.st;\n" \
         "#endif\n" \
         "#ifdef VSG_NORMAL\n" \
-        "    vec3 n = ((pc.view * pc.model) * vec4(osg_Normal, 0.0)).xyz;\n" \
+        "    vec3 n = ((pc.mdoelview) * vec4(osg_Normal, 0.0)).xyz;\n" \
         "    normalDir = n;\n" \
         "#endif\n" \
         "#ifdef VSG_LIGHTING\n" \
         "    vec4 lpos = /*osg_LightSource.position*/ vec4(0.0, 0.25, 1.0, 0.0);\n" \
-        "    viewDir = -vec3((pc.view * pc.model) * vec4(osg_Vertex, 1.0));\n" \
+        "    viewDir = -vec3((pc.modelview) * vec4(osg_Vertex, 1.0));\n" \
         "    if (lpos.w == 0.0)\n" \
         "        lightDir = lpos.xyz;\n" \
         "    else\n" \

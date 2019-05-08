@@ -767,7 +767,7 @@ vsg::ref_ptr<vsg::BindGraphicsPipeline> SceneBuilder::createBindGraphicsPipeline
 
     vsg::PushConstantRanges pushConstantRanges
     {
-        {VK_SHADER_STAGE_VERTEX_BIT, 0, 196} // projection view, and model matrices
+        {VK_SHADER_STAGE_VERTEX_BIT, 0, 128} // projection and modelview matrices
     };
 
     uint32_t vertexBindingIndex = 0;
