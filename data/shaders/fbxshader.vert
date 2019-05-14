@@ -3,8 +3,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 layout(push_constant) uniform PushConstants {
     mat4 projection;
-    mat4 view;
-    mat4 model;
+    mat4 modelview;
     //mat3 normal;
 } pc;
 layout(location = 0) in vec3 osg_Vertex;
@@ -31,7 +30,7 @@ out gl_PerVertex{ vec4 gl_Position; };
 
 void main()
 {
-	mat4 modelView = pc.view * pc.model;
+	mat4 modelView = pc.modelview;
 #ifdef VSG_BILLBOARD
 	// xaxis
 	modelView[0][0] = 1.0;
