@@ -81,17 +81,156 @@ osg::ref_ptr<osg::Image> formatImageToRGBA(const osg::Image* image)
     return new_image;
 }
 
+
+vsg::ref_ptr<vsg::Data> createWhiteTexture()
+{
+    vsg::ref_ptr<vsg::vec4Array2D> vsg_data(new vsg::vec4Array2D(1,1));
+    vsg_data->setFormat(VK_FORMAT_R32G32B32A32_SFLOAT);
+    for(auto& color : *vsg_data)
+    {
+        color = vsg::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    }
+    return vsg_data;
+}
+
+vsg::ref_ptr<vsg::Data> convertCompressedImageToVsg(const osg::Image* image)
+{
+    uint32_t blockSize = 0;
+    VkFormat format = VK_FORMAT_UNDEFINED;
+    vsg::BlockDimensions blockDimensions;
+    switch(image->getPixelFormat())
+    {
+        case(GL_COMPRESSED_ALPHA_ARB):
+        case(GL_COMPRESSED_INTENSITY_ARB):
+        case(GL_COMPRESSED_LUMINANCE_ALPHA_ARB):
+        case(GL_COMPRESSED_LUMINANCE_ARB):
+        case(GL_COMPRESSED_RGBA_ARB):
+        case(GL_COMPRESSED_RGB_ARB):
+            break;
+        case(GL_COMPRESSED_RGB_S3TC_DXT1_EXT):
+            blockSize = 64;
+            blockDimensions = {4,4};
+            format = VK_FORMAT_BC1_RGB_UNORM_BLOCK;
+            break;
+        case(GL_COMPRESSED_RGBA_S3TC_DXT1_EXT):
+            blockSize = 64;
+            blockDimensions = {4,4};
+            format = VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
+            break;
+        case(GL_COMPRESSED_RGBA_S3TC_DXT3_EXT):
+            blockSize = 128;
+            blockDimensions = {4,4};
+            format = VK_FORMAT_BC2_UNORM_BLOCK;
+            break;
+        case(GL_COMPRESSED_RGBA_S3TC_DXT5_EXT):
+            blockSize = 128;
+            blockDimensions = {4,4};
+            format = VK_FORMAT_BC3_UNORM_BLOCK;
+            break;
+        case(GL_COMPRESSED_SIGNED_RED_RGTC1_EXT):
+        case(GL_COMPRESSED_RED_RGTC1_EXT):
+        case(GL_COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT):
+        case(GL_COMPRESSED_RED_GREEN_RGTC2_EXT):
+        case(GL_COMPRESSED_RGB_PVRTC_4BPPV1_IMG):
+        case(GL_COMPRESSED_RGB_PVRTC_2BPPV1_IMG):
+        case(GL_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG):
+        case(GL_COMPRESSED_RGBA_PVRTC_2BPPV1_IMG):
+        case(GL_ETC1_RGB8_OES):
+        case(GL_COMPRESSED_RGB8_ETC2):
+        case(GL_COMPRESSED_SRGB8_ETC2):
+        case(GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2):
+        case(GL_COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2):
+        case(GL_COMPRESSED_RGBA8_ETC2_EAC):
+        case(GL_COMPRESSED_SRGB8_ALPHA8_ETC2_EAC):
+        case(GL_COMPRESSED_R11_EAC):
+        case(GL_COMPRESSED_SIGNED_R11_EAC):
+        case(GL_COMPRESSED_RG11_EAC):
+        case(GL_COMPRESSED_SIGNED_RG11_EAC):
+        case (GL_COMPRESSED_RGBA_ASTC_4x4_KHR) :
+        case (GL_COMPRESSED_RGBA_ASTC_5x4_KHR) :
+        case (GL_COMPRESSED_RGBA_ASTC_5x5_KHR) :
+        case (GL_COMPRESSED_RGBA_ASTC_6x5_KHR) :
+        case (GL_COMPRESSED_RGBA_ASTC_6x6_KHR) :
+        case (GL_COMPRESSED_RGBA_ASTC_8x5_KHR) :
+        case (GL_COMPRESSED_RGBA_ASTC_8x6_KHR) :
+        case (GL_COMPRESSED_RGBA_ASTC_8x8_KHR) :
+        case (GL_COMPRESSED_RGBA_ASTC_10x5_KHR) :
+        case (GL_COMPRESSED_RGBA_ASTC_10x6_KHR) :
+        case (GL_COMPRESSED_RGBA_ASTC_10x8_KHR) :
+        case (GL_COMPRESSED_RGBA_ASTC_10x10_KHR) :
+        case (GL_COMPRESSED_RGBA_ASTC_12x10_KHR) :
+        case (GL_COMPRESSED_RGBA_ASTC_12x12_KHR) :
+        case (GL_COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR) :
+        case (GL_COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR) :
+        case (GL_COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR) :
+        case (GL_COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR) :
+        case (GL_COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR) :
+        case (GL_COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR) :
+        case (GL_COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR) :
+        case (GL_COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR) :
+        case (GL_COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR) :
+        case (GL_COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR) :
+        case (GL_COMPRESSED_SRGB8_ALPHA8_ASTC_10x8_KHR) :
+        case (GL_COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR) :
+        case (GL_COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR) :
+        case (GL_COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR) :
+            break;
+        default:
+            break;
+    }
+
+    if (blockSize==0)
+    {
+        std::cout<<"Compressed format not supported, falling back to white texture."<<std::endl;
+        return createWhiteTexture();
+    }
+
+    // stop the OSG image from deleting the image data as we are passing this on to the vsg Data object
+    auto size = image->getTotalSizeInBytesIncludingMipmaps();
+    uint8_t* data = new uint8_t[size];
+    memcpy(data, image->data(), size);
+
+    vsg::ref_ptr<vsg::Data> vsg_data;
+    if (blockSize==64)
+    {
+        if (image->r()==1)
+        {
+            vsg_data = new vsg::block64Array2D(image->s() / blockDimensions.w, image->t() / blockDimensions.h, reinterpret_cast<vsg::block64*>(data));
+        }
+        else
+        {
+            vsg_data = new vsg::block64Array3D(image->s() / blockDimensions.w, image->t() / blockDimensions.h, image->r(), reinterpret_cast<vsg::block64*>(data));
+        }
+    }
+    else
+    {
+        if (image->r()==1)
+        {
+            vsg_data = new vsg::block128Array2D(image->s() / blockDimensions.w, image->t() / blockDimensions.h, reinterpret_cast<vsg::block128*>(data));
+        }
+        else
+        {
+            vsg_data = new vsg::block128Array3D(image->s() / blockDimensions.w, image->t() / blockDimensions.h, image->r(), reinterpret_cast<vsg::block128*>(data));
+        }
+    }
+
+    vsg_data->setFormat(format);
+    vsg_data->setBlockDimensions(blockDimensions);
+
+    return vsg_data;
+}
+
 vsg::ref_ptr<vsg::Data> convertToVsg(const osg::Image* image)
 {
     if (!image)
     {
-        vsg::ref_ptr<vsg::vec4Array2D> vsg_data(new vsg::vec4Array2D(1,1));
-        vsg_data->setFormat(VK_FORMAT_R32G32B32A32_SFLOAT);
-        for(auto& color : *vsg_data)
-        {
-            color = vsg::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-        }
-        return vsg_data;
+        return createWhiteTexture();
+    }
+
+
+    if (image->isCompressed())
+    {
+        return convertCompressedImageToVsg(image);
     }
 
     osg::ref_ptr<osg::Image> new_image = formatImageToRGBA(image);
