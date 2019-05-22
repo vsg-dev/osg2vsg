@@ -20,6 +20,7 @@
 #include <osg2vsg/GeometryUtils.h>
 #include <osg2vsg/SceneBuilder.h>
 #include <osg2vsg/SceneAnalysis.h>
+#include <osg2vsg/Optimize.h>
 
 
 namespace vsg
@@ -320,6 +321,10 @@ int main(int argc, char** argv)
 
             osgUtil::Optimizer optimizer;
             optimizer.optimize(osg_scene.get(), osgUtil::Optimizer::DEFAULT_OPTIMIZATIONS);
+
+            osg2vsg::OptimizeOsgBillboards optimizeBillboards;
+            osg_scene->accept(optimizeBillboards);
+            optimizeBillboards.optimize();
         }
 
         // Collect stats for reporting.
