@@ -3,7 +3,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 layout(push_constant) uniform PushConstants {
     mat4 projection;
-    mat4 modelview;
+    mat4 modelView;
     //mat3 normal;
 } pc;
 layout(location = 0) in vec3 osg_Vertex;
@@ -30,18 +30,30 @@ out gl_PerVertex{ vec4 gl_Position; };
 
 void main()
 {
-	mat4 modelView = pc.modelview;
+    mat4 modelView = pc.modelView;
+
 #ifdef VSG_BILLBOARD
-	// xaxis
-	modelView[0][0] = 1.0;
-	modelView[0][1] = 0.0;
-	modelView[0][2] = 0.0;
-	// zaxis
-	modelView[2][0] = 0.0;
-	modelView[2][1] = 0.0;
-	modelView[2][2] = 1.0;
+    vec3 lookDir = vec3(-modelView[0][2], -modelView[1][2], -modelView[2][2]);
+
+    // rotate around local z axis
+    float l = length(lookDir.xy);
+    if (l>0.0)
+    {
+        float inv = 1.0/l;
+        float c = lookDir.y * inv;
+        float s = lookDir.x * inv;
+
+        mat4 rotation_z = mat4(c,   -s,  0.0, 0.0,
+                               s,   c,   0.0, 0.0,
+                               0.0, 0.0, 1.0, 0.0,
+                               0.0, 0.0, 0.0, 1.0);
+
+        modelView = modelView * rotation_z;
+    }
 #endif
-	gl_Position = (pc.projection * modelView) * vec4(osg_Vertex, 1.0);
+
+    gl_Position = (pc.projection * modelView) * vec4(osg_Vertex, 1.0);
+
 #ifdef VSG_TEXCOORD0
     texCoord0 = osg_MultiTexCoord0.st;
 #endif

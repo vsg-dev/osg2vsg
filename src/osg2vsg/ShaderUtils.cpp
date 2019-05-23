@@ -236,340 +236,45 @@ std::string osg2vsg::readGLSLShader(const std::string& filename, const uint32_t&
 }
 
 // create an fbx vertex shader
+#include "shaders/fbxshader_vert.cpp"
 
 std::string osg2vsg::createFbxVertexSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
 {
-    std::string source =
-        "#version 450\n" \
-        "#pragma import_defines ( VSG_NORMAL, VSG_TANGENT, VSG_COLOR, VSG_TEXCOORD0, VSG_LIGHTING, VSG_NORMAL_MAP, VSG_BILLBOARD )\n" \
-        "#extension GL_ARB_separate_shader_objects : enable\n" \
-        "layout(push_constant) uniform PushConstants {\n" \
-        "    mat4 projection;\n" \
-        "    mat4 modelview;\n" \
-        "    //mat3 normal;\n" \
-        "} pc; \n" \
-        "layout(location = 0) in vec3 osg_Vertex;\n" \
-        "#ifdef VSG_NORMAL\n" \
-        "layout(location = 1) in vec3 osg_Normal;\n" \
-        "layout(location = 1) out vec3 normalDir;\n" \
-        "#endif\n" \
-        "#ifdef VSG_TANGENT\n" \
-        "layout(location = 2) in vec4 osg_Tangent;\n" \
-        "#endif\n"
-        "#ifdef VSG_COLOR\n" \
-        "layout(location = 3) in vec4 osg_Color;\n" \
-        "layout(location = 3) out vec4 vertColor;\n" \
-        "#endif\n"
-        "#ifdef VSG_TEXCOORD0\n" \
-        "layout(location = 4) in vec2 osg_MultiTexCoord0;\n" \
-        "layout(location = 4) out vec2 texCoord0;\n" \
-        "#endif\n"
-        "#ifdef VSG_LIGHTING\n" \
-        "layout(location = 5) out vec3 viewDir;\n" \
-        "layout(location = 6) out vec3 lightDir;\n" \
-        "#endif\n" \
-        "out gl_PerVertex{ vec4 gl_Position; };\n" \
-        "\n" \
-        "void main()\n" \
-        "{\n" \
-        "    mat4 modelView = pc.modelview;\n" \
-        "#ifdef VSG_BILLBOARD\n" \
-        "    // xaxis\n" \
-        "    modelView[0][0] = 1.0;\n" \
-        "    modelView[0][1] = 0.0;\n" \
-        "    modelView[0][2] = 0.0;\n" \
-        "    // yaxis\n" \
-        "    modelView[1][0] = 0.0;\n" \
-        "    modelView[1][1] = 1.0;\n" \
-        "    modelView[1][2] = 0.0;\n" \
-        "    // zaxis\n" \
-        "    //modelView[2][0] = 0.0;\n" \
-        "    //modelView[2][1] = 0.0;\n" \
-        "    //modelView[2][2] = 1.0;\n" \
-        "#endif\n" \
-        "    gl_Position = (pc.projection * modelView) * vec4(osg_Vertex, 1.0);\n" \
-        "#ifdef VSG_TEXCOORD0\n" \
-        "    texCoord0 = osg_MultiTexCoord0.st;\n" \
-        "#endif\n" \
-        "#ifdef VSG_NORMAL\n" \
-        "    vec3 n = (modelView * vec4(osg_Normal, 0.0)).xyz;\n" \
-        "    normalDir = n;\n" \
-        "#endif\n" \
-        "#ifdef VSG_LIGHTING\n" \
-        "    vec4 lpos = /*osg_LightSource.position*/ vec4(0.0, 0.25, 1.0, 0.0);\n" \
-        "#ifdef VSG_NORMAL_MAP\n" \
-        "    vec3 t = (modelView * vec4(osg_Tangent.xyz, 0.0)).xyz;\n" \
-        "    vec3 b = cross(n, t);\n" \
-        "    vec3 dir = -vec3(modelView * vec4(osg_Vertex, 1.0));\n" \
-        "    viewDir.x = dot(dir, t);\n" \
-        "    viewDir.y = dot(dir, b);\n" \
-        "    viewDir.z = dot(dir, n);\n" \
-        "    if (lpos.w == 0.0)\n" \
-        "        dir = lpos.xyz;\n" \
-        "    else\n" \
-        "        dir += lpos.xyz;\n" \
-        "    lightDir.x = dot(dir, t); \n" \
-        "    lightDir.y = dot(dir, b);\n" \
-        "    lightDir.z = dot(dir, n); \n" \
-        "#else\n" \
-        "    viewDir = -vec3(modelView * vec4(osg_Vertex, 1.0));\n" \
-        "    if (lpos.w == 0.0)\n" \
-        "        lightDir = lpos.xyz;\n" \
-        "    else\n" \
-        "        lightDir = lpos.xyz + viewDir;\n" \
-        "#endif\n" \
-        "#endif\n" \
-        "#ifdef VSG_COLOR\n" \
-        "    vertColor = osg_Color;\n" \
-        "#endif\n" \
-        "}\n";
-
     auto defines = createPSCDefineStrings(shaderModeMask, geometryAttrbutes);
-    std::string formatedSource = processGLSLShaderSource(source, defines);
+    std::string formatedSource = processGLSLShaderSource(fbxshader_vert, defines);
 
     return formatedSource;
 }
 
 // create an fbx fragment shader
+#include "shaders/fbxshader_frag.cpp"
 
 std::string osg2vsg::createFbxFragmentSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
 {
-    std::string source =
-        "#version 450\n" \
-        "#pragma import_defines ( VSG_NORMAL, VSG_COLOR, VSG_TEXCOORD0, VSG_LIGHTING, VSG_MATERIAL, VSG_DIFFUSE_MAP, VSG_OPACITY_MAP, VSG_AMBIENT_MAP, VSG_NORMAL_MAP, VSG_SPECULAR_MAP )\n" \
-        "#extension GL_ARB_separate_shader_objects : enable\n" \
-        "#ifdef VSG_DIFFUSE_MAP\n" \
-        "layout(binding = 0) uniform sampler2D diffuseMap; \n" \
-        "#endif\n" \
-        "#ifdef VSG_OPACITY_MAP\n" \
-        "layout(binding = 1) uniform sampler2D opacityMap;\n" \
-        "#endif\n" \
-        "#ifdef VSG_AMBIENT_MAP\n" \
-        "layout(binding = 4) uniform sampler2D ambientMap; \n" \
-        "#endif\n" \
-        "#ifdef VSG_NORMAL_MAP\n" \
-        "layout(binding = 5) uniform sampler2D normalMap;\n" \
-        "#endif\n" \
-        "#ifdef VSG_SPECULAR_MAP\n" \
-        "layout(binding = 6) uniform sampler2D specularMap; \n" \
-        "#endif\n" \
-
-        "#ifdef VSG_MATERIAL\n" \
-        "layout(binding = 10) uniform MaterialData\n" \
-        "{\n" \
-        "    vec4 ambientColor;\n" \
-        "    vec4 diffuseColor; \n" \
-        "    vec4 specularColor;\n" \
-        "    float shine; \n" \
-        "} material;\n" \
-        "#endif\n" \
-
-        "#ifdef VSG_NORMAL\n" \
-        "layout(location = 1) in vec3 normalDir; \n" \
-        "#endif\n" \
-        "#ifdef VSG_COLOR\n" \
-        "layout(location = 3) in vec4 vertColor; \n" \
-        "#endif\n" \
-        "#ifdef VSG_TEXCOORD0\n" \
-        "layout(location = 4) in vec2 texCoord0;\n" \
-        "#endif\n" \
-        "#ifdef VSG_LIGHTING\n" \
-        "layout(location = 5) in vec3 viewDir; \n" \
-        "layout(location = 6) in vec3 lightDir;\n" \
-        "#endif\n" \
-        "layout(location = 0) out vec4 outColor;\n" \
-        "\n" \
-        "void main()\n" \
-        "{\n" \
-        "#ifdef VSG_DIFFUSE_MAP\n" \
-        "    vec4 base = texture(diffuseMap, texCoord0.st);\n" \
-        "#else\n" \
-        "    vec4 base = vec4(1.0,1.0,1.0,1.0);\n" \
-        "#endif\n" \
-        "#ifdef VSG_COLOR\n" \
-        "    base = base * vertColor;\n" \
-        "#endif\n" \
-        "#ifdef VSG_MATERIAL\n" \
-        "    vec3 ambientColor = material.ambientColor.rgb;\n" \
-        "    vec3 diffuseColor = material.diffuseColor.rgb;\n" \
-        "    vec3 specularColor = material.specularColor.rgb;\n" \
-        "    float shine = material.shine;\n" \
-        "#else\n" \
-        "    vec3 ambientColor = vec3(0.1,0.1,0.1);\n" \
-        "    vec3 diffuseColor = vec3(1.0,1.0,1.0);\n" \
-        "    vec3 specularColor = vec3(0.3,0.3,0.3);\n" \
-        "    float shine = 16.0;\n" \
-        "#endif\n" \
-        "#ifdef VSG_AMBIENT_MAP\n" \
-        "    ambientColor *= texture(ambientMap, texCoord0.st).r;\n" \
-        "#endif\n" \
-        "#ifdef VSG_SPECULAR_MAP\n" \
-        "    specularColor = texture(specularMap, texCoord0.st).rrr;\n" \
-        "#endif\n" \
-        "#ifdef VSG_LIGHTING\n" \
-        "#ifdef VSG_NORMAL_MAP\n" \
-        "    vec3 nDir = texture(normalMap, texCoord0.st).xyz*2.0 - 1.0;\n" \
-        "    nDir.g = -nDir.g;\n" \
-        "#else\n" \
-        "    vec3 nDir = normalDir;\n" \
-        "#endif\n" \
-        "    vec3 nd = normalize(nDir);\n" \
-        "    vec3 ld = normalize(lightDir);\n" \
-        "    vec3 vd = normalize(viewDir);\n" \
-        "    vec4 color = vec4(0.01, 0.01, 0.01, 1.0);\n" \
-        "    color.rgb += ambientColor;\n" \
-        "    float diff = max(dot(ld, nd), 0.0);\n" \
-        "    color.rgb += diffuseColor * diff;\n" \
-        "    color *= base;\n" \
-        "    if (diff > 0.0)\n" \
-        "    {\n" \
-        "        vec3 halfDir = normalize(ld + vd);\n" \
-        "        color.rgb += base.a * specularColor *\n" \
-        "            pow(max(dot(halfDir, nd), 0.0), shine);\n" \
-        "    }\n" \
-        "#else\n" \
-        "    vec4 color = base;\n" \
-        "    color.rgb *= diffuseColor;\n" \
-        "#endif\n" \
-        "    outColor = color;\n" \
-        "#ifdef VSG_OPACITY_MAP\n" \
-        "    outColor.a *= texture(opacityMap, texCoord0.st).r;\n" \
-        "#endif\n" \
-        "    if (outColor.a==0.0) discard;\n" \
-        "}\n";
-
     auto defines = createPSCDefineStrings(shaderModeMask, geometryAttrbutes);
-    std::string formatedSource = processGLSLShaderSource(source, defines);
+    std::string formatedSource = processGLSLShaderSource(fbxshader_frag, defines);
 
     return formatedSource;
 }
 
 // create a default vertex shader
+#include "shaders/defaultshader_vert.cpp"
 
 std::string osg2vsg::createDefaultVertexSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
 {
-    std::string source =
-        "#version 450\n" \
-        "#pragma import_defines ( VSG_NORMAL, VSG_COLOR, VSG_TEXCOORD0, VSG_LIGHTING )\n" \
-        "#extension GL_ARB_separate_shader_objects : enable\n" \
-        "layout(push_constant) uniform PushConstants {\n" \
-        "    mat4 projection;\n" \
-        "    mat4 moddelview;\n" \
-        "    //mat3 normal;\n" \
-        "} pc; \n" \
-        "layout(location = 0) in vec3 osg_Vertex;\n" \
-        "#ifdef VSG_NORMAL\n" \
-        "layout(location = 1) in vec3 osg_Normal;\n" \
-        "layout(location = 1) out vec3 normalDir;\n" \
-        "#endif\n" \
-        "#ifdef VSG_COLOR\n" \
-        "layout(location = 3) in vec4 osg_Color;\n" \
-        "layout(location = 3) out vec4 vertColor;\n" \
-        "#endif\n"
-        "#ifdef VSG_TEXCOORD0\n" \
-        "layout(location = 4) in vec2 osg_MultiTexCoord0;\n" \
-        "layout(location = 4) out vec2 texCoord0;\n" \
-        "#endif\n"
-        "#ifdef VSG_LIGHTING\n" \
-        "layout(location = 5) out vec3 viewDir;\n" \
-        "layout(location = 6) out vec3 lightDir;\n" \
-        "#endif\n" \
-        "out gl_PerVertex{ vec4 gl_Position; };\n" \
-        "\n" \
-        "void main()\n" \
-        "{\n" \
-        "    gl_Position = (pc.projection * pc.modelview) * vec4(osg_Vertex, 1.0);\n" \
-        "#ifdef VSG_TEXCOORD0\n" \
-        "    texCoord0 = osg_MultiTexCoord0.st;\n" \
-        "#endif\n" \
-        "#ifdef VSG_NORMAL\n" \
-        "    vec3 n = ((pc.mdoelview) * vec4(osg_Normal, 0.0)).xyz;\n" \
-        "    normalDir = n;\n" \
-        "#endif\n" \
-        "#ifdef VSG_LIGHTING\n" \
-        "    vec4 lpos = /*osg_LightSource.position*/ vec4(0.0, 0.25, 1.0, 0.0);\n" \
-        "    viewDir = -vec3((pc.modelview) * vec4(osg_Vertex, 1.0));\n" \
-        "    if (lpos.w == 0.0)\n" \
-        "        lightDir = lpos.xyz;\n" \
-        "    else\n" \
-        "        lightDir = lpos.xyz + viewDir;\n" \
-        "#endif\n" \
-        "#ifdef VSG_COLOR\n" \
-        "    vertColor = osg_Color;\n" \
-        "#endif\n" \
-        "}\n";
-
     auto defines = createPSCDefineStrings(shaderModeMask, geometryAttrbutes);
-    std::string formatedSource = processGLSLShaderSource(source, defines);
+    std::string formatedSource = processGLSLShaderSource(defaultshader_vert, defines);
 
     return formatedSource;
 }
 
 // create a default fragment shader
+#include "shaders/defaultshader_frag.cpp"
 
 std::string osg2vsg::createDefaultFragmentSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
 {
-    std::string source =
-        "#version 450\n" \
-        "#pragma import_defines ( VSG_NORMAL, VSG_COLOR, VSG_TEXCOORD0, VSG_LIGHTING, VSG_DIFFUSE_MAP )\n" \
-        "#extension GL_ARB_separate_shader_objects : enable\n" \
-        "#ifdef VSG_DIFFUSE_MAP\n" \
-        "layout(binding = 0) uniform sampler2D diffuseMap; \n" \
-        "#endif\n" \
-
-        "#ifdef VSG_NORMAL\n" \
-        "layout(location = 1) in vec3 normalDir; \n" \
-        "#endif\n" \
-        "#ifdef VSG_COLOR\n" \
-        "layout(location = 3) in vec4 vertColor; \n" \
-        "#endif\n" \
-        "#ifdef VSG_TEXCOORD0\n" \
-        "layout(location = 4) in vec2 texCoord0;\n" \
-        "#endif\n" \
-        "#ifdef VSG_LIGHTING\n" \
-        "layout(location = 5) in vec3 viewDir; \n" \
-        "layout(location = 6) in vec3 lightDir;\n" \
-        "#endif\n" \
-        "layout(location = 0) out vec4 outColor;\n" \
-        "\n" \
-        "void main()\n" \
-        "{\n" \
-        "#ifdef VSG_DIFFUSE_MAP\n" \
-        "    vec4 base = texture(diffuseMap, texCoord0.st);\n" \
-        "#else\n" \
-        "    vec4 base = vec4(1.0,1.0,1.0,1.0);\n" \
-        "#endif\n" \
-        "#ifdef VSG_COLOR\n" \
-        "    base = base * vertColor;\n" \
-        "#endif\n" \
-        "    float ambientOcclusion = 1.0;\n" \
-        "    vec3 specularColor = vec3(0.2,0.2,0.2);\n" \
-        "#ifdef VSG_LIGHTING\n" \
-        "    vec3 nDir = normalDir;\n" \
-        "    vec3 nd = normalize(nDir);\n" \
-        "    vec3 ld = normalize(lightDir);\n" \
-        "    vec3 vd = normalize(viewDir);\n" \
-        "    vec4 color = vec4(0.01, 0.01, 0.01, 1.0);\n" \
-        "    color += /*osg_Material.ambient*/ vec4(0.1, 0.1, 0.1, 0.0);\n" \
-        "    float diff = max(dot(ld, nd), 0.0);\n" \
-        "    color += /*osg_Material.diffuse*/ vec4(0.8, 0.8, 0.8, 0.0) * diff;\n" \
-        "    color *= ambientOcclusion;\n" \
-        "    color *= base;\n" \
-        "    if (diff > 0.0)\n" \
-        "    {\n" \
-        "        vec3 halfDir = normalize(ld + vd);\n" \
-        "        color.rgb += base.a * specularColor *\n" \
-        "            pow(max(dot(halfDir, nd), 0.0), 16.0/*osg_Material.shine*/);\n" \
-        "    }\n" \
-        "#else\n" \
-        "    vec4 color = base;\n" \
-        "#endif\n" \
-        "    outColor = color;\n" \
-        "    if (outColor.a==0.0) discard;\n" \
-        "}\n";
-
     auto defines = createPSCDefineStrings(shaderModeMask, geometryAttrbutes);
-    std::string formatedSource = processGLSLShaderSource(source, defines);
+    std::string formatedSource = processGLSLShaderSource(defaultshader_frag, defines);
 
     return formatedSource;
 }
