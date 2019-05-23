@@ -30,18 +30,22 @@ out gl_PerVertex{ vec4 gl_Position; };
 
 void main()
 {
-	mat4 modelView = pc.modelview;
+    mat4 modelView = pc.modelview;
 #ifdef VSG_BILLBOARD
-	// xaxis
-	modelView[0][0] = 1.0;
-	modelView[0][1] = 0.0;
-	modelView[0][2] = 0.0;
-	// zaxis
-	modelView[2][0] = 0.0;
-	modelView[2][1] = 0.0;
-	modelView[2][2] = 1.0;
+    // xaxis
+    modelView[0][0] = 1.0;
+    modelView[0][1] = 0.0;
+    modelView[0][2] = 0.0;
+    // yaxis
+    //modelView[1][0] = 0.0;
+    //modelView[1][1] = 1.0;
+    //modelView[1][2] = 0.0;
+    // zaxis
+    modelView[2][0] = 0.0;
+    modelView[2][1] = 0.0;
+    modelView[2][2] = 1.0;
 #endif
-	gl_Position = (pc.projection * modelView) * vec4(osg_Vertex, 1.0);
+    gl_Position = (pc.projection * modelView) * vec4(osg_Vertex, 1.0);
 #ifdef VSG_TEXCOORD0
     texCoord0 = osg_MultiTexCoord0.st;
 #endif
