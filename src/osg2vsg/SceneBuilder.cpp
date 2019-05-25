@@ -8,6 +8,8 @@
 #include <vsg/nodes/CullGroup.h>
 #include <vsg/nodes/CullNode.h>
 
+#include <osg/io_utils>
+
 using namespace osg2vsg;
 
 #if 0
@@ -116,18 +118,84 @@ void SceneBuilder::apply(osg::Billboard& billboard)
 
     if (billboard.getStateSet()) pushStateSet(*billboard.getStateSet());
 
+#if 1
+    nodeShaderModeMasks = BILLBOARD | SHADER_TRANSLATE;
+#else
     nodeShaderModeMasks = BILLBOARD;
+#endif
 
-    for(unsigned int i=0; i<billboard.getNumDrawables(); ++i)
+
+    if (nodeShaderModeMasks & SHADER_TRANSLATE)
     {
-        auto translate = osg::Matrixd::translate(billboard.getPosition(i));
+        using Positions = std::vector<osg::Vec3>;
+        using ChildPositions = std::map<osg::Drawable*, Positions>;
+        ChildPositions childPositions;
 
-        if (matrixstack.empty()) pushMatrix(translate);
-        else pushMatrix(translate * matrixstack.back());
+        for(unsigned int i=0; i<billboard.getNumDrawables(); ++i)
+        {
+            childPositions[billboard.getDrawable(i)].push_back(billboard.getPosition(i));
+        }
 
-        billboard.getDrawable(i)->accept(*this);
+        struct ComputeBillboardBoundingBox : public osg::Drawable::ComputeBoundingBoxCallback
+        {
+            Positions positions;
 
-        popMatrix();
+            ComputeBillboardBoundingBox(const Positions& in_positions) : positions(in_positions) {}
+
+            virtual osg::BoundingBox computeBound(const osg::Drawable& drawable) const
+            {
+                const osg::Geometry* geom = drawable.asGeometry();
+                const osg::Vec3Array* vertices = geom ? dynamic_cast<const osg::Vec3Array*>(geom->getVertexArray()) : nullptr;
+                if (vertices)
+                {
+                    osg::BoundingBox local_bb;
+                    for(auto vertex : *vertices)
+                    {
+                        local_bb.expandBy(vertex);
+                    }
+
+                    osg::BoundingBox world_bb;
+                    for(auto position : positions)
+                    {
+                        world_bb.expandBy(local_bb._min + position);
+                        world_bb.expandBy(local_bb._max + position);
+                    }
+
+                    return world_bb;
+                }
+
+                return osg::BoundingBox();
+            }
+        };
+
+
+        for(auto&[child, positions] : childPositions)
+        {
+            osg::Geometry* geometry = child->asGeometry();
+            if (geometry)
+            {
+                geometry->setComputeBoundingBoxCallback(new ComputeBillboardBoundingBox(positions));
+
+                osg::ref_ptr<osg::Vec3Array> positionArray = new osg::Vec3Array(positions.begin(), positions.end());
+                positionArray->setBinding(osg::Array::BIND_OVERALL);
+                geometry->setVertexAttribArray(7, positionArray);
+                geometry->accept(*this);
+            }
+        }
+    }
+    else
+    {
+        for(unsigned int i=0; i<billboard.getNumDrawables(); ++i)
+        {
+            auto translate = osg::Matrixd::translate(billboard.getPosition(i));
+
+            if (matrixstack.empty()) pushMatrix(translate);
+            else pushMatrix(translate * matrixstack.back());
+
+            billboard.getDrawable(i)->accept(*this);
+
+            popMatrix();
+        }
     }
 
     nodeShaderModeMasks = NONE;
@@ -772,17 +840,15 @@ vsg::ref_ptr<vsg::BindGraphicsPipeline> SceneBuilder::createBindGraphicsPipeline
 
     uint32_t vertexBindingIndex = 0;
 
-    vsg::VertexInputState::Bindings vertexBindingsDescriptions = vsg::VertexInputState::Bindings
-    {
-        VkVertexInputBindingDescription{vertexBindingIndex, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX}, // vertex data
-    };
+    vsg::VertexInputState::Bindings vertexBindingsDescriptions;
+    vsg::VertexInputState::Attributes vertexAttributeDescriptions;
 
-    vsg::VertexInputState::Attributes vertexAttributeDescriptions = vsg::VertexInputState::Attributes
+    // setup vertex array
     {
-        VkVertexInputAttributeDescription{VERTEX_CHANNEL, vertexBindingIndex, VK_FORMAT_R32G32B32_SFLOAT, 0}, // vertex data
-    };
-
-    vertexBindingIndex++;
+        vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{vertexBindingIndex, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX});
+        vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ VERTEX_CHANNEL, vertexBindingIndex, VK_FORMAT_R32G32B32_SFLOAT, 0});
+        vertexBindingIndex++;
+    }
 
     if (geometryAttributesMask & NORMAL)
     {
@@ -809,6 +875,13 @@ vsg::ref_ptr<vsg::BindGraphicsPipeline> SceneBuilder::createBindGraphicsPipeline
     {
         vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingIndex, sizeof(vsg::vec2), VK_VERTEX_INPUT_RATE_VERTEX });
         vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ TEXCOORD0_CHANNEL, vertexBindingIndex, VK_FORMAT_R32G32_SFLOAT, 0 }); // texcoord as vec2
+        vertexBindingIndex++;
+    }
+    if (geometryAttributesMask & TRANSLATE)
+    {
+        VkVertexInputRate trate = geometryAttributesMask & TRANSLATE_OVERALL ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
+        vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{ vertexBindingIndex, sizeof(vsg::vec3), trate });
+        vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{ TRANSLATE_CHANNEL, vertexBindingIndex, VK_FORMAT_R32G32B32_SFLOAT, 0 }); // tanget as vec4
         vertexBindingIndex++;
     }
 
