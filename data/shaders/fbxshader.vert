@@ -1,5 +1,5 @@
 #version 450
-#pragma import_defines ( VSG_NORMAL, VSG_TANGENT, VSG_COLOR, VSG_TEXCOORD0, VSG_LIGHTING, VSG_NORMAL_MAP, VSG_BILLBOARD )
+#pragma import_defines ( VSG_NORMAL, VSG_TANGENT, VSG_COLOR, VSG_TEXCOORD0, VSG_LIGHTING, VSG_NORMAL_MAP, VSG_BILLBOARD, VSG_TRANSLATE )
 #extension GL_ARB_separate_shader_objects : enable
 layout(push_constant) uniform PushConstants {
     mat4 projection;
@@ -26,11 +26,25 @@ layout(location = 4) out vec2 texCoord0;
 layout(location = 5) out vec3 viewDir;
 layout(location = 6) out vec3 lightDir;
 #endif
+#ifdef VSG_TRANSLATE
+layout(location = 7) in vec3 translate;
+#endif
+
+
 out gl_PerVertex{ vec4 gl_Position; };
 
 void main()
 {
     mat4 modelView = pc.modelView;
+
+#ifdef VSG_TRANSLATE
+    mat4 translate_mat = mat4(1.0, 0.0, 0.0, 0.0,
+                              0.0, 1.0, 0.0, 0.0,
+                              0.0, 0.0, 1.0, 0.0,
+                              translate.x,  translate.y,  translate.z, 1.0);
+
+    modelView = modelView * translate_mat;
+#endif
 
 #ifdef VSG_BILLBOARD
     vec3 lookDir = vec3(-modelView[0][2], -modelView[1][2], -modelView[2][2]);

@@ -11,45 +11,96 @@
 namespace osg2vsg
 {
 
-    vsg::ref_ptr<vsg::vec2Array> convertToVsg(const osg::Vec2Array* inarray)
+    vsg::ref_ptr<vsg::vec2Array> convertToVsg(const osg::Vec2Array* inarray, uint32_t bindOverallPaddingCount)
     {
         if (!inarray) return vsg::ref_ptr<vsg::vec2Array>();
 
         uint32_t count = inarray->size();
-        vsg::ref_ptr<vsg::vec2Array> outarray(new vsg::vec2Array(count));
-        std::memcpy(outarray->dataPointer(), inarray->getDataPointer(), outarray->dataSize());
+        uint32_t targetSize = std::max(count, bindOverallPaddingCount);
+
+        vsg::ref_ptr<vsg::vec2Array> outarray(new vsg::vec2Array(targetSize));
+        uint32_t i=0;
+        for(; i<count; ++i)
+        {
+            const osg::Vec2& in_value = inarray->at(i);
+            outarray->at(i) = vsg::vec2(in_value.x(), in_value.y());
+        }
+
+        if (i<bindOverallPaddingCount)
+        {
+            auto last = outarray->at(count-1);
+            for(; i<bindOverallPaddingCount; ++i)
+            {
+                outarray->at(i) = last;
+            }
+        }
+
         return outarray;
     }
 
-    vsg::ref_ptr<vsg::vec3Array> convertToVsg(const osg::Vec3Array* inarray)
+    vsg::ref_ptr<vsg::vec3Array> convertToVsg(const osg::Vec3Array* inarray, uint32_t bindOverallPaddingCount)
     {
-        if (!inarray) return vsg::ref_ptr<vsg::vec3Array>();
+        if (!inarray || inarray->size()==0) return vsg::ref_ptr<vsg::vec3Array>();
 
         uint32_t count = inarray->size();
-        vsg::ref_ptr<vsg::vec3Array> outarray(new vsg::vec3Array(count));
-        std::memcpy(outarray->dataPointer(), inarray->getDataPointer(), outarray->dataSize());
+        uint32_t targetSize = std::max(count, bindOverallPaddingCount);
+
+        vsg::ref_ptr<vsg::vec3Array> outarray(new vsg::vec3Array(targetSize));
+        uint32_t i=0;
+        for(; i<count; ++i)
+        {
+            const osg::Vec3& in_value = inarray->at(i);
+            outarray->at(i) = vsg::vec3(in_value.x(), in_value.y(), in_value.z());
+        }
+
+        if (i<bindOverallPaddingCount)
+        {
+            auto last = outarray->at(count-1);
+            for(; i<bindOverallPaddingCount; ++i)
+            {
+                outarray->at(i) = last;
+            }
+        }
+
         return outarray;
     }
 
-    vsg::ref_ptr<vsg::vec4Array> convertToVsg(const osg::Vec4Array* inarray)
+    vsg::ref_ptr<vsg::vec4Array> convertToVsg(const osg::Vec4Array* inarray, uint32_t bindOverallPaddingCount)
     {
         if (!inarray) return vsg::ref_ptr<vsg::vec4Array>();
 
         uint32_t count = inarray->size();
-        vsg::ref_ptr<vsg::vec4Array> outarray(new vsg::vec4Array(count));
-        std::memcpy(outarray->dataPointer(), inarray->getDataPointer(), outarray->dataSize());
+        uint32_t targetSize = std::max(count, bindOverallPaddingCount);
+
+        vsg::ref_ptr<vsg::vec4Array> outarray(new vsg::vec4Array(targetSize));
+        uint32_t i=0;
+        for(; i<count; ++i)
+        {
+            const osg::Vec4& in_value = inarray->at(i);
+            outarray->at(i) = vsg::vec4(in_value.x(), in_value.y(), in_value.z(), in_value.w());
+        }
+
+        if (i<bindOverallPaddingCount)
+        {
+            auto last = outarray->at(count-1);
+            for(; i<bindOverallPaddingCount; ++i)
+            {
+                outarray->at(i) = last;
+            }
+        }
+
         return outarray;
     }
 
-    vsg::ref_ptr<vsg::Data> convertToVsg(const osg::Array* inarray)
+    vsg::ref_ptr<vsg::Data> convertToVsg(const osg::Array* inarray, uint32_t bindOverallPaddingCount)
     {
         if (!inarray) return vsg::ref_ptr<vsg::Data>();
 
         switch (inarray->getType())
         {
-            case osg::Array::Type::Vec2ArrayType: return convertToVsg(dynamic_cast<const osg::Vec2Array*>(inarray));
-            case osg::Array::Type::Vec3ArrayType: return convertToVsg(dynamic_cast<const osg::Vec3Array*>(inarray));
-            case osg::Array::Type::Vec4ArrayType: return convertToVsg(dynamic_cast<const osg::Vec4Array*>(inarray));
+            case osg::Array::Type::Vec2ArrayType: return convertToVsg(dynamic_cast<const osg::Vec2Array*>(inarray), bindOverallPaddingCount);
+            case osg::Array::Type::Vec3ArrayType: return convertToVsg(dynamic_cast<const osg::Vec3Array*>(inarray), bindOverallPaddingCount);
+            case osg::Array::Type::Vec4ArrayType: return convertToVsg(dynamic_cast<const osg::Vec4Array*>(inarray), bindOverallPaddingCount);
             default: return vsg::ref_ptr<vsg::Data>();
         }
     }
@@ -77,6 +128,12 @@ namespace osg2vsg
         {
             mask |= TANGENT;
             if ( geometry->getVertexAttribBinding(6) == osg::Geometry::AttributeBinding::BIND_OVERALL) mask |= TANGENT_OVERALL;
+        }
+
+        if (geometry->getVertexAttribArray(7) != nullptr)
+        {
+            mask |= TRANSLATE;
+            if ( geometry->getVertexAttribBinding(7) == osg::Geometry::AttributeBinding::BIND_OVERALL) mask |= TRANSLATE_OVERALL;
         }
 
         if (geometry->getTexCoordArray(0) != nullptr) mask |= TEXCOORD0;
@@ -218,15 +275,37 @@ namespace osg2vsg
 
     vsg::ref_ptr<vsg::Command> convertToVsg(osg::Geometry* ingeometry, uint32_t requiredAttributesMask, GeometryTarget geometryTarget)
     {
+        uint32_t instanceCount = 1;
+
+        // work out if we need to enable instance by looking at BIND_OVERALL entries
+        // to see if any have more than one element which we'll interpret requesting instancing, such as used for our custom osg::Billboard handling.
+        {
+            osg::Geometry::ArrayList arrays;
+            if (ingeometry->getArrayList(arrays))
+            {
+                for(auto& array : arrays)
+                {
+                    if (array->getBinding()==osg::Array::BIND_OVERALL)
+                    {
+                        if (instanceCount < array->getNumElements()) instanceCount = array->getNumElements();
+                    }
+                }
+            }
+
+        }
+
+        uint32_t bindOverallPaddingCount = instanceCount;
+
+
         // convert attribute arrays, create defaults for any requested that don't exist for now to ensure pipline gets required data
-        vsg::ref_ptr<vsg::Data> vertices(osg2vsg::convertToVsg(ingeometry->getVertexArray()));
+        vsg::ref_ptr<vsg::Data> vertices(osg2vsg::convertToVsg(ingeometry->getVertexArray(), bindOverallPaddingCount));
         if (!vertices.valid() || vertices->valueCount() == 0) return vsg::ref_ptr<vsg::Geometry>();
 
         // normals
-        vsg::ref_ptr<vsg::Data> normals(osg2vsg::convertToVsg(ingeometry->getNormalArray()));
+        vsg::ref_ptr<vsg::Data> normals(osg2vsg::convertToVsg(ingeometry->getNormalArray(), bindOverallPaddingCount));
 
         // tangents
-        vsg::ref_ptr<vsg::Data> tangents(osg2vsg::convertToVsg(ingeometry->getVertexAttribArray(6)));
+        vsg::ref_ptr<vsg::Data> tangents(osg2vsg::convertToVsg(ingeometry->getVertexAttribArray(6), bindOverallPaddingCount));
         if ((!tangents.valid() || tangents->valueCount() == 0) && (requiredAttributesMask & TANGENT))
         {
             osg::ref_ptr<osgUtil::TangentSpaceGenerator> tangentSpaceGenerator = new osgUtil::TangentSpaceGenerator();
@@ -237,7 +316,7 @@ namespace osg2vsg
 
             if (tangentArray && tangentArray->size() > 0)
             {
-                tangents = osg2vsg::convertToVsg(tangentArray);
+                tangents = osg2vsg::convertToVsg(tangentArray, bindOverallPaddingCount);
                 // bind them to the osg geometry too??
                 ingeometry->setVertexAttribArray(6, tangentArray);
                 ingeometry->setVertexAttribBinding(6, osg::Geometry::BIND_PER_VERTEX);
@@ -245,10 +324,12 @@ namespace osg2vsg
         }
 
         // colors
-        vsg::ref_ptr<vsg::Data> colors(osg2vsg::convertToVsg(ingeometry->getColorArray()));
+        vsg::ref_ptr<vsg::Data> colors(osg2vsg::convertToVsg(ingeometry->getColorArray(), bindOverallPaddingCount));
 
         // tex0
-        vsg::ref_ptr<vsg::Data> texcoord0(osg2vsg::convertToVsg(ingeometry->getTexCoordArray(0)));
+        vsg::ref_ptr<vsg::Data> texcoord0(osg2vsg::convertToVsg(ingeometry->getTexCoordArray(0), bindOverallPaddingCount));
+
+        vsg::ref_ptr<vsg::Data> translations(osg2vsg::convertToVsg(ingeometry->getVertexAttribArray(7), bindOverallPaddingCount));
 
         // fill arrays data list THE ORDER HERE IS IMPORTANT
         auto attributeArrays = vsg::DataList{ vertices }; // always have verticies
@@ -256,6 +337,7 @@ namespace osg2vsg
         if (tangents.valid() && tangents->valueCount() > 0) attributeArrays.push_back(tangents);
         if (colors.valid() && colors->valueCount() > 0) attributeArrays.push_back(colors);
         if (texcoord0.valid() && texcoord0->valueCount() > 0) attributeArrays.push_back(texcoord0);
+        if (translations.valid() && translations->valueCount() > 0) attributeArrays.push_back(translations);
 
         // convert indicies
 
@@ -287,7 +369,7 @@ namespace osg2vsg
                 {
                     osg::DrawArrays* da = dynamic_cast<osg::DrawArrays*>((*itr).get());
 
-                    drawCommands.push_back(vsg::Draw::create(da->getCount(), 1, da->getFirst(), 0));
+                    drawCommands.push_back(vsg::Draw::create(da->getCount(), instanceCount, da->getFirst(), 0));
                 }
             }
         }
@@ -313,7 +395,7 @@ namespace osg2vsg
             if(vsgindices)
             {
                 commands->addChild( vsg::BindIndexBuffer::create(vsgindices) );
-                commands->addChild( vsg::DrawIndexed::create(vsgindices->valueCount(), 1, 0, 0, 0) );
+                commands->addChild( vsg::DrawIndexed::create(vsgindices->valueCount(), instanceCount, 0, 0, 0) );
             }
 
             return commands;
@@ -326,7 +408,7 @@ namespace osg2vsg
             vid->_indices = vsgindices;
             vid->_indexType = VK_INDEX_TYPE_UINT16;
             vid->indexCount = vsgindices->size();
-            vid->instanceCount = 1;
+            vid->instanceCount = instanceCount;
             vid->firstIndex = 0;
             vid->vertexOffset = 0;
             vid->firstInstance = 0;
@@ -345,7 +427,7 @@ namespace osg2vsg
         {
             geometry->_indices = vsgindices;
 
-            drawCommands.push_back(vsg::DrawIndexed::create(vsgindices->valueCount(), 1, 0, 0, 0));
+            drawCommands.push_back(vsg::DrawIndexed::create(vsgindices->valueCount(), instanceCount, 0, 0, 0));
         }
 
         geometry->_commands = drawCommands;

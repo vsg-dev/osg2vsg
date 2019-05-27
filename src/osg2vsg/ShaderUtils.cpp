@@ -77,6 +77,8 @@ std::vector<std::string> createPSCDefineStrings(const uint32_t& shaderModeMask, 
 
     if (shaderModeMask & BILLBOARD) defines.push_back("VSG_BILLBOARD");
 
+    if (shaderModeMask & SHADER_TRANSLATE) defines.push_back("VSG_TRANSLATE");
+
     return defines;
 }
 
