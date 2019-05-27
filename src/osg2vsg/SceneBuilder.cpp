@@ -118,11 +118,14 @@ void SceneBuilder::apply(osg::Billboard& billboard)
 
     if (billboard.getStateSet()) pushStateSet(*billboard.getStateSet());
 
-#if 1
-    nodeShaderModeMasks = BILLBOARD | SHADER_TRANSLATE;
-#else
-    nodeShaderModeMasks = BILLBOARD;
-#endif
+    if (billboardTransform)
+    {
+        nodeShaderModeMasks = BILLBOARD;
+    }
+    else
+    {
+        nodeShaderModeMasks = BILLBOARD | SHADER_TRANSLATE;
+    }
 
 
     if (nodeShaderModeMasks & SHADER_TRANSLATE)

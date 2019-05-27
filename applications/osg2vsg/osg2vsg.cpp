@@ -234,6 +234,7 @@ int main(int argc, char** argv)
     if (arguments.read("--cull-nodes")) sceneBuilder.insertCullNodes = true;
     if (arguments.read("--no-cull-nodes")) sceneBuilder.insertCullNodes = false;
     if (arguments.read("--no-culling")) { sceneBuilder.insertCullGroups = false; sceneBuilder.insertCullNodes = false; }
+    if (arguments.read("--billboard-transform")) { sceneBuilder.billboardTransform = true; }
     if (arguments.read("--Geometry")) { sceneBuilder.geometryTarget = osg2vsg::VSG_GEOMETRY; }
     if (arguments.read("--VertexIndexDraw")) { sceneBuilder.geometryTarget = osg2vsg::VSG_VERTEXINDEXDRAW; }
     if (arguments.read("--Commands")) { sceneBuilder.geometryTarget = osg2vsg::VSG_COMMANDS; }

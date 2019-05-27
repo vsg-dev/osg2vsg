@@ -72,6 +72,7 @@ namespace osg2vsg
         bool insertCullGroups = true;
         bool insertCullNodes = true;
         bool useBindDescriptorSet = true;
+        bool billboardTransform = false;
 
         GeometryTarget geometryTarget = VSG_VERTEXINDEXDRAW;
 
