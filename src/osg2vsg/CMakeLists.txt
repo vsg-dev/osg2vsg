@@ -5,6 +5,7 @@ set(HEADERS
     ${HEADER_PATH}/Export.h
     ${HEADER_PATH}/ImageUtils.h
     ${HEADER_PATH}/GeometryUtils.h
+    ${HEADER_PATH}/Optimize.h
     ${HEADER_PATH}/ShaderUtils.h
     ${HEADER_PATH}/SceneBuilder.h
     ${HEADER_PATH}/SceneAnalysis.h
@@ -13,6 +14,7 @@ set(HEADERS
 set(SOURCES
     ImageUtils.cpp
     GeometryUtils.cpp
+    Optimize.cpp
     ShaderUtils.cpp
     SceneBuilder.cpp
     SceneAnalysis.cpp
