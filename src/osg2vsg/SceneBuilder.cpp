@@ -734,7 +734,7 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createVSG(vsg::Paths& searchPaths)
     return group;
 }
 
-vsg::ref_ptr<vsg::DescriptorImages> SceneBuilder::convertToVsgTexture(const osg::Texture* osgtexture)
+vsg::ref_ptr<vsg::DescriptorImage> SceneBuilder::convertToVsgTexture(const osg::Texture* osgtexture)
 {
     if (auto itr = texturesMap.find(osgtexture); itr != texturesMap.end()) return itr->second;
 
@@ -743,12 +743,12 @@ vsg::ref_ptr<vsg::DescriptorImages> SceneBuilder::convertToVsgTexture(const osg:
     if (!textureData)
     {
         // DEBUG_OUTPUT << "Could not convert osg image data" << std::endl;
-        return vsg::ref_ptr<vsg::DescriptorImages>();
+        return vsg::ref_ptr<vsg::DescriptorImage>();
     }
 
     vsg::ref_ptr<vsg::Sampler> sampler = vsg::Sampler::create();
     sampler->info() = convertToSamplerCreateInfo(osgtexture);
-    vsg::ref_ptr<vsg::DescriptorImages> texture = vsg::DescriptorImages::create(0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, vsg::SamplerImages{vsg::SamplerImage(sampler, textureData)});
+    auto texture = vsg::DescriptorImage::create(0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, vsg::SamplerImage(sampler, textureData));
 
     texturesMap[osgtexture] = texture;
 

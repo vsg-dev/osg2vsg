@@ -42,7 +42,7 @@ namespace osg2vsg
 
         using GeometriesMap = std::map<const osg::Geometry*, vsg::ref_ptr<vsg::Command>>;
 
-        using TexturesMap = std::map<const osg::Texture*, vsg::ref_ptr<vsg::DescriptorImages>>;
+        using TexturesMap = std::map<const osg::Texture*, vsg::ref_ptr<vsg::DescriptorImage>>;
 
         struct UniqueStateSet
         {
@@ -114,7 +114,7 @@ namespace osg2vsg
         vsg::ref_ptr<vsg::Node> createVSG(vsg::Paths& searchPaths);
 
         // core VSG style usage
-        vsg::ref_ptr<vsg::DescriptorImages> convertToVsgTexture(const osg::Texture* osgtexture);
+        vsg::ref_ptr<vsg::DescriptorImage> convertToVsgTexture(const osg::Texture* osgtexture);
 
         vsg::ref_ptr<vsg::DescriptorSet> createVsgStateSet(const vsg::DescriptorSetLayouts& descriptorSetLayouts, const osg::StateSet* stateset, uint32_t shaderModeMask);
         vsg::ref_ptr<vsg::BindGraphicsPipeline> createBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryAttributesMask, const std::string& vertShaderPath = "", const std::string& fragShaderPath = "");
