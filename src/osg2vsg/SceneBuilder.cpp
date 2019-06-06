@@ -734,7 +734,7 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createVSG(vsg::Paths& searchPaths)
     return group;
 }
 
-vsg::ref_ptr<vsg::Texture> SceneBuilder::convertToVsgTexture(const osg::Texture* osgtexture)
+vsg::ref_ptr<vsg::DescriptorImages> SceneBuilder::convertToVsgTexture(const osg::Texture* osgtexture)
 {
     if (auto itr = texturesMap.find(osgtexture); itr != texturesMap.end()) return itr->second;
 
@@ -743,11 +743,12 @@ vsg::ref_ptr<vsg::Texture> SceneBuilder::convertToVsgTexture(const osg::Texture*
     if (!textureData)
     {
         // DEBUG_OUTPUT << "Could not convert osg image data" << std::endl;
-        return vsg::ref_ptr<vsg::Texture>();
+        return vsg::ref_ptr<vsg::DescriptorImages>();
     }
-    vsg::ref_ptr<vsg::Texture> texture = vsg::Texture::create();
-    texture->_textureData = textureData;
-    texture->_samplerInfo = convertToSamplerCreateInfo(osgtexture);
+
+    vsg::ref_ptr<vsg::Sampler> sampler = vsg::Sampler::create();
+    sampler->info() = convertToSamplerCreateInfo(osgtexture);
+    vsg::ref_ptr<vsg::DescriptorImages> texture = vsg::DescriptorImages::create(0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, vsg::SamplerImages{vsg::SamplerImage(sampler, textureData)});
 
     texturesMap[osgtexture] = texture;
 
@@ -768,7 +769,7 @@ vsg::ref_ptr<vsg::DescriptorSet> SceneBuilder::createVsgStateSet(const vsg::Desc
         const osg::Texture* osgtex = dynamic_cast<const osg::Texture*>(texatt);
         if (osgtex)
         {
-            vsg::ref_ptr<vsg::Texture> vsgtex = convertToVsgTexture(osgtex);
+            auto vsgtex = convertToVsgTexture(osgtex);
             if (vsgtex)
             {
                 // shaders are looking for textures in original units
@@ -778,7 +779,7 @@ vsg::ref_ptr<vsg::DescriptorSet> SceneBuilder::createVsgStateSet(const vsg::Desc
             }
             else
             {
-                std::cout<<"createVsgStateSet(..) osg::Texture, with i="<<i<<" found but cannot be mapped to vsg::Texture."<<std::endl;
+                std::cout<<"createVsgStateSet(..) osg::Texture, with i="<<i<<" found but cannot be mapped to vsg::DescriptorImage."<<std::endl;
             }
         }
     };

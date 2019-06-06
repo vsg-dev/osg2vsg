@@ -140,12 +140,12 @@ namespace osg2vsg
 
         void apply(vsg::Object& object) override
         {
-            if (typeid(object)==typeid(vsg::Texture))
+            if (typeid(object)==typeid(vsg::DescriptorImage))
             {
-                vsg::Texture* texture = static_cast<vsg::Texture*>(&object);
-                if (texture->_textureData)
+                vsg::DescriptorImage* descriptorImage = static_cast<vsg::DescriptorImage*>(&object);
+                if (descriptorImage->getImage())
                 {
-                    objects->addChild(texture->_textureData);
+                    objects->addChild(vsg::ref_ptr<Object>(descriptorImage->getImage()));
                 }
             }
 
