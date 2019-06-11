@@ -35,7 +35,8 @@ namespace osg2vsg
         AMBIENT_TEXTURE_UNIT,
         NORMAL_TEXTURE_UNIT,
         SPECULAR_TEXTURE_UNIT,
-        SHININESS_TEXTURE_UNIT
+        SHININESS_TEXTURE_UNIT,
+        MATERIAL_BINDING = 10 // same value as used in the shader
     };
 
     extern OSG2VSG_DECLSPEC uint32_t calculateShaderModeMask(const osg::StateSet* stateSet);

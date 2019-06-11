@@ -748,8 +748,8 @@ vsg::ref_ptr<vsg::DescriptorImage> SceneBuilder::convertToVsgTexture(const osg::
 
     vsg::ref_ptr<vsg::Sampler> sampler = vsg::Sampler::create();
     sampler->info() = convertToSamplerCreateInfo(osgtexture);
-    auto texture = vsg::DescriptorImage::create(0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, vsg::SamplerImage(sampler, textureData));
 
+    auto texture = vsg::DescriptorImage::create(vsg::SamplerImage(sampler, textureData), 0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     texturesMap[osgtexture] = texture;
 
     return texture;
@@ -786,12 +786,10 @@ vsg::ref_ptr<vsg::DescriptorSet> SceneBuilder::createVsgStateSet(const vsg::Desc
 
     // add material first
     const osg::Material* osg_material = dynamic_cast<const osg::Material*>(stateset->getAttribute(osg::StateAttribute::Type::MATERIAL));
-    if (osg_material != nullptr && stateset->getMode(GL_COLOR_MATERIAL) == osg::StateAttribute::Values::ON)
+    if ((shaderModeMask & ShaderModeMask::MATERIAL) && (osg_material != nullptr) /*&& stateset->getMode(GL_COLOR_MATERIAL) == osg::StateAttribute::Values::ON*/)
     {
         vsg::ref_ptr<vsg::MaterialValue> matdata = convertToMaterialValue(osg_material);
-        vsg::ref_ptr<vsg::Uniform> vsg_materialUniform = vsg::Uniform::create();
-        vsg_materialUniform->_dataList.push_back(matdata);
-        vsg_materialUniform->_dstBinding = 10; // just use high value for now, should maybe put uniforms into a different descriptor set to simplify binding indexes
+        auto vsg_materialUniform = vsg::DescriptorBuffer::create(matdata, MATERIAL_BINDING); // just use high value for now, should maybe put uniforms into a different descriptor set to simplify binding indexes
         descriptors.push_back(vsg_materialUniform);
     }
 
@@ -823,8 +821,8 @@ vsg::ref_ptr<vsg::BindGraphicsPipeline> SceneBuilder::createBindGraphicsPipeline
 
     vsg::DescriptorSetLayoutBindings descriptorBindings;
 
-    // add material first if any (for now material is hardcoded to binding 10)
-    if (shaderModeMask & MATERIAL) descriptorBindings.push_back({ 10, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr }); // { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
+    // add material first if any (for now material is hardcoded to binding MATERIAL_BINDING)
+    if (shaderModeMask & MATERIAL) descriptorBindings.push_back({ MATERIAL_BINDING, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr }); // { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
 
     // these need to go in incremental order by texture unit value as that how they will have been added to the desctiptor set
     // VkDescriptorSetLayoutBinding { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
