@@ -258,7 +258,7 @@ int main(int argc, char** argv)
     VsgNodes vsgNodes;
 
     // read any vsg files
-    vsg::vsgReaderWriter io;
+    vsg::ReaderWriter_vsg io;
 
     for (int i=1; i<argc; ++i)
     {
