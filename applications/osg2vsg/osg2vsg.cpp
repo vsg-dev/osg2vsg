@@ -258,7 +258,7 @@ int main(int argc, char** argv)
     VsgNodes vsgNodes;
 
     // read any vsg files
-    vsg::vsgReaderWriter io;
+    vsg::ReaderWriter_vsg io;
 
     for (int i=1; i<argc; ++i)
     {
@@ -266,7 +266,7 @@ int main(int argc, char** argv)
 
         auto before_vsg_load = std::chrono::steady_clock::now();
 
-        auto loaded_scene = io.read<vsg::Node>(filename);
+        auto loaded_scene = io.read_cast<vsg::Node>(filename);
 
         auto vsg_loadTime = std::chrono::duration<double, std::chrono::milliseconds::period>(std::chrono::steady_clock::now() - before_vsg_load).count();
 
@@ -386,7 +386,7 @@ int main(int argc, char** argv)
                 vsg_scene->setObject("batch", leafDataCollection.objects);
             }
 
-            if (io.writeFile(vsg_scene, outputFilename))
+            if (io.write(vsg_scene, outputFilename))
             {
                 return 1;
             }
