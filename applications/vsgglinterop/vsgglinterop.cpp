@@ -107,9 +107,8 @@ public:
         osg::Texture2D(image),
         _handle(handle),
         _tiling(tiling),
-        _memory(0),
+        //_memory(0),
         _isDedicated(isDedicated),
-        _textureId(0),
         _srcLayout(GL_LAYOUT_GENERAL_EXT),
         _dstLayout(GL_LAYOUT_GENERAL_EXT)
     {}
@@ -176,8 +175,8 @@ public:
                 GLuint glTiling = _tiling == VK_IMAGE_TILING_LINEAR ? GL_LINEAR_TILING_EXT : GL_OPTIMAL_TILING_EXT;
 
                 // create texture storage using the memory
-                _memExt->glTextureParameteri(_textureId, GL_TEXTURE_TILING_EXT, glTiling);
-                _memExt->glTextureStorageMem2DEXT(_textureId, 1, GL_RGBA8, _image->s(), _image->t(), _memory, 0);
+                _memExt->glTextureParameteri(textureObject->id(), GL_TEXTURE_TILING_EXT, glTiling);
+                _memExt->glTextureStorageMem2DEXT(textureObject->id(), 1, GL_RGBA8, _image->s(), _image->t(), memory, 0);
                 
                 glTexImage2D(GL_TEXTURE_2D, 0, _internalFormat,
                     _textureWidth, _textureHeight, 0,
@@ -197,10 +196,9 @@ public:
 public:
     HandleType _handle;
     VkImageTiling _tiling;
-    GLuint _memory;
+    //GLuint _memory;
     bool _isDedicated;
 
-    GLuint _textureId;
     GLenum _srcLayout;
     GLenum _dstLayout;
 };
