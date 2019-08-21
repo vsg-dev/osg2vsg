@@ -66,6 +66,8 @@ find_package(OpenThreads)
 find_package(osg)
 find_package(osgDB)
 find_package(osgUtil)
+find_package(osgGA)
+find_package(osgViewer)
 find_package(OpenGL)
 
 find_package(Vulkan)
