@@ -735,14 +735,12 @@ int main(int /*argc*/, char** /*argv*/)
     vsg::ref_ptr<vsg::Viewer> vsgviewer = createVsgViewer(image);
 
     _sharedTexture = new SharedTexture2D(_sharedImage->_memoryHandle, _sharedImage->_tiling, _sharedImage->_dedicated, image.get());
-    //_sharedTexture = new SharedTexture2D(0, VkImageTiling::VK_IMAGE_TILING_OPTIMAL, false, image.get());
     _sharedTexture->apply(*osgviewer->getCamera()->getGraphicsContext()->getState());
 
     gc->releaseContext();
 
     //buildOsgDebugScene(osgviewer, _sharedTexture.get());
-    //buildOsgDebugScene(osgviewer, new osg::Texture2D(image.get()));
-    //osgviewer->run();
+    //osgviewer->frame();
 
     // main frame loop
     
