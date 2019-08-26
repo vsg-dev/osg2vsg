@@ -17,30 +17,17 @@
 namespace osg2vsg
 {
 
-    class SceneBuilder : public osg::NodeVisitor
+    class SceneBuilderBase
     {
     public:
-        SceneBuilder();
-
-        using Geometries = std::vector<osg::ref_ptr<osg::Geometry>>;
-        using StateGeometryMap = std::map<osg::ref_ptr<osg::StateSet>, Geometries>;
-        using TransformGeometryMap = std::map<osg::Matrix, Geometries>;
-
-        struct TransformStatePair
-        {
-            std::map<osg::Matrix, StateGeometryMap> matrixStateGeometryMap;
-            std::map<osg::ref_ptr<osg::StateSet>, TransformGeometryMap> stateTransformMap;
-        };
-
-        using ProgramTransformStateMap = std::map<osg::ref_ptr<osg::StateSet>, TransformStatePair>;
+        SceneBuilderBase();
 
         using StateStack = std::vector<osg::ref_ptr<osg::StateSet>>;
         using StateSets = std::set<StateStack>;
-        using MatrixStack = std::vector<osg::Matrixd>;
         using StatePair = std::pair<osg::ref_ptr<osg::StateSet>, osg::ref_ptr<osg::StateSet>>;
         using StateMap = std::map<StateStack, StatePair>;
-
         using GeometriesMap = std::map<const osg::Geometry*, vsg::ref_ptr<vsg::Command>>;
+
 
         using TexturesMap = std::map<const osg::Texture*, vsg::ref_ptr<vsg::DescriptorImage>>;
 
@@ -56,16 +43,9 @@ namespace osg2vsg
 
         using UniqueStats = std::set<osg::ref_ptr<osg::StateSet>, UniqueStateSet>;
 
-        using Masks = std::pair<uint32_t, uint32_t>;
-        using MasksTransformStateMap = std::map<Masks, TransformStatePair>;
-
         StateStack statestack;
         StateMap stateMap;
-        MatrixStack matrixstack;
         UniqueStats uniqueStateSets;
-        ProgramTransformStateMap programTransformStateMap;
-        MasksTransformStateMap masksTransformStateMap;
-        GeometriesMap geometriesMap;
         TexturesMap texturesMap;
         bool writeToFileProgramAndDataSetSets = false;
         ShaderCompiler shaderCompiler;
@@ -91,6 +71,48 @@ namespace osg2vsg
 
         StatePair computeStatePair(osg::StateSet* stateset);
 
+
+        // core VSG style usage
+        vsg::ref_ptr<vsg::DescriptorImage> convertToVsgTexture(const osg::Texture* osgtexture);
+
+        vsg::ref_ptr<vsg::DescriptorSet> createVsgStateSet(const vsg::DescriptorSetLayouts& descriptorSetLayouts, const osg::StateSet* stateset, uint32_t shaderModeMask);
+        vsg::ref_ptr<vsg::BindGraphicsPipeline> createBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryAttributesMask, const std::string& vertShaderPath = "", const std::string& fragShaderPath = "");
+    };
+
+    class SceneBuilder : public osg::NodeVisitor, public SceneBuilderBase
+    {
+    public:
+        SceneBuilder();
+
+        using Geometries = std::vector<osg::ref_ptr<osg::Geometry>>;
+        using StateGeometryMap = std::map<osg::ref_ptr<osg::StateSet>, Geometries>;
+        using TransformGeometryMap = std::map<osg::Matrix, Geometries>;
+        using MatrixStack = std::vector<osg::Matrixd>;
+
+        struct TransformStatePair
+        {
+            std::map<osg::Matrix, StateGeometryMap> matrixStateGeometryMap;
+            std::map<osg::ref_ptr<osg::StateSet>, TransformGeometryMap> stateTransformMap;
+        };
+
+        using Masks = std::pair<uint32_t, uint32_t>;
+        using MasksTransformStateMap = std::map<Masks, TransformStatePair>;
+
+        using ProgramTransformStateMap = std::map<osg::ref_ptr<osg::StateSet>, TransformStatePair>;
+
+        MatrixStack matrixstack;
+        ProgramTransformStateMap programTransformStateMap;
+        MasksTransformStateMap masksTransformStateMap;
+        GeometriesMap geometriesMap;
+
+        osg::ref_ptr<osg::Node> createStateGeometryGraphOSG(StateGeometryMap& stateGeometryMap);
+        osg::ref_ptr<osg::Node> createTransformGeometryGraphOSG(TransformGeometryMap& transformGeometryMap);
+        osg::ref_ptr<osg::Node> createOSG();
+
+        vsg::ref_ptr<vsg::Node> createTransformGeometryGraphVSG(TransformGeometryMap& transformGeometryMap, vsg::Paths& searchPaths, uint32_t requiredGeomAttributesMask);
+
+        vsg::ref_ptr<vsg::Node> createVSG(vsg::Paths& searchPaths);
+
         void apply(osg::Node& node);
         void apply(osg::Group& group);
         void apply(osg::Transform& transform);
@@ -104,19 +126,5 @@ namespace osg2vsg
         void popMatrix();
 
         void print();
-
-        osg::ref_ptr<osg::Node> createStateGeometryGraphOSG(StateGeometryMap& stateGeometryMap);
-        osg::ref_ptr<osg::Node> createTransformGeometryGraphOSG(TransformGeometryMap& transformGeometryMap);
-        osg::ref_ptr<osg::Node> createOSG();
-
-        vsg::ref_ptr<vsg::Node> createTransformGeometryGraphVSG(TransformGeometryMap& transformGeometryMap, vsg::Paths& searchPaths, uint32_t requiredGeomAttributesMask);
-
-        vsg::ref_ptr<vsg::Node> createVSG(vsg::Paths& searchPaths);
-
-        // core VSG style usage
-        vsg::ref_ptr<vsg::DescriptorImage> convertToVsgTexture(const osg::Texture* osgtexture);
-
-        vsg::ref_ptr<vsg::DescriptorSet> createVsgStateSet(const vsg::DescriptorSetLayouts& descriptorSetLayouts, const osg::StateSet* stateset, uint32_t shaderModeMask);
-        vsg::ref_ptr<vsg::BindGraphicsPipeline> createBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryAttributesMask, const std::string& vertShaderPath = "", const std::string& fragShaderPath = "");
     };
 }
