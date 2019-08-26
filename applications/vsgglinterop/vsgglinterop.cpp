@@ -5,26 +5,24 @@
 
 #define NOMINMAX
 
-// should this be moved into vsg instance header??
-#if defined(WIN32)
-#define VK_USE_PLATFORM_WIN32_KHR
-#elif defined(ANDROID)
-#define VK_USE_PLATFORM_ANDROID_KHR
-#elif defined(APPLE)
-#define VK_USE_PLATFORM_MACOS_MVK
-#elif defined(UNIX)
-#define VK_USE_PLATFORM_XCB_KHR
-#endif
-
 #include <iostream>
 #include <vector>
 #include <set>
 
+#if defined(WIN32)
+#    define VK_USE_PLATFORM_WIN32_KHR
+#elif defined(ANDROID)
+#    define VK_USE_PLATFORM_ANDROID_KHR
+#elif defined(APPLE)
+#    define VK_USE_PLATFORM_MACOS_MVK
+#elif defined(UNIX)
+#    define VK_USE_PLATFORM_XCB_KHR
+#endif
+
 #include <vulkan/vulkan.h>
+
 #include <vsg/all.h>
 
-
-#include <gl/GL.h>
 #include <osg/GL>
 #include <osg/GLExtensions>
 #include <osg/Texture>
@@ -32,192 +30,18 @@
 #include <osgDB/ReadFile>
 #include <osgViewer/Viewer>
 
+#include "SharedTexture.h"
+#include "SharedDescriptorImage.h"
 
-#if defined(WIN32)
-using HandleType = HANDLE;
-const auto semaphoreHandleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT;
-const auto memoryHandleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
-#else
-using HandleType = int;
-const auto semaphoreHandleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT;
-const auto memoryHandleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
-#endif
-
-
-#define GL_TEXTURE_TILING_EXT             0x9580
-#define GL_DEDICATED_MEMORY_OBJECT_EXT    0x9581
-#define GL_PROTECTED_MEMORY_OBJECT_EXT    0x959B
-#define GL_NUM_TILING_TYPES_EXT           0x9582
-#define GL_TILING_TYPES_EXT               0x9583
-#define GL_OPTIMAL_TILING_EXT             0x9584
-#define GL_LINEAR_TILING_EXT              0x9585
-
-#define GL_LAYOUT_GENERAL_EXT             0x958D
-
-#define GL_HANDLE_TYPE_OPAQUE_WIN32_EXT   0x9587
-
-
-class GLMemoryObjectExtensions : public osg::Referenced
-{
-public:
-    void (GL_APIENTRY * glGetInternalformativ) (GLenum, GLenum, GLenum, GLsizei, GLint*);
-
-    void (GL_APIENTRY * glCreateTextures) (GLenum, GLsizei, GLuint*);
-    void (GL_APIENTRY * glTextureParameteri) (GLenum, GLenum, GLint);
-    
-    void (GL_APIENTRY * glCreateMemoryObjectsEXT) (GLsizei, GLuint*);
-    void (GL_APIENTRY * glMemoryObjectParameterivEXT) (GLuint, GLenum, const GLint*);
-
-    void (GL_APIENTRY * glTextureStorageMem2DEXT) (GLuint, GLsizei, GLenum, GLsizei, GLsizei, GLuint, GLuint64);
-
-#if WIN32
-    void (GL_APIENTRY * glImportMemoryWin32HandleEXT) (GLuint, GLuint64, GLenum, void*);
-#else
-    void (GL_APIENTRY * glImportMemoryFdEXT) (GLuint, GLuint64, GLenum, GLint);
-#endif
-
-    GLMemoryObjectExtensions(unsigned int in_contextID)
-    {
-        osg::setGLExtensionFuncPtr(glGetInternalformativ, "glGetInternalformativ");
-        
-        osg::setGLExtensionFuncPtr(glCreateTextures, "glCreateTextures");
-        osg::setGLExtensionFuncPtr(glTextureParameteri, "glTextureParameteri");
-
-        osg::setGLExtensionFuncPtr(glCreateMemoryObjectsEXT, "glCreateMemoryObjectsEXT");
-        osg::setGLExtensionFuncPtr(glMemoryObjectParameterivEXT, "glMemoryObjectParameterivEXT");
-
-        osg::setGLExtensionFuncPtr(glTextureStorageMem2DEXT, "glTextureStorageMem2DEXT");
-
-#if WIN32
-        osg::setGLExtensionFuncPtr(glImportMemoryWin32HandleEXT, "glImportMemoryWin32HandleEXT");
-#else
-        osg::setGLExtensionFuncPtr(glImportMemoryFdEXT, "glImportMemoryFdEXT");
-#endif
-    }
-
-};
-
-osg::ref_ptr<GLMemoryObjectExtensions> _memExt;
-
-
-class SharedTexture2D : public osg::Texture2D
-{
-public:
-    SharedTexture2D(HandleType handle, VkImageTiling tiling, bool isDedicated, osg::Image* image) :
-        osg::Texture2D(image),
-        _handle(handle),
-        _tiling(tiling),
-        //_memory(0),
-        _isDedicated(isDedicated)
-    {
-        setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
-        setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
-        setUseHardwareMipMapGeneration(false);
-        setResizeNonPowerOfTwoHint(false);
-    }
-
-    void apply(osg::State& state) const
-    {
-        const unsigned int contextID = state.getContextID();
-
-        // get the texture object for the current contextID.
-        TextureObject* textureObject = getTextureObject(contextID);
-
-        if(textureObject)
-        {
-            textureObject->bind(state);
-        }
-        else if(_image.valid() && _image->data())
-        {
-            osg::GLExtensions * extensions = state.get<osg::GLExtensions>();
-
-            // keep the image around at least till we go out of scope.
-            osg::ref_ptr<osg::Image> image = _image;
-
-            // compute the internal texture format, this set the _internalFormat to an appropriate value.
-            computeInternalFormat();
-
-            // compute the dimensions of the texture.
-            computeRequiredTextureDimensions(state, *image, _textureWidth, _textureHeight, _numMipmapLevels);
-
-            GLenum texStorageSizedInternalFormat = extensions->isTextureStorageEnabled && (_borderWidth == 0) ? selectSizedInternalFormat(_image.get()) : 0;
-
-            textureObject = generateAndAssignTextureObject(contextID, GL_TEXTURE_2D, _numMipmapLevels,
-                texStorageSizedInternalFormat != 0 ? texStorageSizedInternalFormat : _internalFormat,
-                _textureWidth, _textureHeight, 1, _borderWidth);
-
-            textureObject->bind(state);
-
-            applyTexParameters(GL_TEXTURE_2D, state);
-
-            // update the modified tag to show that it is up to date.
-            getModifiedCount(contextID) = image->getModifiedCount();
-
-            if (textureObject->isAllocated() && image->supportsTextureSubloading())
-            {
-
-            }
-            else
-            {
-                
-                // create memory object
-                GLuint memory = 0;
-                _memExt->glCreateMemoryObjectsEXT(1, &memory);
-                if (_isDedicated)
-                {
-                    static const GLint DEDICATED_FLAG = GL_TRUE;
-                    _memExt->glMemoryObjectParameterivEXT(memory, GL_DEDICATED_MEMORY_OBJECT_EXT, &DEDICATED_FLAG);
-                }
-
-#if WIN32
-                _memExt->glImportMemoryWin32HandleEXT(memory, _image->getTotalSizeInBytes(), GL_HANDLE_TYPE_OPAQUE_WIN32_EXT, _handle);
-#else
-                _memExt->glImportMemoryFdEXT(memory, _image->getTotalSizeInBytes(), GL_HANDLE_TYPE_OPAQUE_FD_EXT, _handle);
-#endif
-
-                GLuint glTiling = _tiling == VK_IMAGE_TILING_LINEAR ? GL_LINEAR_TILING_EXT : GL_OPTIMAL_TILING_EXT;
-                
-                glPixelStorei(GL_UNPACK_ALIGNMENT, image->getPacking());
-
-                // create texture storage using the memory
-                _memExt->glTextureParameteri(textureObject->id(), GL_TEXTURE_TILING_EXT, glTiling);
-                _memExt->glTextureStorageMem2DEXT(textureObject->id(), 1, texStorageSizedInternalFormat, _image->s(), _image->t(), memory, 0);
-                
-                //extensions->glTexStorage2D(GL_TEXTURE_2D, _numMipmapLevels, texStorageSizedInternalFormat, _textureWidth, _textureWidth);
-
-                unsigned char* dataPtr = (unsigned char*)image->data();
-                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
-                    _textureWidth, _textureHeight,
-                    (GLenum)image->getPixelFormat(),
-                    (GLenum)image->getDataType(),
-                    dataPtr);
-
-                textureObject->setAllocated(true);
-            }
-        }
-        else
-        {
-            glBindTexture(GL_TEXTURE_2D, 0);
-        }
-    }
-
-public:
-    HandleType _handle;
-    VkImageTiling _tiling;
-    //GLuint _memory;
-    bool _isDedicated;
-};
-
-std::set<VkImageTiling> getSupportedTiling()
+std::set<VkImageTiling> getSupportedTiling(const osg::State& state)
 {
     std::set<VkImageTiling> result;
 
     GLint numTilingTypes = 0;
 
-    void (GL_APIENTRY * glGetInternalformativ) (GLenum, GLenum, GLenum, GLsizei, GLint*);
-    osg::setGLExtensionFuncPtr(glGetInternalformativ, "glGetInternalformativ");
+    const osg::GLExtensions* extensions = state.get<osg::GLExtensions>();
 
-    glGetInternalformativ(GL_TEXTURE_2D, GL_RGBA8, GL_NUM_TILING_TYPES_EXT, 1, &numTilingTypes);
+    extensions->glGetInternalformativ(GL_TEXTURE_2D, GL_RGBA8, GL_NUM_TILING_TYPES_EXT, 1, &numTilingTypes);
     // Broken tiling detection on AMD
     if (0 == numTilingTypes)
     {
@@ -228,7 +52,7 @@ std::set<VkImageTiling> getSupportedTiling()
     std::vector<GLint> glTilingTypes;
     {
         glTilingTypes.resize(numTilingTypes);
-        glGetInternalformativ(GL_TEXTURE_2D, GL_RGBA8, GL_TILING_TYPES_EXT, numTilingTypes, glTilingTypes.data());
+        extensions->glGetInternalformativ(GL_TEXTURE_2D, GL_RGBA8, GL_TILING_TYPES_EXT, numTilingTypes, glTilingTypes.data());
     }
 
     for (const auto& glTilingType : glTilingTypes)
@@ -250,229 +74,7 @@ std::set<VkImageTiling> getSupportedTiling()
     return result;
 }
 
-namespace vsg
-{
-    class SharedDescriptorImage : public Inherit<DescriptorImage, SharedDescriptorImage>
-    {
-    public:
-        SharedDescriptorImage(){}
-
-        SharedDescriptorImage(ref_ptr<Sampler> sampler, VkExtent2D dimensions, uint32_t dstBinding = 0, uint32_t dstArrayElement = 0, VkDescriptorType descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) :
-            Inherit(sampler, vsg::ref_ptr<Data>(), dstBinding, dstArrayElement, descriptorType),
-            _dimensions(dimensions)
-        {
-        }
-
-        class MoveToTargetLayoutImageDataCommand : public Command
-        {
-        public:
-            MoveToTargetLayoutImageDataCommand(ImageData imageData) :
-                _imageData(imageData) {}
-
-            void dispatch(CommandBuffer& commandBuffer) const override
-            {
-                ref_ptr<Image> textureImage(_imageData._imageView->getImage());
-                VkImageLayout targetImageLayout = _imageData._imageLayout;
-
-                ImageMemoryBarrier postCopyImageMemoryBarrier(
-                    0, VK_ACCESS_SHADER_READ_BIT,
-                    VK_IMAGE_LAYOUT_UNDEFINED, targetImageLayout,
-                    textureImage);
-
-                postCopyImageMemoryBarrier.cmdPiplineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-            }
-
-            ImageData _imageData;
-
-        protected:
-            virtual ~MoveToTargetLayoutImageDataCommand(){}
-        };
-
-        vsg::ImageData createSharedMemoryImageData(Context& context, Sampler* sampler, VkImageLayout targetImageLayout)
-        {
-            Device* device = context.device;
-
-            // Prefer optimal if available
-            auto supportedTiling = getSupportedTiling();
-            if (supportedTiling.end() != supportedTiling.find(VK_IMAGE_TILING_OPTIMAL))
-            {
-                _tiling = VK_IMAGE_TILING_OPTIMAL;
-            }
-
-            // query chain
-            VkPhysicalDeviceImageFormatInfo2 imageFormatInfo;
-            imageFormatInfo.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2;
-            imageFormatInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
-            imageFormatInfo.type = VK_IMAGE_TYPE_2D;
-            imageFormatInfo.tiling = _tiling;
-            imageFormatInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;// VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-
-            VkPhysicalDeviceExternalImageFormatInfo externalImageFormatInfo;
-            externalImageFormatInfo.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO;
-            externalImageFormatInfo.handleType = memoryHandleType;
-            externalImageFormatInfo.pNext = nullptr;
-
-            imageFormatInfo.pNext = &externalImageFormatInfo;
-
-            // results chain
-            VkImageFormatProperties2 imageFormatProperties2;
-            imageFormatProperties2.sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2;
-
-            VkExternalImageFormatProperties externalImageFormatProperties;
-            externalImageFormatProperties.sType = VK_STRUCTURE_TYPE_EXTERNAL_IMAGE_FORMAT_PROPERTIES;
-            externalImageFormatProperties.pNext = nullptr;
-
-            imageFormatProperties2.pNext = &externalImageFormatProperties;
-            
-            vkGetPhysicalDeviceImageFormatProperties2(device->getPhysicalDevice()->getPhysicalDevice(), &imageFormatInfo, &imageFormatProperties2);
-
-            VkImageFormatProperties imageFormatProperties = imageFormatProperties2.imageFormatProperties;
-
-            if (externalImageFormatProperties.externalMemoryProperties.externalMemoryFeatures & VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT)
-            {
-                _dedicated = true;
-            }
-            
-            VkImageCreateInfo imageCreateInfo = {};
-            imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-            imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-            imageCreateInfo.extent.width = _dimensions.width;
-            imageCreateInfo.extent.height = _dimensions.height;
-            imageCreateInfo.extent.depth = 1;
-            imageCreateInfo.mipLevels = 1;
-            imageCreateInfo.arrayLayers = 1;
-            imageCreateInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
-            imageCreateInfo.tiling = _tiling;
-            imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            imageCreateInfo.usage = imageFormatInfo.usage;//VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-            imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-            imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-            imageCreateInfo.pNext = nullptr;
-                
-            ref_ptr<Image> textureImage = Image::create(device, imageCreateInfo);
-            if (!textureImage)
-            {
-                return ImageData();
-            }            
-
-
-            // Always add the export info to the memory allocation chain
-            VkExportMemoryAllocateInfo exportAllocInfo;
-            exportAllocInfo.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO;
-            exportAllocInfo.handleTypes = memoryHandleType;
-            exportAllocInfo.pNext = nullptr;
-
-            VkMemoryDedicatedAllocateInfo dedicatedMemAllocInfo;
-            if (_dedicated)
-            {
-                // Potentially add the dedicated memory allocation
-                dedicatedMemAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO;
-                dedicatedMemAllocInfo.image = textureImage->image();
-                dedicatedMemAllocInfo.buffer = VK_NULL_HANDLE;
-                dedicatedMemAllocInfo.pNext = nullptr;
-                exportAllocInfo.pNext = &dedicatedMemAllocInfo;
-            }
-
-            VkMemoryRequirements memRequirements;
-            vkGetImageMemoryRequirements(*device, *textureImage, &memRequirements);
-
-            auto[deviceMemory, offset] = context.deviceMemoryBufferPools.reserveMemory(memRequirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &exportAllocInfo);
-
-            if (!deviceMemory)
-            {
-                std::cout << "Warning: vsg::transferImageData() Failed allocate memory to reserve slot" << std::endl;
-                return ImageData();
-            }
-
-            textureImage->bind(deviceMemory, offset);
-
-#if WIN32
-            VkMemoryGetWin32HandleInfoKHR getHandleInfo;
-            getHandleInfo.sType = VK_STRUCTURE_TYPE_MEMORY_GET_WIN32_HANDLE_INFO_KHR;
-#else
-            VkMemoryGetFdInfoKHR getHandleInfo;
-            getHandleInfo.sType = VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR;
-#endif
-            getHandleInfo.handleType = memoryHandleType;
-            getHandleInfo.memory = *deviceMemory;
-            getHandleInfo.pNext = nullptr;
-
-            auto vkGetMemoryWin32HandleKHR2 = PFN_vkGetMemoryWin32HandleKHR(vkGetDeviceProcAddr(device->getDevice(), "vkGetMemoryWin32HandleKHR"));
-            vkGetMemoryWin32HandleKHR2(device->getDevice(), &getHandleInfo, &_memoryHandle);
-
-            VkImageViewCreateInfo createInfo = {};
-            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            createInfo.image = *textureImage;
-            createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            createInfo.format = imageCreateInfo.format;
-            createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            createInfo.subresourceRange.baseMipLevel = 0;
-            createInfo.subresourceRange.levelCount = 1;
-            createInfo.subresourceRange.baseArrayLayer = 0;
-            createInfo.subresourceRange.layerCount = 1;
-            createInfo.pNext = nullptr;
-
-            ref_ptr<ImageView> textureImageView = ImageView::create(device, createInfo);
-            if (textureImageView) textureImageView->setImage(textureImage);
-
-            ImageData imageData(sampler, textureImageView, targetImageLayout);
-
-            context.commands.emplace_back(new MoveToTargetLayoutImageDataCommand(imageData));
-
-            return imageData;
-        }
-
-        void compile(Context& context) override
-        {
-            // check if we have already compiled the imageData.
-            if ((_imageInfos.size() >= _imageDataList.size()) && (_imageInfos.size() >= _samplerImages.size())) return;
-
-            if (!_samplerImages.empty())
-            {
-                _imageDataList.clear();
-                _imageDataList.reserve(_samplerImages.size());
-                for (auto& samplerImage : _samplerImages)
-                {
-                    samplerImage.first->compile(context);
-                    _imageDataList.emplace_back(createSharedMemoryImageData(context, samplerImage.first, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
-                }
-            }
-
-            // convert from VSG to Vk
-            _imageInfos.resize(_imageDataList.size());
-            for (size_t i = 0; i < _imageDataList.size(); ++i)
-            {
-                const ImageData& data = _imageDataList[i];
-                VkDescriptorImageInfo& info = _imageInfos[i];
-                if (data._sampler)
-                    info.sampler = *(data._sampler);
-                else
-                    info.sampler = 0;
-
-                if (data._imageView)
-                    info.imageView = *(data._imageView);
-                else
-                    info.imageView = 0;
-
-                info.imageLayout = data._imageLayout;
-            }
-        }
-
-    public:
-        VkExtent2D _dimensions;
-        VkImageTiling _tiling { VK_IMAGE_TILING_LINEAR };
-        bool _dedicated {false};
-
-        HandleType _memoryHandle {0};
-    };
-    VSG_type_name(vsg::SharedDescriptorImage)
-}
-
-
-osg::ref_ptr<SharedTexture2D> _sharedTexture;
-vsg::ref_ptr<vsg::SharedDescriptorImage> _sharedImage;
-
-vsg::ref_ptr<vsg::Viewer> createVsgViewer(osg::ref_ptr<osg::Image> image)
+vsg::ref_ptr<vsg::Viewer> createVsgViewer(vsg::ref_ptr<vsg::Descriptor> image)
 {
     auto viewer = vsg::Viewer::create();
 
@@ -564,15 +166,12 @@ vsg::ref_ptr<vsg::Viewer> createVsgViewer(osg::ref_ptr<osg::Image> image)
     auto graphicsPipeline = vsg::GraphicsPipeline::create(pipelineLayout, vsg::ShaderStages{ vertexShader, fragmentShader }, pipelineStates);
     auto bindGraphicsPipeline = vsg::BindGraphicsPipeline::create(graphicsPipeline);
 
+
     // create texture image and associated DescriptorSets and binding
-    _sharedImage = vsg::SharedDescriptorImage::create(vsg::Sampler::create(), VkExtent2D {(uint32_t)image->s(), (uint32_t)image->t()} , 0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
-    /*vsg::Path textureFile("textures/lz.vsgb");
-    auto textureData = vsg::read_cast<vsg::Data>(vsg::findFile(textureFile, searchPaths));
-    auto texture = vsg::DescriptorImage::create(vsg::Sampler::create(), textureData, 0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);*/
-
-    auto descriptorSet = vsg::DescriptorSet::create(descriptorSetLayouts, vsg::Descriptors{ /*texture*/ _sharedImage });
+    auto descriptorSet = vsg::DescriptorSet::create(descriptorSetLayouts, vsg::Descriptors{ image });
     auto bindDescriptorSets = vsg::BindDescriptorSets::create(VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->getPipelineLayout(), 0, vsg::DescriptorSets{ descriptorSet });
+
 
     // create StateGroup as the root of the scene/command graph to hold the GraphicsProgram, and binding of Descriptors to decorate the whole graph
     auto scenegraph = vsg::StateGroup::create();
@@ -730,12 +329,22 @@ int main(int /*argc*/, char** /*argv*/)
     
     gc->makeCurrent();
 
-    if (!_memExt.valid()) _memExt = new GLMemoryObjectExtensions(0);
+    std::set<VkImageTiling> supportedTilingModes = getSupportedTiling(*gc->getState());
 
-    vsg::ref_ptr<vsg::Viewer> vsgviewer = createVsgViewer(image);
+    VkImageTiling tilingMode = VK_IMAGE_TILING_LINEAR;
+    if (supportedTilingModes.find(VK_IMAGE_TILING_OPTIMAL) != supportedTilingModes.end())
+    {
+        tilingMode = VK_IMAGE_TILING_OPTIMAL;
+    }
 
-    _sharedTexture = new SharedTexture2D(_sharedImage->_memoryHandle, _sharedImage->_tiling, _sharedImage->_dedicated, image.get());
-    _sharedTexture->apply(*osgviewer->getCamera()->getGraphicsContext()->getState());
+    vsg::ref_ptr<vsg::SharedDescriptorImage> sharedImage = vsg::SharedDescriptorImage::create(vsg::Sampler::create(), VkExtent2D{ (uint32_t)image->s(), (uint32_t)image->t() }, VK_FORMAT_R8G8B8A8_UNORM, tilingMode, 0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+
+    vsg::ref_ptr<vsg::Viewer> vsgviewer = createVsgViewer(sharedImage);
+
+
+    osg::ref_ptr<osg::SharedTexture> sharedTexture = new osg::SharedTexture(sharedImage->handle(), sharedImage->byteSize(), sharedImage->dimensions().width, sharedImage->dimensions().height, GL_RGBA8, sharedImage->tiling(), sharedImage->dedicated());
+    sharedTexture->setImage(image);
+    sharedTexture->apply(*osgviewer->getCamera()->getGraphicsContext()->getState());
 
     gc->releaseContext();
 

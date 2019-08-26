@@ -6,7 +6,7 @@ else()
     set(OPENGL_LIBRARY OpenGL::GL)
 endif()
 
-set(SOURCES vsgglinterop.cpp)
+set(SOURCES vsgglinterop.cpp SharedDescriptorImage.h SharedDescriptorImage.cpp SharedTexture.h SharedTexture.cpp)
 
 add_executable(vsgglinterop ${SOURCES})
 target_include_directories(vsgglinterop PRIVATE ${OSG_INCLUDE_DIR})
