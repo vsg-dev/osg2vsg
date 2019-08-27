@@ -67,10 +67,11 @@ namespace osg2vsg
         std::string vertexShaderPath = "";
         std::string fragmentShaderPath = "";
 
+
         osg::ref_ptr<osg::StateSet> uniqueState(osg::ref_ptr<osg::StateSet> stateset, bool programStateSet);
 
         StatePair computeStatePair(osg::StateSet* stateset);
-
+        StatePair& getStatePair();
 
         // core VSG style usage
         vsg::ref_ptr<vsg::DescriptorImage> convertToVsgTexture(const osg::Texture* osgtexture);

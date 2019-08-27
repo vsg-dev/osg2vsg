@@ -25,6 +25,10 @@ public:
     using PipelineMap = std::map<MaskPair, vsg::ref_ptr<vsg::BindGraphicsPipeline>>;
     PipelineMap pipelineMap;
 
+    using MasksAndState = std::tuple<uint32_t, uint32_t, osg::ref_ptr<osg::StateSet>>;
+    using BindDescriptorSetMap = std::map<MasksAndState, vsg::ref_ptr<vsg::BindDescriptorSet>>;
+    BindDescriptorSetMap bindDescriptorSetMap;
+
     vsg::ref_ptr<vsg::BindGraphicsPipeline> getOrCreateBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryMask)
     {
         MaskPair masks(shaderModeMask, geometryMask);
@@ -33,6 +37,38 @@ public:
         auto bindGraphicsPipeline = createBindGraphicsPipeline(shaderModeMask, geometryMask, vertexShaderPath, fragmentShaderPath);
         pipelineMap[masks] = bindGraphicsPipeline;
         return bindGraphicsPipeline;
+    }
+
+    vsg::ref_ptr<vsg::BindDescriptorSet> getOrCreateBindDescriptorSet(uint32_t shaderModeMask, uint32_t geometryMask, osg::StateSet* stateset)
+    {
+        MasksAndState masksAndState(shaderModeMask, geometryMask, stateset);
+        if (auto itr = bindDescriptorSetMap.find(masksAndState); itr != bindDescriptorSetMap.end())
+        {
+            std::cout<<"reusing bindDescriptorSet "<<itr->second.get()<<std::endl;
+            return itr->second;
+        }
+
+        MaskPair masks(shaderModeMask, geometryMask);
+
+        auto bindGraphicsPipeline = pipelineMap[masks];
+        if (!bindGraphicsPipeline) return {};
+
+        auto pipeline = bindGraphicsPipeline->getPipeline();
+        if (!pipeline) return {};
+
+        auto pipelineLayout = pipeline->getPipelineLayout();
+        if (!pipelineLayout) return {};
+
+        auto descriptorSet = createVsgStateSet(pipelineLayout->getDescriptorSetLayouts(), stateset, shaderModeMask);
+        if (!descriptorSet) return {};
+
+        std::cout<<"   We have descriptorSet "<<descriptorSet<<std::endl;
+
+        auto bindDescriptorSet = vsg::BindDescriptorSet::create(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, descriptorSet);
+
+        bindDescriptorSetMap[masksAndState] = bindDescriptorSet;
+
+        return bindDescriptorSet;
     }
 
     void optimize(osg::Node* osg_scene)
@@ -159,62 +195,41 @@ public:
     {
         if (statestack.empty()) return osg2vsg::ShaderModeMask::NONE;
 
-        auto& statepair = stateMap[statestack];
-        if (!statepair.first && !statepair.second)
-        {
-            osg::ref_ptr<osg::StateSet> combined;
-            if (statestack.size()==1)
-            {
-                std::cout<<"Assigning lone stateset"<<std::endl;
-                combined = statestack.back();
-            }
-            else
-            {
-                std::cout<<"Assigning combined stateset"<<std::endl;
-                combined = new osg::StateSet;
-                for(auto& stateset : statestack)
-                {
-                    combined->merge(*stateset);
-                }
-            }
+        auto& statepair = getStatePair();
 
-        }
-        else
-        {
-                std::cout<<"Reusing exisitng"<<std::endl;
-        }
-
-        return osg2vsg::calculateShaderModeMask(statepair.first);
+        return osg2vsg::calculateShaderModeMask(statepair.first) | osg2vsg::calculateShaderModeMask(statepair.second);
     }
 
     void apply(osg::Geometry& geometry)
     {
         ScopedPushPop spp(*this, geometry.getStateSet());
 
-
         uint32_t geometryMask = (osg2vsg::calculateAttributesMask(&geometry) | overrideGeomAttributes) & supportedGeometryAttributes;
         uint32_t shaderModeMask = (calculateShaderModeMask() | overrideShaderModeMask) & supportedShaderModeMask;
 
         std::cout<<"Have geometry with "<<statestack.size()<<" shaderModeMask="<<shaderModeMask<<", geometryMask="<<geometryMask<<std::endl;
 
-#if 1
-        auto graphicsPipelineGroup = vsg::StateGroup::create();
+        auto stategroup = vsg::StateGroup::create();
 
         auto bindGraphicsPipeline = getOrCreateBindGraphicsPipeline(shaderModeMask, geometryMask);
-        graphicsPipelineGroup->add(bindGraphicsPipeline);
-
-        auto graphicsPipeline = bindGraphicsPipeline->getPipeline();
-        auto& descriptorSetLayouts = graphicsPipeline->getPipelineLayout()->getDescriptorSetLayouts();
+        if (bindGraphicsPipeline) stategroup->add(bindGraphicsPipeline);
 
         auto vsg_geometry = osg2vsg::convertToVsg(&geometry, geometryMask, geometryTarget);
 
-        graphicsPipelineGroup->addChild(vsg_geometry);
+        if (!statestack.empty())
+        {
+            auto stateset = getStatePair().second;
+            //std::cout<<"   We have stateset "<<stateset<<", descriptorSetLayouts.size() = "<<descriptorSetLayouts.size()<<", "<<shaderModeMask<<std::endl;
+            if (stateset)
+            {
+                auto bindDescriptorSet = getOrCreateBindDescriptorSet(shaderModeMask, geometryMask, stateset);
+                if (bindDescriptorSet) stategroup->add(bindDescriptorSet);
+            }
+        }
 
-        root = graphicsPipelineGroup;
-#else
-        root = osg2vsg::convertToVsg(&geometry, requiredAttributesMask, geometryTarget);
-#endif
+        stategroup->addChild(vsg_geometry);
 
+        root = stategroup;
     }
 
     void apply(osg::Group& group)
@@ -343,9 +358,19 @@ public:
 
 int main(int argc, char** argv)
 {
+    ConvertToVsg sceneBuilder;
+
     vsg::CommandLine arguments(&argc, argv);
     auto levels = arguments.value(3, "-l");
     auto outputFilename = arguments.value(std::string(), "-o");
+    if (arguments.read("--cull-nodes")) sceneBuilder.insertCullNodes = true;
+    if (arguments.read("--no-cull-nodes")) sceneBuilder.insertCullNodes = false;
+    if (arguments.read("--no-culling")) { sceneBuilder.insertCullGroups = false; sceneBuilder.insertCullNodes = false; }
+    if (arguments.read("--billboard-transform")) { sceneBuilder.billboardTransform = true; }
+    if (arguments.read("--Geometry")) { sceneBuilder.geometryTarget = osg2vsg::VSG_GEOMETRY; }
+    if (arguments.read("--VertexIndexDraw")) { sceneBuilder.geometryTarget = osg2vsg::VSG_VERTEXINDEXDRAW; }
+    if (arguments.read("--Commands")) { sceneBuilder.geometryTarget = osg2vsg::VSG_COMMANDS; }
+    if (arguments.read({"--bind-single-ds", "--bsds"})) sceneBuilder.useBindDescriptorSet = true;
 
     std::cout<<"levels = "<<levels<<std::endl;
     std::cout<<"outputFilename = "<<outputFilename<<std::endl;
@@ -358,14 +383,13 @@ int main(int argc, char** argv)
 
     if (osg_scene.valid())
     {
-        ConvertToVsg convertToVsg;
-        convertToVsg.optimize(osg_scene);
+        sceneBuilder.optimize(osg_scene);
 
-        auto vsg_scene = convertToVsg.convert(osg_scene);
+        auto vsg_scene = sceneBuilder.convert(osg_scene);
 
         if (vsg_scene && !outputFilename.empty())
         {
-            vsg::write(convertToVsg.root, outputFilename);
+            vsg::write(vsg_scene, outputFilename);
         }
     }
 

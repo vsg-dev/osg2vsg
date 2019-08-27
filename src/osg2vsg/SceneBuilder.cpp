@@ -21,7 +21,6 @@ using namespace osg2vsg;
 SceneBuilderBase::SceneBuilderBase()
 {
 }
-
 osg::ref_ptr<osg::StateSet> SceneBuilderBase::uniqueState(osg::ref_ptr<osg::StateSet> stateset, bool programStateSet)
 {
     if (auto itr = uniqueStateSets.find(stateset); itr != uniqueStateSets.end())
@@ -72,6 +71,34 @@ SceneBuilderBase::StatePair SceneBuilderBase::computeStatePair(osg::StateSet* st
     return StatePair(uniqueState(programState, true), uniqueState(dataState, false));
 }
 
+SceneBuilderBase::StatePair& SceneBuilderBase::getStatePair()
+{
+    auto& statepair = stateMap[statestack];
+
+    if (!statestack.empty() && (!statepair.first || !statepair.second))
+    {
+        osg::ref_ptr<osg::StateSet> combined;
+        if (statestack.size()==1)
+        {
+            std::cout<<"Assigning lone stateset"<<std::endl;
+            combined = statestack.back();
+        }
+        else
+        {
+            std::cout<<"Assigning combined stateset"<<std::endl;
+            combined = new osg::StateSet;
+            for(auto& stateset : statestack)
+            {
+                combined->merge(*stateset);
+            }
+        }
+
+        statepair = computeStatePair(combined);
+
+    }
+    return statepair;
+}
+
 vsg::ref_ptr<vsg::DescriptorImage> SceneBuilderBase::convertToVsgTexture(const osg::Texture* osgtexture)
 {
     if (auto itr = texturesMap.find(osgtexture); itr != texturesMap.end()) return itr->second;
@@ -95,6 +122,8 @@ vsg::ref_ptr<vsg::DescriptorImage> SceneBuilderBase::convertToVsgTexture(const o
 
 vsg::ref_ptr<vsg::DescriptorSet> SceneBuilderBase::createVsgStateSet(const vsg::DescriptorSetLayouts& descriptorSetLayouts, const osg::StateSet* stateset, uint32_t shaderModeMask)
 {
+    std::cout<<"SceneBuilderBase::createVsgStateSet("<<descriptorSetLayouts.size()<<", stateset="<<stateset<<", shaderModeMask="<<shaderModeMask<<std::endl;
+
     if (!stateset) return vsg::ref_ptr<vsg::DescriptorSet>();
 
     uint32_t texcount = 0;
@@ -441,47 +470,13 @@ void SceneBuilder::apply(osg::Geometry& geometry)
 
     if (geometry.getStateSet()) pushStateSet(*geometry.getStateSet());
 
-    auto itr = stateMap.find(statestack);
-
-    if (itr==stateMap.end())
-    {
-        if (statestack.empty())
-        {
-            DEBUG_OUTPUT<<"New Empty StateSet's"<<std::endl;
-            stateMap[statestack] = computeStatePair(0);
-        }
-        else if (statestack.size()==1)
-        {
-            DEBUG_OUTPUT<<"New Single  StateSet's"<<std::endl;
-            stateMap[statestack] = computeStatePair(statestack.back());
-        }
-        else // multiple stateset's need to merge
-        {
-            DEBUG_OUTPUT<<"New Merging StateSet's "<<statestack.size()<<std::endl;
-            osg::ref_ptr<osg::StateSet> new_stateset = new osg::StateSet;
-            for(auto& stateset : statestack)
-            {
-                new_stateset->merge(*stateset);
-            }
-            stateMap[statestack] = computeStatePair(new_stateset);
-        }
-
-        itr = stateMap.find(statestack);
-
-        DEBUG_OUTPUT<<"Need to create StateSet"<<std::endl;
-    }
-    else
-    {
-        DEBUG_OUTPUT<<"Already have StateSet"<<std::endl;
-    }
+    StatePair& statePair = getStatePair();
 
     osg::Matrix matrix;
     if (!matrixstack.empty()) matrix = matrixstack.back();
 
     // Build programTransformStateMap
     {
-        StatePair& statePair = itr->second;
-
         TransformStatePair& transformStatePair = programTransformStateMap[statePair.first];
         StateGeometryMap& stateGeometryMap = transformStatePair.matrixStateGeometryMap[matrix];
         stateGeometryMap[statePair.second].push_back(&geometry);
@@ -492,7 +487,6 @@ void SceneBuilder::apply(osg::Geometry& geometry)
 
     // Build new masksTransformStateMap
     {
-        StatePair& statePair = itr->second;
         Masks masks(calculateShaderModeMask(statePair.first.get()) | calculateShaderModeMask(statePair.second.get()) | nodeShaderModeMasks, calculateAttributesMask(&geometry));
 
         DEBUG_OUTPUT<<"populating masks ("<<masks.first<<", "<<masks.second<<")"<<std::endl;
