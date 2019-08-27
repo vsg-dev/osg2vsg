@@ -3,10 +3,13 @@
 #include <osg/ArgumentParser>
 #include <osg/PagedLOD>
 #include <osgDB/ReadFile>
+#include <osgUtil/Optimizer>
+#include <osgUtil/MeshOptimizers>
 
 #include <osg2vsg/GeometryUtils.h>
 #include <osg2vsg/ShaderUtils.h>
 #include <osg2vsg/SceneBuilder.h>
+#include <osg2vsg/Optimize.h>
 
 
 class ConvertToVsg : public osg::NodeVisitor, public osg2vsg::SceneBuilderBase
@@ -17,6 +20,45 @@ public:
         osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN) {}
 
     vsg::ref_ptr<vsg::Node> root;
+
+    using MaskPair = std::pair<uint32_t, uint32_t>;
+    using PipelineMap = std::map<MaskPair, vsg::ref_ptr<vsg::BindGraphicsPipeline>>;
+    PipelineMap pipelineMap;
+
+    vsg::ref_ptr<vsg::BindGraphicsPipeline> getOrCreateBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryMask)
+    {
+        MaskPair masks(shaderModeMask, geometryMask);
+        if (auto itr = pipelineMap.find(masks); itr != pipelineMap.end()) return itr->second;
+
+        auto bindGraphicsPipeline = createBindGraphicsPipeline(shaderModeMask, geometryMask, vertexShaderPath, fragmentShaderPath);
+        pipelineMap[masks] = bindGraphicsPipeline;
+        return bindGraphicsPipeline;
+    }
+
+    void optimize(osg::Node* osg_scene)
+    {
+        osgUtil::IndexMeshVisitor imv;
+        #if OSG_MIN_VERSION_REQUIRED(3,6,4)
+        imv.setGenerateNewIndicesOnAllGeometries(true);
+        #endif
+        osg_scene->accept(imv);
+        imv.makeMesh();
+
+        osgUtil::VertexCacheVisitor vcv;
+        osg_scene->accept(vcv);
+        vcv.optimizeVertices();
+
+        osgUtil::VertexAccessOrderVisitor vaov;
+        osg_scene->accept(vaov);
+        vaov.optimizeOrder();
+
+        osgUtil::Optimizer optimizer;
+        optimizer.optimize(osg_scene, osgUtil::Optimizer::DEFAULT_OPTIMIZATIONS);
+
+        osg2vsg::OptimizeOsgBillboards optimizeBillboards;
+        osg_scene->accept(optimizeBillboards);
+        optimizeBillboards.optimize();
+    }
 
     vsg::ref_ptr<vsg::Node> convert(osg::Node* node)
     {
@@ -149,14 +191,30 @@ public:
     {
         ScopedPushPop spp(*this, geometry.getStateSet());
 
+
         uint32_t geometryMask = (osg2vsg::calculateAttributesMask(&geometry) | overrideGeomAttributes) & supportedGeometryAttributes;
         uint32_t shaderModeMask = (calculateShaderModeMask() | overrideShaderModeMask) & supportedShaderModeMask;
 
         std::cout<<"Have geometry with "<<statestack.size()<<" shaderModeMask="<<shaderModeMask<<", geometryMask="<<geometryMask<<std::endl;
 
-        uint32_t requiredAttributesMask = 0;
+#if 1
+        auto graphicsPipelineGroup = vsg::StateGroup::create();
 
+        auto bindGraphicsPipeline = getOrCreateBindGraphicsPipeline(shaderModeMask, geometryMask);
+        graphicsPipelineGroup->add(bindGraphicsPipeline);
+
+        auto graphicsPipeline = bindGraphicsPipeline->getPipeline();
+        auto& descriptorSetLayouts = graphicsPipeline->getPipelineLayout()->getDescriptorSetLayouts();
+
+        auto vsg_geometry = osg2vsg::convertToVsg(&geometry, geometryMask, geometryTarget);
+
+        graphicsPipelineGroup->addChild(vsg_geometry);
+
+        root = graphicsPipelineGroup;
+#else
         root = osg2vsg::convertToVsg(&geometry, requiredAttributesMask, geometryTarget);
+#endif
+
     }
 
     void apply(osg::Group& group)
@@ -165,7 +223,7 @@ public:
 
         ScopedPushPop spp(*this, group.getStateSet());
 
-        vsg_group->setValue("class", group.className());
+        //vsg_group->setValue("class", group.className());
 
         for(unsigned int i=0; i<group.getNumChildren(); ++i)
         {
@@ -301,9 +359,11 @@ int main(int argc, char** argv)
     if (osg_scene.valid())
     {
         ConvertToVsg convertToVsg;
-        osg_scene->accept(convertToVsg);
+        convertToVsg.optimize(osg_scene);
 
-        if (convertToVsg.root && !outputFilename.empty())
+        auto vsg_scene = convertToVsg.convert(osg_scene);
+
+        if (vsg_scene && !outputFilename.empty())
         {
             vsg::write(convertToVsg.root, outputFilename);
         }
