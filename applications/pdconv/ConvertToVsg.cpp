@@ -210,6 +210,12 @@ void ConvertToVsg::apply(osg::Geometry& geometry)
 
 void ConvertToVsg::apply(osg::Group& group)
 {
+    if (osgTerrain::TerrainTile* tile = dynamic_cast<osgTerrain::TerrainTile*>(&group); tile)
+    {
+        apply(*tile);
+        return;
+    }
+
     ScopedPushPop spp(*this, group.getStateSet());
 
     auto vsg_group = vsg::Group::create();
@@ -398,46 +404,60 @@ void ConvertToVsg::apply(osg::LOD& lod)
 
 void ConvertToVsg::apply(osg::PagedLOD& plod)
 {
-#if 1
-    apply((osg::LOD&)plod);
+    auto vsg_lod = vsg::PagedLOD::create();
 
-    if (root) root->setValue("class", "PagedLOD");
-#else
-    auto vsg_plod = vsg::PagedLOD::create();
+    const osg::BoundingSphere& bs = plod.getBound();
+    osg::Vec3d center = (plod.getCenterMode()==osg::LOD::USER_DEFINED_CENTER) ? plod.getCenter() : bs.center();
+    double radius = (plod.getRadius()>0.0) ? plod.getRadius() : bs.radius();
 
-    auto& vsg_plod_children  = vsg_plod->getChildren();
+    vsg_lod->setBound(vsg::dsphere(center.x(), center.y(), center.z(), radius));
 
-    addToChildrenStackAndPushNewChildrenStack(vsg_plod);
+    unsigned int numChildren = plod.getNumRanges();
 
-    for(unsigned int i=0; i<plod.getNumFileNames(); ++i)
+    const double pixel_ratio = 1.0/1080.0;
+    const double angle_ratio = 1.0/osg::DegreesToRadians(30.0); // assume a 60 fovy for reference
+
+    struct CompareChild
     {
-        auto& vsg_child = vsg_plod_children[i];
-
-        if (plod.getChild(i))
+        bool operator() (const vsg::PagedLOD::PagedLODChild& lhs, const vsg::PagedLOD::PagedLODChild& rhs) const
         {
-            Objects& vsg_nested_children = childrenStack.back();
-            vsg_nested_children.clear();
-
-            plod.getChild(i)->accept(*this);
-
-            if (!vsg_nested_children.empty())
-            {
-                Objects& vsg_nested_children = childrenStack.back();
-
-                vsg_child.child = dynamic_cast<vsg::Node*>(vsg_nested_children[0].get());
-
-                vsg_nested_children.clear();
-            }
+            return lhs.minimumScreenHeightRatio > rhs.minimumScreenHeightRatio;
         }
+    };
 
-        if (!plod.getFileName(i).empty())
-        {
-            vsg_child.filename = plod.getFileName(i);
-            filenames.push_back(vsg_child.filename);
-        }
+    using Children = std::set<vsg::PagedLOD::PagedLODChild, CompareChild>;
+    Children children;
+
+    for(unsigned int i = 0; i < numChildren; ++i)
+    {
+        auto vsg_child = convert(plod.getChild(i));
+
+        double minimumScreenHeightRatio = (plod.getRangeMode()==osg::LOD::DISTANCE_FROM_EYE_POINT) ?
+            (atan2(radius, static_cast<double>(plod.getMaxRange(i))) * angle_ratio) :
+            (plod.getMinRange(i) * pixel_ratio);
+
+        vsg::Path filename = plod.getFileName(i);
+
+        // record external filename for futuure use
+        filenames.push_back(filename);
+
+        // TODO need to adapt file to a vsg version.
+
+        children.insert(vsg::PagedLOD::PagedLODChild{minimumScreenHeightRatio, filename, vsg_child, vsg_child});
     }
 
-    popChildrenStack();
-#endif
+    // add to vsg::LOD in reverse order - highest level of detail first
+    for(auto& child : children)
+    {
+        vsg_lod->addChild(child);
+    }
+
+    root = vsg_lod;
 }
 
+void ConvertToVsg::apply(osgTerrain::TerrainTile& tile)
+{
+    std::cout<<"Have TerrainTile "<<&tile<<std::endl;
+    root = vsg::Group::create();
+    root->setValue("class", "TerrainTile");
+}

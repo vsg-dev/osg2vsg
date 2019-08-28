@@ -65,6 +65,7 @@ endforeach ()
 find_package(OpenThreads)
 find_package(osg)
 find_package(osgDB)
+find_package(osgTerrain)
 find_package(osgUtil)
 find_package(OpenGL)
 

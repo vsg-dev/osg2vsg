@@ -5,6 +5,7 @@
 #include <osgDB/ReadFile>
 #include <osgUtil/Optimizer>
 #include <osgUtil/MeshOptimizers>
+#include <osgTerrain/TerrainTile>
 
 #include <osg2vsg/GeometryUtils.h>
 #include <osg2vsg/ShaderUtils.h>
@@ -48,6 +49,8 @@ public:
 
     using NodeMap = std::map<osg::Node*, vsg::ref_ptr<vsg::Node>>;
     NodeMap nodeMap;
+
+    vsg::Paths filenames;
 
     vsg::ref_ptr<vsg::BindGraphicsPipeline> getOrCreateBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryMask);
 
@@ -96,6 +99,7 @@ public:
     void apply(osg::Billboard& billboard);
     void apply(osg::LOD& lod);
     void apply(osg::PagedLOD& plod);
+    void apply(osgTerrain::TerrainTile& terrainTile);
 
 };
 
