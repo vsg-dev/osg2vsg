@@ -14,6 +14,22 @@
 namespace osg2vsg
 {
 
+inline vsg::dmat4 convert(const osg::Matrixd& m)
+{
+    return vsg::dmat4(m(0, 0), m(1, 0), m(2, 0), m(3, 0),
+                      m(0, 1), m(1, 1), m(2, 1), m(3, 1),
+                      m(0, 2), m(1, 2), m(2, 2), m(3, 2),
+                      m(0, 3), m(1, 3), m(2, 3), m(3, 3));
+}
+
+inline vsg::mat4 convert(const osg::Matrixf& m)
+{
+    return vsg::mat4(m(0, 0), m(1, 0), m(2, 0), m(3, 0),
+                     m(0, 1), m(1, 1), m(2, 1), m(3, 1),
+                     m(0, 2), m(1, 2), m(2, 2), m(3, 2),
+                     m(0, 3), m(1, 3), m(2, 3), m(3, 3));
+}
+
 class ConvertToVsg : public osg::NodeVisitor, public osg2vsg::SceneBuilderBase
 {
 public:
@@ -74,10 +90,9 @@ public:
     uint32_t calculateShaderModeMask();
 
     void apply(osg::Geometry& geometry);
-
     void apply(osg::Group& group);
-
     void apply(osg::MatrixTransform& transform);
+    void apply(osg::Billboard& billboard);
 
 };
 

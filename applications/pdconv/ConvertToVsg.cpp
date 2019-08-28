@@ -174,6 +174,8 @@ uint32_t ConvertToVsg::calculateShaderModeMask()
     return osg2vsg::calculateShaderModeMask(statepair.first) | osg2vsg::calculateShaderModeMask(statepair.second);
 }
 
+
+
 void ConvertToVsg::apply(osg::Geometry& geometry)
 {
     ScopedPushPop spp(*this, geometry.getStateSet());
@@ -208,9 +210,9 @@ void ConvertToVsg::apply(osg::Geometry& geometry)
 
 void ConvertToVsg::apply(osg::Group& group)
 {
-    auto vsg_group = vsg::Group::create();
-
     ScopedPushPop spp(*this, group.getStateSet());
+
+    auto vsg_group = vsg::Group::create();
 
     //vsg_group->setValue("class", group.className());
 
@@ -228,15 +230,10 @@ void ConvertToVsg::apply(osg::Group& group)
 
 void ConvertToVsg::apply(osg::MatrixTransform& transform)
 {
-    osg::Matrix matrix = transform.getMatrix();
-
-    vsg::mat4 vsg_matrix = vsg::mat4(matrix(0, 0), matrix(1, 0), matrix(2, 0), matrix(3, 0),
-                                        matrix(0, 1), matrix(1, 1), matrix(2, 1), matrix(3, 1),
-                                        matrix(0, 2), matrix(1, 2), matrix(2, 2), matrix(3, 2),
-                                        matrix(0, 3), matrix(1, 3), matrix(2, 3), matrix(3, 3));
+    ScopedPushPop spp(*this, transform.getStateSet());
 
     auto vsg_transform = vsg::MatrixTransform::create();
-    vsg_transform->setMatrix(vsg_matrix);
+    vsg_transform->setMatrix(osg2vsg::convert(transform.getMatrix()));
 
     for(unsigned int i=0; i<transform.getNumChildren(); ++i)
     {
@@ -248,6 +245,110 @@ void ConvertToVsg::apply(osg::MatrixTransform& transform)
     }
 
     root = vsg_transform;
+
+}
+
+void ConvertToVsg::apply(osg::Billboard& billboard)
+{
+    ScopedPushPop spp(*this, billboard.getStateSet());
+
+    if (billboardTransform)
+    {
+        nodeShaderModeMasks = BILLBOARD;
+    }
+    else
+    {
+        nodeShaderModeMasks = BILLBOARD | SHADER_TRANSLATE;
+    }
+
+#if 0
+    if (nodeShaderModeMasks & SHADER_TRANSLATE)
+    {
+        using Positions = std::vector<osg::Vec3>;
+        using ChildPositions = std::map<osg::Drawable*, Positions>;
+        ChildPositions childPositions;
+
+        for(unsigned int i=0; i<billboard.getNumDrawables(); ++i)
+        {
+            childPositions[billboard.getDrawable(i)].push_back(billboard.getPosition(i));
+        }
+
+        struct ComputeBillboardBoundingBox : public osg::Drawable::ComputeBoundingBoxCallback
+        {
+            Positions positions;
+
+            ComputeBillboardBoundingBox(const Positions& in_positions) : positions(in_positions) {}
+
+            virtual osg::BoundingBox computeBound(const osg::Drawable& drawable) const
+            {
+                const osg::Geometry* geom = drawable.asGeometry();
+                const osg::Vec3Array* vertices = geom ? dynamic_cast<const osg::Vec3Array*>(geom->getVertexArray()) : nullptr;
+                if (vertices)
+                {
+                    osg::BoundingBox local_bb;
+                    for(auto vertex : *vertices)
+                    {
+                        local_bb.expandBy(vertex);
+                    }
+
+                    osg::BoundingBox world_bb;
+                    for(auto position : positions)
+                    {
+                        world_bb.expandBy(local_bb._min + position);
+                        world_bb.expandBy(local_bb._max + position);
+                    }
+
+                    return world_bb;
+                }
+
+                return osg::BoundingBox();
+            }
+        };
+
+
+        for(auto&[child, positions] : childPositions)
+        {
+            osg::Geometry* geometry = child->asGeometry();
+            if (geometry)
+            {
+                geometry->setComputeBoundingBoxCallback(new ComputeBillboardBoundingBox(positions));
+
+                osg::ref_ptr<osg::Vec3Array> positionArray = new osg::Vec3Array(positions.begin(), positions.end());
+                positionArray->setBinding(osg::Array::BIND_OVERALL);
+                geometry->setVertexAttribArray(7, positionArray);
+                geometry->accept(*this);
+            }
+        }
+    }
+    else
+#endif
+    {
+        auto vsg_group = vsg::Group::create();
+
+        for(unsigned int i=0; i<billboard.getNumDrawables(); ++i)
+        {
+            auto translate = osg::Matrixd::translate(billboard.getPosition(i));
+
+            auto vsg_transform = vsg::MatrixTransform::create();
+            vsg_transform->setMatrix(osg2vsg::convert(translate));
+
+            root = nullptr;
+
+            billboard.getDrawable(i)->accept(*this);
+
+            if (root)
+            {
+                vsg_transform->addChild(root);
+                vsg_group->addChild(vsg_transform);
+            }
+        }
+
+        if (vsg_group->getNumChildren()==9) root = nullptr;
+        else if (vsg_group->getNumChildren()==1) root = vsg_group->getChild(0);
+        else root = vsg_group;
+    }
+
+    nodeShaderModeMasks = NONE;
 }
 
 #if 0
