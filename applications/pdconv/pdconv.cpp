@@ -29,6 +29,9 @@ public:
     using BindDescriptorSetMap = std::map<MasksAndState, vsg::ref_ptr<vsg::BindDescriptorSet>>;
     BindDescriptorSetMap bindDescriptorSetMap;
 
+    using NodeMap = std::map<osg::Node*, vsg::ref_ptr<vsg::Node>>;
+    NodeMap nodeMap;
+
     vsg::ref_ptr<vsg::BindGraphicsPipeline> getOrCreateBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryMask)
     {
         MaskPair masks(shaderModeMask, geometryMask);
@@ -44,7 +47,7 @@ public:
         MasksAndState masksAndState(shaderModeMask, geometryMask, stateset);
         if (auto itr = bindDescriptorSetMap.find(masksAndState); itr != bindDescriptorSetMap.end())
         {
-            std::cout<<"reusing bindDescriptorSet "<<itr->second.get()<<std::endl;
+            // std::cout<<"reusing bindDescriptorSet "<<itr->second.get()<<std::endl;
             return itr->second;
         }
 
@@ -62,7 +65,7 @@ public:
         auto descriptorSet = createVsgStateSet(pipelineLayout->getDescriptorSetLayouts(), stateset, shaderModeMask);
         if (!descriptorSet) return {};
 
-        std::cout<<"   We have descriptorSet "<<descriptorSet<<std::endl;
+        // std::cout<<"   We have descriptorSet "<<descriptorSet<<std::endl;
 
         auto bindDescriptorSet = vsg::BindDescriptorSet::create(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, descriptorSet);
 
@@ -99,7 +102,18 @@ public:
     vsg::ref_ptr<vsg::Node> convert(osg::Node* node)
     {
         root = nullptr;
-        node->accept(*this);
+
+        if (auto itr = nodeMap.find(node); itr != nodeMap.end())
+        {
+            root = itr->second;
+        }
+        else
+        {
+            if (node) node->accept(*this);
+
+            nodeMap[node] = root;
+        }
+
         return root;
     }
 
@@ -207,7 +221,7 @@ public:
         uint32_t geometryMask = (osg2vsg::calculateAttributesMask(&geometry) | overrideGeomAttributes) & supportedGeometryAttributes;
         uint32_t shaderModeMask = (calculateShaderModeMask() | overrideShaderModeMask) & supportedShaderModeMask;
 
-        std::cout<<"Have geometry with "<<statestack.size()<<" shaderModeMask="<<shaderModeMask<<", geometryMask="<<geometryMask<<std::endl;
+        // std::cout<<"Have geometry with "<<statestack.size()<<" shaderModeMask="<<shaderModeMask<<", geometryMask="<<geometryMask<<std::endl;
 
         auto stategroup = vsg::StateGroup::create();
 
@@ -250,6 +264,30 @@ public:
         }
 
         root = vsg_group;
+    }
+
+    void apply(osg::MatrixTransform& transform)
+    {
+        osg::Matrix matrix = transform.getMatrix();
+
+        vsg::mat4 vsg_matrix = vsg::mat4(matrix(0, 0), matrix(1, 0), matrix(2, 0), matrix(3, 0),
+                                         matrix(0, 1), matrix(1, 1), matrix(2, 1), matrix(3, 1),
+                                         matrix(0, 2), matrix(1, 2), matrix(2, 2), matrix(3, 2),
+                                         matrix(0, 3), matrix(1, 3), matrix(2, 3), matrix(3, 3));
+
+        auto vsg_transform = vsg::MatrixTransform::create();
+        vsg_transform->setMatrix(vsg_matrix);
+
+        for(unsigned int i=0; i<transform.getNumChildren(); ++i)
+        {
+            auto child = transform.getChild(i);
+            if (auto vsg_child = convert(child); vsg_child)
+            {
+                vsg_transform->addChild(vsg_child);
+            }
+        }
+
+        root = vsg_transform;
     }
 
     #if 0

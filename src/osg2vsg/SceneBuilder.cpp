@@ -80,12 +80,10 @@ SceneBuilderBase::StatePair& SceneBuilderBase::getStatePair()
         osg::ref_ptr<osg::StateSet> combined;
         if (statestack.size()==1)
         {
-            std::cout<<"Assigning lone stateset"<<std::endl;
             combined = statestack.back();
         }
         else
         {
-            std::cout<<"Assigning combined stateset"<<std::endl;
             combined = new osg::StateSet;
             for(auto& stateset : statestack)
             {
@@ -122,8 +120,6 @@ vsg::ref_ptr<vsg::DescriptorImage> SceneBuilderBase::convertToVsgTexture(const o
 
 vsg::ref_ptr<vsg::DescriptorSet> SceneBuilderBase::createVsgStateSet(const vsg::DescriptorSetLayouts& descriptorSetLayouts, const osg::StateSet* stateset, uint32_t shaderModeMask)
 {
-    std::cout<<"SceneBuilderBase::createVsgStateSet("<<descriptorSetLayouts.size()<<", stateset="<<stateset<<", shaderModeMask="<<shaderModeMask<<std::endl;
-
     if (!stateset) return vsg::ref_ptr<vsg::DescriptorSet>();
 
     uint32_t texcount = 0;
