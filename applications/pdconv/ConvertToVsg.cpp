@@ -181,7 +181,7 @@ void ConvertToVsg::apply(osg::Geometry& geometry)
     ScopedPushPop spp(*this, geometry.getStateSet());
 
     uint32_t geometryMask = (osg2vsg::calculateAttributesMask(&geometry) | overrideGeomAttributes) & supportedGeometryAttributes;
-    uint32_t shaderModeMask = (calculateShaderModeMask() | overrideShaderModeMask) & supportedShaderModeMask;
+    uint32_t shaderModeMask = (calculateShaderModeMask() | overrideShaderModeMask | nodeShaderModeMasks) & supportedShaderModeMask;
 
     // std::cout<<"Have geometry with "<<statestack.size()<<" shaderModeMask="<<shaderModeMask<<", geometryMask="<<geometryMask<<std::endl;
 
@@ -261,7 +261,8 @@ void ConvertToVsg::apply(osg::Billboard& billboard)
         nodeShaderModeMasks = BILLBOARD | SHADER_TRANSLATE;
     }
 
-#if 0
+    auto vsg_group = vsg::Group::create();
+
     if (nodeShaderModeMasks & SHADER_TRANSLATE)
     {
         using Positions = std::vector<osg::Vec3>;
@@ -305,7 +306,6 @@ void ConvertToVsg::apply(osg::Billboard& billboard)
             }
         };
 
-
         for(auto&[child, positions] : childPositions)
         {
             osg::Geometry* geometry = child->asGeometry();
@@ -316,15 +316,17 @@ void ConvertToVsg::apply(osg::Billboard& billboard)
                 osg::ref_ptr<osg::Vec3Array> positionArray = new osg::Vec3Array(positions.begin(), positions.end());
                 positionArray->setBinding(osg::Array::BIND_OVERALL);
                 geometry->setVertexAttribArray(7, positionArray);
+
+                root = nullptr;
+
                 geometry->accept(*this);
+
+                if (root) vsg_group->addChild(root);
             }
         }
     }
     else
-#endif
     {
-        auto vsg_group = vsg::Group::create();
-
         for(unsigned int i=0; i<billboard.getNumDrawables(); ++i)
         {
             auto translate = osg::Matrixd::translate(billboard.getPosition(i));
@@ -332,21 +334,19 @@ void ConvertToVsg::apply(osg::Billboard& billboard)
             auto vsg_transform = vsg::MatrixTransform::create();
             vsg_transform->setMatrix(osg2vsg::convert(translate));
 
-            root = nullptr;
+            auto vsg_child = convert(billboard.getDrawable(i));
 
-            billboard.getDrawable(i)->accept(*this);
-
-            if (root)
+            if (vsg_child)
             {
-                vsg_transform->addChild(root);
+                vsg_transform->addChild(vsg_child);
                 vsg_group->addChild(vsg_transform);
             }
         }
-
-        if (vsg_group->getNumChildren()==9) root = nullptr;
-        else if (vsg_group->getNumChildren()==1) root = vsg_group->getChild(0);
-        else root = vsg_group;
     }
+
+    if (vsg_group->getNumChildren()==9) root = nullptr;
+    else if (vsg_group->getNumChildren()==1) root = vsg_group->getChild(0);
+    else root = vsg_group;
 
     nodeShaderModeMasks = NONE;
 }
