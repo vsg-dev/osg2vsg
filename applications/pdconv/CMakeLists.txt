@@ -15,6 +15,7 @@ if (UNIX)
 endif()
 
 set(SOURCES
+    ConvertToVsg.cpp
     pdconv.cpp)
 
 add_executable(pdconv ${SOURCES})
