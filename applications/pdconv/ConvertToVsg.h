@@ -93,6 +93,7 @@ public:
     void apply(osg::Group& group);
     void apply(osg::MatrixTransform& transform);
     void apply(osg::Billboard& billboard);
+    void apply(osg::LOD& lod);
 
 };
 

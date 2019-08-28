@@ -351,11 +351,45 @@ void ConvertToVsg::apply(osg::Billboard& billboard)
     nodeShaderModeMasks = NONE;
 }
 
-#if 0
-void apply(osg::LOD& lod)
+void ConvertToVsg::apply(osg::LOD& lod)
 {
-    traverse(plod);
+    auto vsg_lod = vsg::LOD::create();
+
+    const osg::BoundingSphere& bs = lod.getBound();
+    osg::Vec3d center = (lod.getCenterMode()==osg::LOD::USER_DEFINED_CENTER) ? lod.getCenter() : bs.center();
+    double radius = (lod.getRadius()>0.0) ? lod.getRadius() : bs.radius();
+
+    vsg_lod->setBound(vsg::dsphere(center.x(), center.y(), center.z(), radius));
+
+    unsigned int numChildren = std::min(lod.getNumChildren(), lod.getNumRanges());
+
+    const double pixel_ratio = 1.0/1080.0;
+    const double angle_ratio = 1.0/osg::DegreesToRadians(30.0); // assume a 60 fovy for reference
+
+    // osg::LOD has lowest res children first
+    std::map<double, vsg::ref_ptr<vsg::Node>> ratioChildMap;
+
+    for(unsigned int i = 0; i < numChildren; ++i)
+    {
+        auto vsg_child = convert(lod.getChild(i));
+
+        double minimumScreenHeightRatio = (lod.getRangeMode()==osg::LOD::DISTANCE_FROM_EYE_POINT) ?
+            (atan2(radius, static_cast<double>(lod.getMaxRange(i))) * angle_ratio) :
+            (lod.getMinRange(i) * pixel_ratio);
+
+        ratioChildMap[minimumScreenHeightRatio] = vsg_child;
+    }
+
+    // add to vsg::LOD in reverse order - highest level of detail first
+    for(auto itr = ratioChildMap.rbegin(); itr != ratioChildMap.rend(); ++itr)
+    {
+        vsg_lod->addChild(vsg::LOD::LODChild{itr->first, itr->second});
+    }
+
+    root = vsg_lod;
 }
+
+#if 0
 
 void apply(osg::CoordinateSystemNode& cs)
 {
