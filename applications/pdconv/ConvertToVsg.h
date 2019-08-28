@@ -92,8 +92,10 @@ public:
     void apply(osg::Geometry& geometry);
     void apply(osg::Group& group);
     void apply(osg::MatrixTransform& transform);
+    void apply(osg::CoordinateSystemNode& cs);
     void apply(osg::Billboard& billboard);
     void apply(osg::LOD& lod);
+    void apply(osg::PagedLOD& plod);
 
 };
 

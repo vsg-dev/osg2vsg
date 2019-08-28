@@ -248,6 +248,13 @@ void ConvertToVsg::apply(osg::MatrixTransform& transform)
 
 }
 
+void ConvertToVsg::apply(osg::CoordinateSystemNode& cs)
+{
+    apply((osg::Group&)cs);
+
+    if (root) root->setValue("class", "CoordinateSystemNode");
+}
+
 void ConvertToVsg::apply(osg::Billboard& billboard)
 {
     ScopedPushPop spp(*this, billboard.getStateSet());
@@ -366,18 +373,18 @@ void ConvertToVsg::apply(osg::LOD& lod)
     const double pixel_ratio = 1.0/1080.0;
     const double angle_ratio = 1.0/osg::DegreesToRadians(30.0); // assume a 60 fovy for reference
 
-    // osg::LOD has lowest res children first
+    // build a map of minimum screen ration to child
     std::map<double, vsg::ref_ptr<vsg::Node>> ratioChildMap;
-
     for(unsigned int i = 0; i < numChildren; ++i)
     {
-        auto vsg_child = convert(lod.getChild(i));
+        if (auto vsg_child = convert(lod.getChild(i)); vsg_child)
+        {
+            double minimumScreenHeightRatio = (lod.getRangeMode()==osg::LOD::DISTANCE_FROM_EYE_POINT) ?
+                (atan2(radius, static_cast<double>(lod.getMaxRange(i))) * angle_ratio) :
+                (lod.getMinRange(i) * pixel_ratio);
 
-        double minimumScreenHeightRatio = (lod.getRangeMode()==osg::LOD::DISTANCE_FROM_EYE_POINT) ?
-            (atan2(radius, static_cast<double>(lod.getMaxRange(i))) * angle_ratio) :
-            (lod.getMinRange(i) * pixel_ratio);
-
-        ratioChildMap[minimumScreenHeightRatio] = vsg_child;
+            ratioChildMap[minimumScreenHeightRatio] = vsg_child;
+        }
     }
 
     // add to vsg::LOD in reverse order - highest level of detail first
@@ -389,15 +396,13 @@ void ConvertToVsg::apply(osg::LOD& lod)
     root = vsg_lod;
 }
 
-#if 0
-
-void apply(osg::CoordinateSystemNode& cs)
+void ConvertToVsg::apply(osg::PagedLOD& plod)
 {
-    traverse(plod);
-}
+#if 1
+    apply((osg::LOD&)plod);
 
-void apply(osg::PagedLOD& plod)
-{
+    if (root) root->setValue("class", "PagedLOD");
+#else
     auto vsg_plod = vsg::PagedLOD::create();
 
     auto& vsg_plod_children  = vsg_plod->getChildren();
@@ -433,34 +438,6 @@ void apply(osg::PagedLOD& plod)
     }
 
     popChildrenStack();
-}
-
-
-void apply(osg::Node& node)
-{
-    auto vsg_cs = vsg::Group::create();
-    vsg_cs->setValue("class", node.className());
-
-    addToChildrenStackAndPushNewChildrenStack(vsg_cs);
-
-    // traveer the nodes children
-    traverse(node);
-
-    // handle any VSG children created by traverse
-    Objects& children = childrenStack.back();
-
-    std::cout<<"number of children = "<<children.size()<<std::endl;
-
-    for(auto& child : children)
-    {
-        vsg::ref_ptr<vsg::Node> child_node(dynamic_cast<vsg::Node*>(child.get()));
-        if (child_node) vsg_cs->addChild(child_node);
-        else
-        {
-            std::cout<<"Child is not a node, cannot add to group : "<<child->className()<<std::endl;
-        }
-    }
-
-    popChildrenStack();
-}
 #endif
+}
+
