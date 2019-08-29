@@ -50,11 +50,15 @@ public:
     using NodeMap = std::map<osg::Node*, vsg::ref_ptr<vsg::Node>>;
     NodeMap nodeMap;
 
-    vsg::Paths filenames;
+    using FileNameMap = std::map<std::string, vsg::Path>;
+    vsg::Path extension = ".vsgb";
+    FileNameMap filenameMap;
 
     vsg::ref_ptr<vsg::BindGraphicsPipeline> getOrCreateBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryMask);
 
     vsg::ref_ptr<vsg::BindDescriptorSet> getOrCreateBindDescriptorSet(uint32_t shaderModeMask, uint32_t geometryMask, osg::StateSet* stateset);
+
+    vsg::Path mapFileName(const std::string& filename);
 
     void optimize(osg::Node* osg_scene);
 

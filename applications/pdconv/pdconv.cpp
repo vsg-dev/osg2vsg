@@ -18,8 +18,12 @@ int main(int argc, char** argv)
     osg2vsg::ConvertToVsg sceneBuilder;
 
     vsg::CommandLine arguments(&argc, argv);
+
+    vsg::Path outputFilename;
+    if (arguments.read("-o", outputFilename)) sceneBuilder.extension = vsg::fileExtension(outputFilename);
+
     auto levels = arguments.value(3, "-l");
-    auto outputFilename = arguments.value(std::string(), "-o");
+    if (arguments.read("--ext", sceneBuilder.extension)) {}
     if (arguments.read("--cull-nodes")) sceneBuilder.insertCullNodes = true;
     if (arguments.read("--no-cull-nodes")) sceneBuilder.insertCullNodes = false;
     if (arguments.read("--no-culling")) { sceneBuilder.insertCullGroups = false; sceneBuilder.insertCullNodes = false; }

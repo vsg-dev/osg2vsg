@@ -62,6 +62,22 @@ vsg::ref_ptr<vsg::BindDescriptorSet> ConvertToVsg::getOrCreateBindDescriptorSet(
     return bindDescriptorSet;
 }
 
+vsg::Path ConvertToVsg::mapFileName(const std::string& filename)
+{
+    if (auto itr = filenameMap.find(filename); itr != filenameMap.end())
+    {
+        return itr->second;
+    }
+
+    vsg::Path vsg_filename = vsg::simpleFilename(filename) + "." + extension;
+
+    filenameMap[filename] = vsg_filename;
+
+    std::cout<<"vsg_filename = "<<vsg_filename<<std::endl;
+
+    return vsg_filename;
+}
+
 void ConvertToVsg::optimize(osg::Node* osg_scene)
 {
     osgUtil::IndexMeshVisitor imv;
@@ -436,14 +452,10 @@ void ConvertToVsg::apply(osg::PagedLOD& plod)
             (atan2(radius, static_cast<double>(plod.getMaxRange(i))) * angle_ratio) :
             (plod.getMinRange(i) * pixel_ratio);
 
-        vsg::Path filename = plod.getFileName(i);
+        auto osg_filename = plod.getFileName(i);
+        auto vsg_filename = mapFileName(osg_filename);
 
-        // record external filename for futuure use
-        filenames.push_back(filename);
-
-        // TODO need to adapt file to a vsg version.
-
-        children.insert(vsg::PagedLOD::PagedLODChild{minimumScreenHeightRatio, filename, vsg_child, vsg_child});
+        children.insert(vsg::PagedLOD::PagedLODChild{minimumScreenHeightRatio, vsg_filename, vsg_child, vsg_child});
     }
 
     // add to vsg::LOD in reverse order - highest level of detail first
