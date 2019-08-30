@@ -25,7 +25,7 @@ int main(int argc, char** argv)
     vsg::Path outputFilename;
     if (arguments.read("-o", outputFilename)) buildOptions.extension = vsg::fileExtension(outputFilename);
 
-    auto levels = arguments.value(3, "-l");
+    auto levels = arguments.value(20, "-l");
     uint32_t numThreads = arguments.value(16, "-t");
 
     if (arguments.read("--ext", buildOptions.extension)) {}
@@ -69,16 +69,11 @@ int main(int argc, char** argv)
 
         void run() override
         {
-            std::cout<<"We area reading file "<<inputFilename<<" level = "<<level<<", maxLevel = "<<maxLevel<<"\n";
-
             std::string combinedInputFilename = osgDB::concatPaths(inputPath, inputFilename);
             std::string combinedOutputFilename = vsg::concatPaths(outputPath, outputFilename);
 
             std::string finalInputPath = osgDB::getFilePath(combinedInputFilename);
             std::string finalOutputPath = vsg::filePath(combinedOutputFilename);
-
-            std::cout<<"     inputPath "<<inputPath<<", outputPath "<<outputPath<<std::endl;
-            std::cout<<"     finalInputPath "<<finalInputPath<<", outputPath "<<finalOutputPath<<std::endl;
 
             osg::ref_ptr<osg::Node> osg_scene = osgDB::readNodeFile(combinedInputFilename);
 
@@ -92,8 +87,6 @@ int main(int argc, char** argv)
 
                 if (vsg_scene)
                 {
-                    std::cout<<"Writing vsg object to "<<combinedOutputFilename<<std::endl;
-
                     if (!finalOutputPath.empty() && !vsg::fileExists(finalOutputPath))
                     {
                         osgDB::makeDirectory(finalOutputPath);
@@ -108,8 +101,6 @@ int main(int argc, char** argv)
                 {
                     for(auto& [osg_filename, vsg_filename] : sceneBuilder.filenameMap)
                     {
-                        std::cout<<"Scheduling conversion of "<< osg_filename<<" to "<<vsg_filename<<std::endl;
-
                         // increment the latch as we are adding another operation to do.
                         latch->count_up();
 
@@ -119,6 +110,14 @@ int main(int argc, char** argv)
             }
             // we have finsihed this read operation so decrement the latch, which will release and threads waiting on it.
             latch->count_down();
+
+            // report the number of read/write operations that are pending
+            {
+                static std::mutex s_io_mutex;
+                std::lock_guard<std::mutex> guard(s_io_mutex);
+                std::cout<<" "<<latch->count().load();
+                std::cout.flush();
+            }
         }
 
         vsg::observer_ptr<vsg::OperationQueue> queue;
@@ -132,21 +131,17 @@ int main(int argc, char** argv)
         int maxLevel;
     };
 
+    std::cout<<"read/write operations pending = ";
+
     vsg::observer_ptr<vsg::OperationQueue> obs_queue(operationQueue);
 
     operationQueue->add(vsg::ref_ptr<ReadOperation>(new ReadOperation(obs_queue, latch, buildOptions, "", inputFilename, "", outputFilename, 0, levels)));
 
-    std::cout<<"Waiting on latch"<<std::endl;
-
     // wait until the latch goes zero i.e. all read operations have completed
     latch->wait();
 
-    std::cout<<"Lath released"<<std::endl;
-
     // signal that we are finished and the thread should close
     active->active = false;
-
-    std::cout<<"Active reset to false"<<std::endl;
 
     return 1;
 }

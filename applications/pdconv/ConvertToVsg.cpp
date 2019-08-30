@@ -66,9 +66,6 @@ vsg::Path ConvertToVsg::mapFileName(const std::string& filename)
 
     vsg::Path vsg_filename = vsg::removeExtension(filename) + "." + extension;
 
-
-    std::cout<<"mapFileName("<<filename<<") vsg::removeExtension(filename) = "<<vsg::removeExtension(filename)<<std::endl;
-
     filenameMap[filename] = vsg_filename;
 
     return vsg_filename;
