@@ -3,6 +3,7 @@
 #include <osg/ArgumentParser>
 #include <osg/PagedLOD>
 #include <osgDB/ReadFile>
+#include <osgDB/FileNameUtils>
 #include <osgUtil/Optimizer>
 #include <osgUtil/MeshOptimizers>
 
@@ -49,12 +50,17 @@ int main(int argc, char** argv)
 
     struct ReadOperation : public vsg::Operation
     {
-        ReadOperation(vsg::observer_ptr<vsg::OperationQueue> q, vsg::ref_ptr<vsg::Latch> l, const osg2vsg::BuildOptions& bo, const std::string& ins, const vsg::Path& outs, int cl, int ml) :
+        ReadOperation(vsg::observer_ptr<vsg::OperationQueue> q, vsg::ref_ptr<vsg::Latch> l, const osg2vsg::BuildOptions& bo,
+                      const std::string& inPath, const std::string& inFilename,
+                      const vsg::Path& outPath, const vsg::Path& outFilename,
+                      int cl, int ml) :
             queue(q),
             latch(l),
             buildOptions(bo),
-            inputFilename(ins),
-            outputFilename(outs),
+            inputPath(inPath),
+            inputFilename(inFilename),
+            outputPath(outPath),
+            outputFilename(outFilename),
             level(cl),
             maxLevel(ml)
         {
@@ -62,21 +68,32 @@ int main(int argc, char** argv)
 
         void run() override
         {
-            std::cout<<"We area reading file "<<inputFilename<<" level = "<<level<<", maxLevel = "<<maxLevel<<std::endl;
+            std::cout<<"We area reading file "<<inputFilename<<" level = "<<level<<", maxLevel = "<<maxLevel<<"\n";
 
-            osg::ref_ptr<osg::Node> osg_scene = osgDB::readNodeFile(inputFilename);
+            std::string combinedInputFilename = osgDB::concatPaths(inputPath, inputFilename);
+            std::string combinedOutputFilename = vsg::concatPaths(outputPath, outputFilename);
+
+            std::string finalInputPath = osgDB::getFilePath(combinedInputFilename);
+            std::string finalOutputPath = vsg::filePath(combinedOutputFilename);
+
+            std::cout<<"     inputPath "<<inputPath<<", outputPath "<<outputPath<<std::endl;
+            std::cout<<"     finalInputPath "<<finalInputPath<<", outputPath "<<finalOutputPath<<std::endl;
+
+            osg::ref_ptr<osg::Node> osg_scene = osgDB::readNodeFile(combinedInputFilename);
 
             if (osg_scene)
             {
                 osg2vsg::ConvertToVsg sceneBuilder(buildOptions);
 
+                sceneBuilder.optimize(osg_scene);
+
                 auto vsg_scene = sceneBuilder.convert(osg_scene);
 
                 if (vsg_scene)
                 {
-                    std::cout<<"Wriring vsg object to "<<outputFilename<<std::endl;
+                    std::cout<<"Writing vsg object to "<<combinedOutputFilename<<std::endl;
 
-                    vsg::write(vsg_scene, outputFilename);
+                    vsg::write(vsg_scene, combinedOutputFilename);
                 }
 
                 vsg::ref_ptr<vsg::OperationQueue> ref_queue = queue;
@@ -90,7 +107,7 @@ int main(int argc, char** argv)
                         // increment the latch as we are adding another operation to do.
                         latch->count_up();
 
-                        ref_queue->add(vsg::ref_ptr<ReadOperation>(new ReadOperation(queue, latch, buildOptions, osg_filename, vsg_filename, level+1, maxLevel)));
+                        ref_queue->add(vsg::ref_ptr<ReadOperation>(new ReadOperation(queue, latch, buildOptions, finalInputPath, osg_filename, finalOutputPath, vsg_filename, level+1, maxLevel)));
                     }
                 }
             }
@@ -101,7 +118,9 @@ int main(int argc, char** argv)
         vsg::observer_ptr<vsg::OperationQueue> queue;
         vsg::ref_ptr<vsg::Latch> latch;
         osg2vsg::BuildOptions buildOptions;
+        std::string inputPath;
         std::string inputFilename;
+        vsg::Path outputPath;
         vsg::Path outputFilename;
         int level;
         int maxLevel;
@@ -109,7 +128,7 @@ int main(int argc, char** argv)
 
     vsg::observer_ptr<vsg::OperationQueue> obs_queue(operationQueue);
 
-    operationQueue->add(vsg::ref_ptr<ReadOperation>(new ReadOperation(obs_queue, latch, buildOptions, inputFilename, outputFilename, 0, levels)));
+    operationQueue->add(vsg::ref_ptr<ReadOperation>(new ReadOperation(obs_queue, latch, buildOptions, "", inputFilename, "", outputFilename, 0, levels)));
 
     std::cout<<"Waiting on latch"<<std::endl;
 
@@ -118,7 +137,7 @@ int main(int argc, char** argv)
 
     std::cout<<"Lath released"<<std::endl;
 
-    // signle that we are finished and the thread should close
+    // signal that we are finished and the thread should close
     active->active = false;
 
     std::cout<<"Active reset to false"<<std::endl;
