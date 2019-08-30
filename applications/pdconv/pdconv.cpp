@@ -4,6 +4,7 @@
 #include <osg/PagedLOD>
 #include <osgDB/ReadFile>
 #include <osgDB/FileNameUtils>
+#include <osgDB/FileUtils>
 #include <osgUtil/Optimizer>
 #include <osgUtil/MeshOptimizers>
 
@@ -92,6 +93,11 @@ int main(int argc, char** argv)
                 if (vsg_scene)
                 {
                     std::cout<<"Writing vsg object to "<<combinedOutputFilename<<std::endl;
+
+                    if (!finalOutputPath.empty() && !vsg::fileExists(finalOutputPath))
+                    {
+                        osgDB::makeDirectory(finalOutputPath);
+                    }
 
                     vsg::write(vsg_scene, combinedOutputFilename);
                 }
