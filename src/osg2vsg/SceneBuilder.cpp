@@ -18,9 +18,6 @@ using namespace osg2vsg;
 #define DEBUG_OUTPUT if (false) std::cout
 #endif
 
-SceneBuilderBase::SceneBuilderBase()
-{
-}
 osg::ref_ptr<osg::StateSet> SceneBuilderBase::uniqueState(osg::ref_ptr<osg::StateSet> stateset, bool programStateSet)
 {
     if (auto itr = uniqueStateSets.find(stateset); itr != uniqueStateSets.end())
@@ -178,7 +175,7 @@ vsg::ref_ptr<vsg::BindGraphicsPipeline> SceneBuilderBase::createBindGraphicsPipe
         vsg::ShaderStage::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", fragShaderPath.empty() ? createFbxFragmentSource(shaderModeMask, geometryAttributesMask) : readGLSLShader(fragShaderPath, shaderModeMask, geometryAttributesMask))
     };
 
-    if (!shaderCompiler.compile(shaders)) return vsg::ref_ptr<vsg::BindGraphicsPipeline>();
+    if (!shaderCompiler->compile(shaders)) return vsg::ref_ptr<vsg::BindGraphicsPipeline>();
 
     // std::cout<<"createBindGraphicsPipeline("<<shaderModeMask<<", "<<geometryAttributesMask<<")"<<std::endl;
 
@@ -297,9 +294,6 @@ vsg::ref_ptr<vsg::BindGraphicsPipeline> SceneBuilderBase::createBindGraphicsPipe
 //
 //   SceneBuilder
 //
-SceneBuilder::SceneBuilder():
-    osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN) {}
-
 void SceneBuilder::apply(osg::Node& node)
 {
     DEBUG_OUTPUT<<"Visiting "<<node.className()<<" "<<node.getStateSet()<<std::endl;

@@ -7,6 +7,7 @@
 #include <osg/Array>
 #include <osg/StateSet>
 
+
 namespace osg2vsg
 {
     enum ShaderModeMask : uint32_t
@@ -52,7 +53,8 @@ namespace osg2vsg
     extern OSG2VSG_DECLSPEC std::string createDefaultVertexSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
     extern OSG2VSG_DECLSPEC std::string createDefaultFragmentSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
 
-    class OSG2VSG_DECLSPEC ShaderCompiler : public vsg::Object
+
+    class OSG2VSG_DECLSPEC ShaderCompiler : public vsg::Inherit<vsg::Object, ShaderCompiler>
     {
     public:
         ShaderCompiler(vsg::Allocator* allocator=nullptr);

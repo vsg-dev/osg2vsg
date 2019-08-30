@@ -17,10 +17,37 @@
 namespace osg2vsg
 {
 
-    class SceneBuilderBase
+    struct BuildOptions
+    {
+        bool insertCullGroups = true;
+        bool insertCullNodes = true;
+        bool useBindDescriptorSet = true;
+        bool billboardTransform = false;
+
+        GeometryTarget geometryTarget = VSG_VERTEXINDEXDRAW;
+
+        uint32_t supportedGeometryAttributes = GeometryAttributes::ALL_ATTS;
+        uint32_t supportedShaderModeMask = ShaderModeMask::ALL_SHADER_MODE_MASK;
+        uint32_t overrideGeomAttributes = 0;
+        uint32_t overrideShaderModeMask = ShaderModeMask::NONE;
+
+        uint32_t nodeShaderModeMasks = ShaderModeMask::NONE;
+
+        std::string vertexShaderPath = "";
+        std::string fragmentShaderPath = "";
+
+        vsg::Path extension = "vsgb";
+
+        vsg::ref_ptr<ShaderCompiler> shaderCompiler = ShaderCompiler::create();
+    };
+
+    class SceneBuilderBase : public BuildOptions
     {
     public:
-        SceneBuilderBase();
+        SceneBuilderBase() {}
+
+        SceneBuilderBase(const BuildOptions& options):
+            BuildOptions(options) {}
 
         using StateStack = std::vector<osg::ref_ptr<osg::StateSet>>;
         using StateSets = std::set<StateStack>;
@@ -48,25 +75,6 @@ namespace osg2vsg
         UniqueStats uniqueStateSets;
         TexturesMap texturesMap;
         bool writeToFileProgramAndDataSetSets = false;
-        ShaderCompiler shaderCompiler;
-
-        bool insertCullGroups = true;
-        bool insertCullNodes = true;
-        bool useBindDescriptorSet = true;
-        bool billboardTransform = false;
-
-        GeometryTarget geometryTarget = VSG_VERTEXINDEXDRAW;
-
-        uint32_t supportedGeometryAttributes = GeometryAttributes::ALL_ATTS;
-        uint32_t supportedShaderModeMask = ShaderModeMask::ALL_SHADER_MODE_MASK;
-        uint32_t overrideGeomAttributes = 0;
-        uint32_t overrideShaderModeMask = ShaderModeMask::NONE;
-
-        uint32_t nodeShaderModeMasks = ShaderModeMask::NONE;
-
-        std::string vertexShaderPath = "";
-        std::string fragmentShaderPath = "";
-
 
         osg::ref_ptr<osg::StateSet> uniqueState(osg::ref_ptr<osg::StateSet> stateset, bool programStateSet);
 
@@ -83,7 +91,12 @@ namespace osg2vsg
     class SceneBuilder : public osg::NodeVisitor, public SceneBuilderBase
     {
     public:
-        SceneBuilder();
+        SceneBuilder():
+            osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN) {}
+
+        SceneBuilder(const BuildOptions& options):
+            osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN),
+            SceneBuilderBase(options) {}
 
         using Geometries = std::vector<osg::ref_ptr<osg::Geometry>>;
         using StateGeometryMap = std::map<osg::ref_ptr<osg::StateSet>, Geometries>;
