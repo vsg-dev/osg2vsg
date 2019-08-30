@@ -15,44 +15,113 @@
 
 int main(int argc, char** argv)
 {
-    osg2vsg::ConvertToVsg sceneBuilder;
-
     vsg::CommandLine arguments(&argc, argv);
 
+    osg2vsg::BuildOptions buildOptions;
+    auto inputFilename = arguments.value(std::string(),"-i");
+
     vsg::Path outputFilename;
-    if (arguments.read("-o", outputFilename)) sceneBuilder.extension = vsg::fileExtension(outputFilename);
+    if (arguments.read("-o", outputFilename)) buildOptions.extension = vsg::fileExtension(outputFilename);
 
     auto levels = arguments.value(3, "-l");
-    if (arguments.read("--ext", sceneBuilder.extension)) {}
-    if (arguments.read("--cull-nodes")) sceneBuilder.insertCullNodes = true;
-    if (arguments.read("--no-cull-nodes")) sceneBuilder.insertCullNodes = false;
-    if (arguments.read("--no-culling")) { sceneBuilder.insertCullGroups = false; sceneBuilder.insertCullNodes = false; }
-    if (arguments.read("--billboard-transform")) { sceneBuilder.billboardTransform = true; }
-    if (arguments.read("--Geometry")) { sceneBuilder.geometryTarget = osg2vsg::VSG_GEOMETRY; }
-    if (arguments.read("--VertexIndexDraw")) { sceneBuilder.geometryTarget = osg2vsg::VSG_VERTEXINDEXDRAW; }
-    if (arguments.read("--Commands")) { sceneBuilder.geometryTarget = osg2vsg::VSG_COMMANDS; }
-    if (arguments.read({"--bind-single-ds", "--bsds"})) sceneBuilder.useBindDescriptorSet = true;
+    uint32_t numThreads = arguments.value(16, "-t");
 
-    std::cout<<"levels = "<<levels<<std::endl;
-    std::cout<<"outputFilename = "<<outputFilename<<std::endl;
+    if (arguments.read("--ext", buildOptions.extension)) {}
+    if (arguments.read("--cull-nodes")) buildOptions.insertCullNodes = true;
+    if (arguments.read("--no-cull-nodes")) buildOptions.insertCullNodes = false;
+    if (arguments.read("--no-culling")) { buildOptions.insertCullGroups = false; buildOptions.insertCullNodes = false; }
+    if (arguments.read("--billboard-transform")) { buildOptions.billboardTransform = true; }
+    if (arguments.read("--Geometry")) { buildOptions.geometryTarget = osg2vsg::VSG_GEOMETRY; }
+    if (arguments.read("--VertexIndexDraw")) { buildOptions.geometryTarget = osg2vsg::VSG_VERTEXINDEXDRAW; }
+    if (arguments.read("--Commands")) { buildOptions.geometryTarget = osg2vsg::VSG_COMMANDS; }
+    if (arguments.read({"--bind-single-ds", "--bsds"})) buildOptions.useBindDescriptorSet = true;
 
-    osg::ArgumentParser osg_arguments(&argc, argv);
-
-    osg::ref_ptr<osg::Node> osg_scene = osgDB::readNodeFiles(osg_arguments);
-
-    std::cout<<"osg_scene = "<<osg_scene.get()<<std::endl;
-
-    if (osg_scene.valid())
+    if (inputFilename.empty() || outputFilename.empty())
     {
-        sceneBuilder.optimize(osg_scene);
-
-        auto vsg_scene = sceneBuilder.convert(osg_scene);
-
-        if (vsg_scene && !outputFilename.empty())
-        {
-            vsg::write(vsg_scene, outputFilename);
-        }
+        std::cout<<"Please support an input and output filenames via -o inputfilename.ext -o outputfile.ext"<<std::endl;
+        return 1;
     }
+
+    auto active = vsg::Active::create();
+    auto operationThreads = vsg::OperationThreads::create(numThreads, active);
+    auto operationQueue = operationThreads->queue;
+    auto latch = vsg::Latch::create(1); // 1 for the ReadOperation we're about to add
+
+    struct ReadOperation : public vsg::Operation
+    {
+        ReadOperation(vsg::observer_ptr<vsg::OperationQueue> q, vsg::ref_ptr<vsg::Latch> l, const osg2vsg::BuildOptions& bo, const std::string& ins, const vsg::Path& outs, int cl, int ml) :
+            queue(q),
+            latch(l),
+            buildOptions(bo),
+            inputFilename(ins),
+            outputFilename(outs),
+            level(cl),
+            maxLevel(ml)
+        {
+        }
+
+        void run() override
+        {
+            std::cout<<"We area reading file "<<inputFilename<<" level = "<<level<<", maxLevel = "<<maxLevel<<std::endl;
+
+            osg::ref_ptr<osg::Node> osg_scene = osgDB::readNodeFile(inputFilename);
+
+            if (osg_scene)
+            {
+                osg2vsg::ConvertToVsg sceneBuilder(buildOptions);
+
+                auto vsg_scene = sceneBuilder.convert(osg_scene);
+
+                if (vsg_scene)
+                {
+                    std::cout<<"Wriring vsg object to "<<outputFilename<<std::endl;
+
+                    vsg::write(vsg_scene, outputFilename);
+                }
+
+                vsg::ref_ptr<vsg::OperationQueue> ref_queue = queue;
+
+                if (ref_queue && level<maxLevel)
+                {
+                    for(auto& [osg_filename, vsg_filename] : sceneBuilder.filenameMap)
+                    {
+                        std::cout<<"Scheduling conversion of "<< osg_filename<<" to "<<vsg_filename<<std::endl;
+
+                        // increment the latch as we are adding another operation to do.
+                        latch->count_up();
+
+                        ref_queue->add(vsg::ref_ptr<ReadOperation>(new ReadOperation(queue, latch, buildOptions, osg_filename, vsg_filename, level+1, maxLevel)));
+                    }
+                }
+            }
+            // we have finsihed this read operation so decrement the latch, which will release and threads waiting on it.
+            latch->count_down();
+        }
+
+        vsg::observer_ptr<vsg::OperationQueue> queue;
+        vsg::ref_ptr<vsg::Latch> latch;
+        osg2vsg::BuildOptions buildOptions;
+        std::string inputFilename;
+        vsg::Path outputFilename;
+        int level;
+        int maxLevel;
+    };
+
+    vsg::observer_ptr<vsg::OperationQueue> obs_queue(operationQueue);
+
+    operationQueue->add(vsg::ref_ptr<ReadOperation>(new ReadOperation(obs_queue, latch, buildOptions, inputFilename, outputFilename, 0, levels)));
+
+    std::cout<<"Waiting on latch"<<std::endl;
+
+    // wait until the latch goes zero i.e. all read operations have completed
+    latch->wait();
+
+    std::cout<<"Lath released"<<std::endl;
+
+    // signle that we are finished and the thread should close
+    active->active = false;
+
+    std::cout<<"Active reset to false"<<std::endl;
 
     return 1;
 }

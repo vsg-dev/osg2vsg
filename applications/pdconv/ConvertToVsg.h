@@ -31,11 +31,19 @@ inline vsg::mat4 convert(const osg::Matrixf& m)
                      m(0, 3), m(1, 3), m(2, 3), m(3, 3));
 }
 
+using FileNameMap = std::map<std::string, vsg::Path>;
+
 class ConvertToVsg : public osg::NodeVisitor, public osg2vsg::SceneBuilderBase
 {
 public:
 
-    ConvertToVsg();
+    ConvertToVsg():
+        osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN) {}
+
+
+    ConvertToVsg(const BuildOptions& options):
+        osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN),
+        SceneBuilderBase(options) {}
 
     vsg::ref_ptr<vsg::Node> root;
 
@@ -50,8 +58,6 @@ public:
     using NodeMap = std::map<osg::Node*, vsg::ref_ptr<vsg::Node>>;
     NodeMap nodeMap;
 
-    using FileNameMap = std::map<std::string, vsg::Path>;
-    vsg::Path extension = ".vsgb";
     FileNameMap filenameMap;
 
     vsg::ref_ptr<vsg::BindGraphicsPipeline> getOrCreateBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryMask);

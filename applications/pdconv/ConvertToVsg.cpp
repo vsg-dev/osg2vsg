@@ -15,11 +15,6 @@
 
 using namespace osg2vsg;
 
-ConvertToVsg::ConvertToVsg() :
-    osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN)
-{
-}
-
 vsg::ref_ptr<vsg::BindGraphicsPipeline> ConvertToVsg::getOrCreateBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryMask)
 {
     MaskPair masks(shaderModeMask, geometryMask);
@@ -69,11 +64,9 @@ vsg::Path ConvertToVsg::mapFileName(const std::string& filename)
         return itr->second;
     }
 
-    vsg::Path vsg_filename = vsg::simpleFilename(filename) + "." + extension;
+    vsg::Path vsg_filename = vsg::removeExtension(filename) + "." + extension;
 
     filenameMap[filename] = vsg_filename;
-
-    std::cout<<"vsg_filename = "<<vsg_filename<<std::endl;
 
     return vsg_filename;
 }
@@ -428,7 +421,8 @@ void ConvertToVsg::apply(osg::PagedLOD& plod)
 
     vsg_lod->setBound(vsg::dsphere(center.x(), center.y(), center.z(), radius));
 
-    unsigned int numChildren = plod.getNumRanges();
+    unsigned int numChildren = plod.getNumChildren();
+    unsigned int numRanges = plod.getNumRanges();
 
     const double pixel_ratio = 1.0/1080.0;
     const double angle_ratio = 1.0/osg::DegreesToRadians(30.0); // assume a 60 fovy for reference
@@ -444,16 +438,17 @@ void ConvertToVsg::apply(osg::PagedLOD& plod)
     using Children = std::set<vsg::PagedLOD::PagedLODChild, CompareChild>;
     Children children;
 
-    for(unsigned int i = 0; i < numChildren; ++i)
+    for(unsigned int i = 0; i < numRanges; ++i)
     {
-        auto vsg_child = convert(plod.getChild(i));
+        vsg::ref_ptr<vsg::Node> vsg_child;
+        if (i<numChildren) vsg_child = convert(plod.getChild(i));
 
         double minimumScreenHeightRatio = (plod.getRangeMode()==osg::LOD::DISTANCE_FROM_EYE_POINT) ?
             (atan2(radius, static_cast<double>(plod.getMaxRange(i))) * angle_ratio) :
             (plod.getMinRange(i) * pixel_ratio);
 
         auto osg_filename = plod.getFileName(i);
-        auto vsg_filename = mapFileName(osg_filename);
+        auto vsg_filename = osg_filename.empty() ? vsg::Path() : mapFileName(osg_filename);
 
         children.insert(vsg::PagedLOD::PagedLODChild{minimumScreenHeightRatio, vsg_filename, vsg_child, vsg_child});
     }
@@ -469,7 +464,7 @@ void ConvertToVsg::apply(osg::PagedLOD& plod)
 
 void ConvertToVsg::apply(osgTerrain::TerrainTile& tile)
 {
-    std::cout<<"Have TerrainTile "<<&tile<<std::endl;
-    root = vsg::Group::create();
-    root->setValue("class", "TerrainTile");
+    root = nullptr;
+
+    tile.traverse(*this);
 }
