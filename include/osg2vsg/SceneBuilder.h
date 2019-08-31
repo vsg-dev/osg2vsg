@@ -16,6 +16,18 @@
 
 namespace osg2vsg
 {
+    struct PipelineCache : public vsg::Inherit<vsg::Object, PipelineCache>
+    {
+        vsg::ref_ptr<ShaderCompiler> shaderCompiler = ShaderCompiler::create();
+
+        using Key = std::tuple<uint32_t, uint32_t, std::string, std::string>;
+        using PipelineMap = std::map<Key, vsg::ref_ptr<vsg::BindGraphicsPipeline>>;
+
+        std::mutex mutex;
+        PipelineMap pipelineMap;
+
+        vsg::ref_ptr<vsg::BindGraphicsPipeline> getOrCreateBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryMask, const std::string& vertShaderPath = "", const std::string& fragShaderPath = "");
+    };
 
     struct BuildOptions : public vsg::Inherit<vsg::Object, BuildOptions>
     {
@@ -36,7 +48,7 @@ namespace osg2vsg
 
         vsg::Path extension = "vsgb";
 
-        vsg::ref_ptr<ShaderCompiler> shaderCompiler = ShaderCompiler::create();
+        vsg::ref_ptr<PipelineCache> pipelineCache = PipelineCache::create();
     };
 
     class SceneBuilderBase
@@ -87,7 +99,6 @@ namespace osg2vsg
         vsg::ref_ptr<vsg::DescriptorImage> convertToVsgTexture(const osg::Texture* osgtexture);
 
         vsg::ref_ptr<vsg::DescriptorSet> createVsgStateSet(const vsg::DescriptorSetLayouts& descriptorSetLayouts, const osg::StateSet* stateset, uint32_t shaderModeMask);
-        vsg::ref_ptr<vsg::BindGraphicsPipeline> createBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryAttributesMask, const std::string& vertShaderPath = "", const std::string& fragShaderPath = "");
     };
 
     class SceneBuilder : public osg::NodeVisitor, public SceneBuilderBase

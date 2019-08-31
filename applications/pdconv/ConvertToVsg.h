@@ -43,10 +43,6 @@ public:
 
     vsg::ref_ptr<vsg::Node> root;
 
-    using MaskPair = std::pair<uint32_t, uint32_t>;
-    using PipelineMap = std::map<MaskPair, vsg::ref_ptr<vsg::BindGraphicsPipeline>>;
-    PipelineMap pipelineMap;
-
     using MasksAndState = std::tuple<uint32_t, uint32_t, osg::ref_ptr<osg::StateSet>>;
     using BindDescriptorSetMap = std::map<MasksAndState, vsg::ref_ptr<vsg::BindDescriptorSet>>;
     BindDescriptorSetMap bindDescriptorSetMap;

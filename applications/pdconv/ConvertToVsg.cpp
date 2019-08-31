@@ -17,12 +17,7 @@ using namespace osg2vsg;
 
 vsg::ref_ptr<vsg::BindGraphicsPipeline> ConvertToVsg::getOrCreateBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryMask)
 {
-    MaskPair masks(shaderModeMask, geometryMask);
-    if (auto itr = pipelineMap.find(masks); itr != pipelineMap.end()) return itr->second;
-
-    auto bindGraphicsPipeline = createBindGraphicsPipeline(shaderModeMask, geometryMask, buildOptions->vertexShaderPath, buildOptions->fragmentShaderPath);
-    pipelineMap[masks] = bindGraphicsPipeline;
-    return bindGraphicsPipeline;
+    return buildOptions->pipelineCache->getOrCreateBindGraphicsPipeline(shaderModeMask, geometryMask, buildOptions->vertexShaderPath, buildOptions->fragmentShaderPath);
 }
 
 vsg::ref_ptr<vsg::BindDescriptorSet> ConvertToVsg::getOrCreateBindDescriptorSet(uint32_t shaderModeMask, uint32_t geometryMask, osg::StateSet* stateset)
@@ -34,9 +29,7 @@ vsg::ref_ptr<vsg::BindDescriptorSet> ConvertToVsg::getOrCreateBindDescriptorSet(
         return itr->second;
     }
 
-    MaskPair masks(shaderModeMask, geometryMask);
-
-    auto bindGraphicsPipeline = pipelineMap[masks];
+    auto bindGraphicsPipeline = getOrCreateBindGraphicsPipeline(shaderModeMask, geometryMask);
     if (!bindGraphicsPipeline) return {};
 
     auto pipeline = bindGraphicsPipeline->getPipeline();
