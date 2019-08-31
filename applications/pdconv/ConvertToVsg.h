@@ -37,13 +37,9 @@ class ConvertToVsg : public osg::NodeVisitor, public osg2vsg::SceneBuilderBase
 {
 public:
 
-    ConvertToVsg():
-        osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN) {}
-
-
-    ConvertToVsg(const BuildOptions& options):
-        osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN),
-        SceneBuilderBase(options) {}
+    ConvertToVsg(vsg::ref_ptr<const BuildOptions> options):
+            osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN),
+            SceneBuilderBase(options) {}
 
     vsg::ref_ptr<vsg::Node> root;
 

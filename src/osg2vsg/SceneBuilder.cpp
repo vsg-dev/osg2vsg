@@ -175,7 +175,7 @@ vsg::ref_ptr<vsg::BindGraphicsPipeline> SceneBuilderBase::createBindGraphicsPipe
         vsg::ShaderStage::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", fragShaderPath.empty() ? createFbxFragmentSource(shaderModeMask, geometryAttributesMask) : readGLSLShader(fragShaderPath, shaderModeMask, geometryAttributesMask))
     };
 
-    if (!shaderCompiler->compile(shaders)) return vsg::ref_ptr<vsg::BindGraphicsPipeline>();
+    if (!buildOptions->shaderCompiler->compile(shaders)) return vsg::ref_ptr<vsg::BindGraphicsPipeline>();
 
     // std::cout<<"createBindGraphicsPipeline("<<shaderModeMask<<", "<<geometryAttributesMask<<")"<<std::endl;
 
@@ -341,7 +341,7 @@ void SceneBuilder::apply(osg::Billboard& billboard)
 
     if (billboard.getStateSet()) pushStateSet(*billboard.getStateSet());
 
-    if (billboardTransform)
+    if (buildOptions->billboardTransform)
     {
         nodeShaderModeMasks = BILLBOARD;
     }
@@ -646,8 +646,8 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createTransformGeometryGraphVSG(TransformG
         bool requiresTransform = !matrix.isIdentity();
 
 #if 1
-        bool requiresTopCullGroup = (insertCullGroups || insertCullNodes) && (requiresTransform/* || geometries.size()==1*/);
-        bool requiresLeafCullGroup = (insertCullGroups || insertCullNodes) && !requiresTopCullGroup;
+        bool requiresTopCullGroup = (buildOptions->insertCullGroups || buildOptions->insertCullNodes) && (requiresTransform/* || geometries.size()==1*/);
+        bool requiresLeafCullGroup = (buildOptions->insertCullGroups || buildOptions->insertCullNodes) && !requiresTopCullGroup;
         if (requiresTransform)
         {
             // need to insert a transform
@@ -661,7 +661,7 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createTransformGeometryGraphVSG(TransformG
             localGroup = transform;
 
 
-            if (insertCullGroups || insertCullNodes)
+            if (buildOptions->insertCullGroups || buildOptions->insertCullNodes)
             {
                 osg::BoundingBox overall_bb;
                 for (auto& geometry : geometries)
@@ -677,7 +677,7 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createTransformGeometryGraphVSG(TransformG
                 vsg::vec3 bb_max(overall_bb.xMax(), overall_bb.yMax(), overall_bb.zMax());
                 vsg::sphere boundingSphere((bb_min + bb_max)*0.5f, vsg::length(bb_max - bb_min)*0.5f);
 
-                if (insertCullNodes)
+                if (buildOptions->insertCullNodes)
                 {
                     group->addChild(vsg::CullNode::create(boundingSphere, transform));
                 }
@@ -746,7 +746,7 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createTransformGeometryGraphVSG(TransformG
             }
             else
             {
-                leaf = convertToVsg(geometry, requiredGeomAttributesMask, geometryTarget);
+                leaf = convertToVsg(geometry, requiredGeomAttributesMask, buildOptions->geometryTarget);
                 if (leaf)
                 {
                     geometriesMap[geometry] = leaf;
@@ -760,7 +760,7 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createTransformGeometryGraphVSG(TransformG
                 vsg::vec3 bb_max(bb.xMax(), bb.yMax(), bb.zMax());
 
                 vsg::sphere boundingSphere((bb_min + bb_max)*0.5f, vsg::length(bb_max - bb_min)*0.5f);
-                if (insertCullNodes)
+                if (buildOptions->insertCullNodes)
                 {
                     DEBUG_OUTPUT<<"Using CullNode"<<std::endl;
                     localGroup->addChild( vsg::CullNode::create(boundingSphere, leaf) );
@@ -848,15 +848,15 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createVSG(vsg::Paths& searchPaths)
             DEBUG_OUTPUT<<"  maxNumDescriptors = "<<maxNumDescriptors<<std::endl;
         }
 
-        uint32_t geometrymask = (masks.second | overrideGeomAttributes) & supportedGeometryAttributes;
-        uint32_t shaderModeMask = (masks.first | overrideShaderModeMask) & supportedShaderModeMask;
+        uint32_t geometrymask = (masks.second | buildOptions->overrideGeomAttributes) & buildOptions->supportedGeometryAttributes;
+        uint32_t shaderModeMask = (masks.first | buildOptions->overrideShaderModeMask) & buildOptions->supportedShaderModeMask;
         if (shaderModeMask & NORMAL_MAP) geometrymask |= TANGENT; // mesh propably won't have tangets so force them on if we want Normal mapping
 
         DEBUG_OUTPUT<<"  about to call createStateSetWithGraphicsPipeline("<<shaderModeMask<<", "<<geometrymask<<", "<<maxNumDescriptors<<")"<<std::endl;
 
         auto graphicsPipelineGroup = vsg::StateGroup::create();
 
-        auto bindGraphicsPipeline = createBindGraphicsPipeline(shaderModeMask, geometrymask, vertexShaderPath, fragmentShaderPath);
+        auto bindGraphicsPipeline = createBindGraphicsPipeline(shaderModeMask, geometrymask, buildOptions->vertexShaderPath, buildOptions->fragmentShaderPath);
         graphicsPipelineGroup->add(bindGraphicsPipeline);
 
         auto graphicsPipeline = bindGraphicsPipeline->getPipeline();
@@ -884,7 +884,7 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createVSG(vsg::Paths& searchPaths)
                 graphicsPipelineGroup->addChild(stategroup);
                 stategroup->addChild(transformGeometryGraph);
 
-                if (useBindDescriptorSet)
+                if (buildOptions->useBindDescriptorSet)
                 {
                     auto bindDescriptorSet = vsg::BindDescriptorSet::create(VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->getPipelineLayout(), 0, descriptorSet);
                     stategroup->add(bindDescriptorSet);
@@ -904,7 +904,7 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createVSG(vsg::Paths& searchPaths)
 
 
     // if we are using CullGroups then place one at the top of the created scene graph
-    if (insertCullGroups)
+    if (buildOptions->insertCullGroups)
     {
         vsg::ComputeBounds computeBounds;
         group->accept(computeBounds);

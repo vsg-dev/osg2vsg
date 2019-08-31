@@ -210,7 +210,7 @@ int main(int argc, char** argv)
     }
     std::cout<<std::endl;
 
-    osg2vsg::SceneBuilder sceneBuilder;
+    auto buildOptions = osg2vsg::BuildOptions::create();
     auto windowTraits = vsg::Window::Traits::create();
     windowTraits->windowTitle = "osg2vsg";
 
@@ -227,14 +227,14 @@ int main(int argc, char** argv)
     if (arguments.read({"--fullscreen", "--fs"})) windowTraits->fullscreen = true;
     if (arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height)) { windowTraits->fullscreen = false; }
     if (arguments.read({"--no-frame", "--nf"})) windowTraits->decoration = false;
-    if (arguments.read("--cull-nodes")) sceneBuilder.insertCullNodes = true;
-    if (arguments.read("--no-cull-nodes")) sceneBuilder.insertCullNodes = false;
-    if (arguments.read("--no-culling")) { sceneBuilder.insertCullGroups = false; sceneBuilder.insertCullNodes = false; }
-    if (arguments.read("--billboard-transform")) { sceneBuilder.billboardTransform = true; }
-    if (arguments.read("--Geometry")) { sceneBuilder.geometryTarget = osg2vsg::VSG_GEOMETRY; }
-    if (arguments.read("--VertexIndexDraw")) { sceneBuilder.geometryTarget = osg2vsg::VSG_VERTEXINDEXDRAW; }
-    if (arguments.read("--Commands")) { sceneBuilder.geometryTarget = osg2vsg::VSG_COMMANDS; }
-    if (arguments.read({"--bind-single-ds", "--bsds"})) sceneBuilder.useBindDescriptorSet = true;
+    if (arguments.read("--cull-nodes")) buildOptions->insertCullNodes = true;
+    if (arguments.read("--no-cull-nodes")) buildOptions->insertCullNodes = false;
+    if (arguments.read("--no-culling")) { buildOptions->insertCullGroups = false; buildOptions->insertCullNodes = false; }
+    if (arguments.read("--billboard-transform")) { buildOptions->billboardTransform = true; }
+    if (arguments.read("--Geometry")) { buildOptions->geometryTarget = osg2vsg::VSG_GEOMETRY; }
+    if (arguments.read("--VertexIndexDraw")) { buildOptions->geometryTarget = osg2vsg::VSG_VERTEXINDEXDRAW; }
+    if (arguments.read("--Commands")) { buildOptions->geometryTarget = osg2vsg::VSG_COMMANDS; }
+    if (arguments.read({"--bind-single-ds", "--bsds"})) buildOptions->useBindDescriptorSet = true;
     auto numFrames = arguments.value(-1, "-f");
     auto writeToFileProgramAndDataSetSets = arguments.read({"--write-stateset", "--ws"});
     auto optimize = !arguments.read("--no-optimize");
@@ -243,13 +243,15 @@ int main(int argc, char** argv)
     auto pathFilename = arguments.value(std::string(),"-p");
     auto batchLeafData = arguments.read("--batch");
     auto simulationFrameRate = arguments.value(0.0, "--sim-fps");
-    arguments.read({"--support-mask", "--sm"}, sceneBuilder.supportedShaderModeMask);
-    arguments.read({"--override-mask", "--om"}, sceneBuilder.overrideShaderModeMask);
-    arguments.read({ "--vertex-shader", "--vert" }, sceneBuilder.vertexShaderPath);
-    arguments.read({ "--fragment-shader", "--frag" }, sceneBuilder.fragmentShaderPath);
+    arguments.read({"--support-mask", "--sm"}, buildOptions->supportedShaderModeMask);
+    arguments.read({"--override-mask", "--om"}, buildOptions->overrideShaderModeMask);
+    arguments.read({ "--vertex-shader", "--vert" }, buildOptions->vertexShaderPath);
+    arguments.read({ "--fragment-shader", "--frag" }, buildOptions->fragmentShaderPath);
 
 
     if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
+
+    osg2vsg::SceneBuilder sceneBuilder(buildOptions);
 
     // read shaders
     vsg::Paths searchPaths = vsg::getEnvPaths("VSG_FILE_PATH");

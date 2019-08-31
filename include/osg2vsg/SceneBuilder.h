@@ -17,7 +17,7 @@
 namespace osg2vsg
 {
 
-    struct BuildOptions
+    struct BuildOptions : public vsg::Inherit<vsg::Object, BuildOptions>
     {
         bool insertCullGroups = true;
         bool insertCullNodes = true;
@@ -31,8 +31,6 @@ namespace osg2vsg
         uint32_t overrideGeomAttributes = 0;
         uint32_t overrideShaderModeMask = ShaderModeMask::NONE;
 
-        uint32_t nodeShaderModeMasks = ShaderModeMask::NONE;
-
         std::string vertexShaderPath = "";
         std::string fragmentShaderPath = "";
 
@@ -41,13 +39,13 @@ namespace osg2vsg
         vsg::ref_ptr<ShaderCompiler> shaderCompiler = ShaderCompiler::create();
     };
 
-    class SceneBuilderBase : public BuildOptions
+    class SceneBuilderBase
     {
     public:
         SceneBuilderBase() {}
 
-        SceneBuilderBase(const BuildOptions& options):
-            BuildOptions(options) {}
+        SceneBuilderBase(vsg::ref_ptr<const BuildOptions> options):
+            buildOptions(options) {}
 
         using StateStack = std::vector<osg::ref_ptr<osg::StateSet>>;
         using StateSets = std::set<StateStack>;
@@ -69,6 +67,10 @@ namespace osg2vsg
         };
 
         using UniqueStats = std::set<osg::ref_ptr<osg::StateSet>, UniqueStateSet>;
+
+        vsg::ref_ptr<const BuildOptions> buildOptions = BuildOptions::create();
+
+        uint32_t nodeShaderModeMasks = ShaderModeMask::NONE;
 
         StateStack statestack;
         StateMap stateMap;
@@ -94,7 +96,7 @@ namespace osg2vsg
         SceneBuilder():
             osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN) {}
 
-        SceneBuilder(const BuildOptions& options):
+        SceneBuilder(vsg::ref_ptr<const BuildOptions> options):
             osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN),
             SceneBuilderBase(options) {}
 

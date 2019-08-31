@@ -20,7 +20,7 @@ vsg::ref_ptr<vsg::BindGraphicsPipeline> ConvertToVsg::getOrCreateBindGraphicsPip
     MaskPair masks(shaderModeMask, geometryMask);
     if (auto itr = pipelineMap.find(masks); itr != pipelineMap.end()) return itr->second;
 
-    auto bindGraphicsPipeline = createBindGraphicsPipeline(shaderModeMask, geometryMask, vertexShaderPath, fragmentShaderPath);
+    auto bindGraphicsPipeline = createBindGraphicsPipeline(shaderModeMask, geometryMask, buildOptions->vertexShaderPath, buildOptions->fragmentShaderPath);
     pipelineMap[masks] = bindGraphicsPipeline;
     return bindGraphicsPipeline;
 }
@@ -64,7 +64,7 @@ vsg::Path ConvertToVsg::mapFileName(const std::string& filename)
         return itr->second;
     }
 
-    vsg::Path vsg_filename = vsg::removeExtension(filename) + "." + extension;
+    vsg::Path vsg_filename = vsg::removeExtension(filename) + "." + buildOptions->extension;
 
     filenameMap[filename] = vsg_filename;
 
@@ -189,8 +189,8 @@ void ConvertToVsg::apply(osg::Geometry& geometry)
 {
     ScopedPushPop spp(*this, geometry.getStateSet());
 
-    uint32_t geometryMask = (osg2vsg::calculateAttributesMask(&geometry) | overrideGeomAttributes) & supportedGeometryAttributes;
-    uint32_t shaderModeMask = (calculateShaderModeMask() | overrideShaderModeMask | nodeShaderModeMasks) & supportedShaderModeMask;
+    uint32_t geometryMask = (osg2vsg::calculateAttributesMask(&geometry) | buildOptions->overrideGeomAttributes) & buildOptions->supportedGeometryAttributes;
+    uint32_t shaderModeMask = (calculateShaderModeMask() | buildOptions->overrideShaderModeMask | nodeShaderModeMasks) & buildOptions->supportedShaderModeMask;
 
     // std::cout<<"Have geometry with "<<statestack.size()<<" shaderModeMask="<<shaderModeMask<<", geometryMask="<<geometryMask<<std::endl;
 
@@ -199,7 +199,7 @@ void ConvertToVsg::apply(osg::Geometry& geometry)
     auto bindGraphicsPipeline = getOrCreateBindGraphicsPipeline(shaderModeMask, geometryMask);
     if (bindGraphicsPipeline) stategroup->add(bindGraphicsPipeline);
 
-    auto vsg_geometry = osg2vsg::convertToVsg(&geometry, geometryMask, geometryTarget);
+    auto vsg_geometry = osg2vsg::convertToVsg(&geometry, geometryMask, buildOptions->geometryTarget);
 
     if (!statestack.empty())
     {
@@ -274,7 +274,7 @@ void ConvertToVsg::apply(osg::Billboard& billboard)
 {
     ScopedPushPop spp(*this, billboard.getStateSet());
 
-    if (billboardTransform)
+    if (buildOptions->billboardTransform)
     {
         nodeShaderModeMasks = BILLBOARD;
     }

@@ -19,24 +19,24 @@ int main(int argc, char** argv)
 {
     vsg::CommandLine arguments(&argc, argv);
 
-    osg2vsg::BuildOptions buildOptions;
+    auto buildOptions = osg2vsg::BuildOptions::create();
     auto inputFilename = arguments.value(std::string(),"-i");
 
     vsg::Path outputFilename;
-    if (arguments.read("-o", outputFilename)) buildOptions.extension = vsg::fileExtension(outputFilename);
+    if (arguments.read("-o", outputFilename)) buildOptions->extension = vsg::fileExtension(outputFilename);
 
     auto levels = arguments.value(20, "-l");
     uint32_t numThreads = arguments.value(16, "-t");
 
-    if (arguments.read("--ext", buildOptions.extension)) {}
-    if (arguments.read("--cull-nodes")) buildOptions.insertCullNodes = true;
-    if (arguments.read("--no-cull-nodes")) buildOptions.insertCullNodes = false;
-    if (arguments.read("--no-culling")) { buildOptions.insertCullGroups = false; buildOptions.insertCullNodes = false; }
-    if (arguments.read("--billboard-transform")) { buildOptions.billboardTransform = true; }
-    if (arguments.read("--Geometry")) { buildOptions.geometryTarget = osg2vsg::VSG_GEOMETRY; }
-    if (arguments.read("--VertexIndexDraw")) { buildOptions.geometryTarget = osg2vsg::VSG_VERTEXINDEXDRAW; }
-    if (arguments.read("--Commands")) { buildOptions.geometryTarget = osg2vsg::VSG_COMMANDS; }
-    if (arguments.read({"--bind-single-ds", "--bsds"})) buildOptions.useBindDescriptorSet = true;
+    if (arguments.read("--ext", buildOptions->extension)) {}
+    if (arguments.read("--cull-nodes")) buildOptions->insertCullNodes = true;
+    if (arguments.read("--no-cull-nodes")) buildOptions->insertCullNodes = false;
+    if (arguments.read("--no-culling")) { buildOptions->insertCullGroups = false; buildOptions->insertCullNodes = false; }
+    if (arguments.read("--billboard-transform")) { buildOptions->billboardTransform = true; }
+    if (arguments.read("--Geometry")) { buildOptions->geometryTarget = osg2vsg::VSG_GEOMETRY; }
+    if (arguments.read("--VertexIndexDraw")) { buildOptions->geometryTarget = osg2vsg::VSG_VERTEXINDEXDRAW; }
+    if (arguments.read("--Commands")) { buildOptions->geometryTarget = osg2vsg::VSG_COMMANDS; }
+    if (arguments.read({"--bind-single-ds", "--bsds"})) buildOptions->useBindDescriptorSet = true;
 
     if (inputFilename.empty() || outputFilename.empty())
     {
@@ -51,7 +51,7 @@ int main(int argc, char** argv)
 
     struct ReadOperation : public vsg::Operation
     {
-        ReadOperation(vsg::observer_ptr<vsg::OperationQueue> q, vsg::ref_ptr<vsg::Latch> l, const osg2vsg::BuildOptions& bo,
+        ReadOperation(vsg::observer_ptr<vsg::OperationQueue> q, vsg::ref_ptr<vsg::Latch> l, vsg::ref_ptr<const osg2vsg::BuildOptions> bo,
                       const std::string& inPath, const std::string& inFilename,
                       const vsg::Path& outPath, const vsg::Path& outFilename,
                       int cl, int ml) :
@@ -122,7 +122,7 @@ int main(int argc, char** argv)
 
         vsg::observer_ptr<vsg::OperationQueue> queue;
         vsg::ref_ptr<vsg::Latch> latch;
-        osg2vsg::BuildOptions buildOptions;
+        vsg::ref_ptr<const osg2vsg::BuildOptions> buildOptions;
         std::string inputPath;
         std::string inputFilename;
         vsg::Path outputPath;
