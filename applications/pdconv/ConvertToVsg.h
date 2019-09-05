@@ -37,15 +37,19 @@ class ConvertToVsg : public osg::NodeVisitor, public osg2vsg::SceneBuilderBase
 {
 public:
 
-    ConvertToVsg(vsg::ref_ptr<const BuildOptions> options):
+    ConvertToVsg(vsg::ref_ptr<const BuildOptions> options, int in_level, int in_maxLevel):
             osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN),
-            SceneBuilderBase(options) {}
+            SceneBuilderBase(options),
+            level(in_level),
+            maxLevel(in_maxLevel) {}
 
     vsg::ref_ptr<vsg::Node> root;
 
     using MasksAndState = std::tuple<uint32_t, uint32_t, osg::ref_ptr<osg::StateSet>>;
     using BindDescriptorSetMap = std::map<MasksAndState, vsg::ref_ptr<vsg::BindDescriptorSet>>;
     BindDescriptorSetMap bindDescriptorSetMap;
+    int level;
+    int maxLevel;
 
     using NodeMap = std::map<osg::Node*, vsg::ref_ptr<vsg::Node>>;
     NodeMap nodeMap;

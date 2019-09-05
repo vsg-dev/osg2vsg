@@ -420,15 +420,22 @@ void ConvertToVsg::apply(osg::PagedLOD& plod)
     const double pixel_ratio = 1.0/1080.0;
     const double angle_ratio = 1.0/osg::DegreesToRadians(30.0); // assume a 60 fovy for reference
 
-    struct CompareChild
+    if (numRanges<=0) return;
+
+    struct Child
     {
-        bool operator() (const vsg::PagedLOD::PagedLODChild& lhs, const vsg::PagedLOD::PagedLODChild& rhs) const
+        double minimumScreenHeightRatio;
+        std::string filename;
+        vsg::ref_ptr<vsg::Node> node;
+
+        bool operator < (const Child& rhs) const
         {
-            return lhs.minimumScreenHeightRatio > rhs.minimumScreenHeightRatio;
+            return minimumScreenHeightRatio > rhs.minimumScreenHeightRatio;
         }
     };
 
-    using Children = std::set<vsg::PagedLOD::PagedLODChild, CompareChild>;
+
+    using Children = std::vector<Child>;
     Children children;
 
     for(unsigned int i = 0; i < numRanges; ++i)
@@ -443,13 +450,47 @@ void ConvertToVsg::apply(osg::PagedLOD& plod)
         auto osg_filename = plod.getFileName(i);
         auto vsg_filename = osg_filename.empty() ? vsg::Path() : mapFileName(osg_filename);
 
-        children.insert(vsg::PagedLOD::PagedLODChild{minimumScreenHeightRatio, vsg_filename, vsg_child, vsg_child});
+        children.emplace_back(Child{minimumScreenHeightRatio, vsg_filename, vsg_child});
     }
 
-    // add to vsg::LOD in reverse order - highest level of detail first
-    for(auto& child : children)
+    std::sort(children.begin(), children.end());
+
+
+    if (children.size()==2)
     {
-        vsg_lod->addChild(child);
+        vsg_lod->filename = children[0].filename;
+        vsg_lod->setChild(0, vsg::PagedLOD::Child{children[0].minimumScreenHeightRatio, children[0].node});
+        vsg_lod->setChild(1, vsg::PagedLOD::Child{children[1].minimumScreenHeightRatio, children[1].node});
+    }
+
+    double lod_multiplier = 1.0;
+    if (!children.empty())
+    {
+        double screenRatio = children.front().minimumScreenHeightRatio;
+        lod_multiplier = 6.0 / (screenRatio * screenRatio);
+    }
+
+    double maxNumOfTilesBelow = 0;
+    for(int i=level; i<maxLevel; ++i)
+    {
+        maxNumOfTilesBelow += std::pow(4.0, static_cast<double>(i-level));
+    }
+
+    if (lod_multiplier > maxNumOfTilesBelow)
+    {
+        lod_multiplier = maxNumOfTilesBelow;
+    }
+
+
+
+    vsg::CollectDescriptorStats collectStats;
+    vsg_lod->accept(collectStats);
+
+    vsg_lod->setMaxSlot(collectStats.maxSlot);
+    vsg_lod->setDescriptorPoolSizes(collectStats.computeDescriptorPoolSizes());
+    for(auto& poolSize : vsg_lod->getDescriptorPoolSizes())
+    {
+        poolSize.descriptorCount = static_cast<uint32_t>(static_cast<double>(poolSize.descriptorCount) * lod_multiplier );
     }
 
     root = vsg_lod;

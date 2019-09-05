@@ -79,7 +79,7 @@ int main(int argc, char** argv)
 
             if (osg_scene)
             {
-                osg2vsg::ConvertToVsg sceneBuilder(buildOptions);
+                osg2vsg::ConvertToVsg sceneBuilder(buildOptions, level, maxLevel);
 
                 sceneBuilder.optimize(osg_scene);
 
