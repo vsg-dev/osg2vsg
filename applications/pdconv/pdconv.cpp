@@ -27,6 +27,7 @@ int main(int argc, char** argv)
 
     auto levels = arguments.value(20, "-l");
     uint32_t numThreads = arguments.value(16, "-t");
+    uint32_t numTilesBelow = arguments.value(0, "-n");
 
     if (arguments.read("--ext", buildOptions->extension)) {}
     if (arguments.read("--cull-nodes")) buildOptions->insertCullNodes = true;
@@ -54,7 +55,7 @@ int main(int argc, char** argv)
         ReadOperation(vsg::observer_ptr<vsg::OperationQueue> q, vsg::ref_ptr<vsg::Latch> l, vsg::ref_ptr<const osg2vsg::BuildOptions> bo,
                       const std::string& inPath, const std::string& inFilename,
                       const vsg::Path& outPath, const vsg::Path& outFilename,
-                      int cl, int ml) :
+                      int cl, int ml, uint32_t ntb) :
             queue(q),
             latch(l),
             buildOptions(bo),
@@ -63,7 +64,8 @@ int main(int argc, char** argv)
             outputPath(outPath),
             outputFilename(outFilename),
             level(cl),
-            maxLevel(ml)
+            maxLevel(ml),
+            numTilesBelow(ntb)
         {
         }
 
@@ -79,7 +81,7 @@ int main(int argc, char** argv)
 
             if (osg_scene)
             {
-                osg2vsg::ConvertToVsg sceneBuilder(buildOptions, level, maxLevel);
+                osg2vsg::ConvertToVsg sceneBuilder(buildOptions, level, maxLevel, numTilesBelow);
 
                 sceneBuilder.optimize(osg_scene);
 
@@ -104,7 +106,7 @@ int main(int argc, char** argv)
                         // increment the latch as we are adding another operation to do.
                         latch->count_up();
 
-                        ref_queue->add(vsg::ref_ptr<ReadOperation>(new ReadOperation(queue, latch, buildOptions, finalInputPath, osg_filename, finalOutputPath, vsg_filename, level+1, maxLevel)));
+                        ref_queue->add(vsg::ref_ptr<ReadOperation>(new ReadOperation(queue, latch, buildOptions, finalInputPath, osg_filename, finalOutputPath, vsg_filename, level+1, maxLevel, numTilesBelow)));
                     }
                 }
             }
@@ -129,13 +131,14 @@ int main(int argc, char** argv)
         vsg::Path outputFilename;
         int level;
         int maxLevel;
+        uint32_t numTilesBelow;
     };
 
     std::cout<<"read/write operations pending = ";
 
     vsg::observer_ptr<vsg::OperationQueue> obs_queue(operationQueue);
 
-    operationQueue->add(vsg::ref_ptr<ReadOperation>(new ReadOperation(obs_queue, latch, buildOptions, "", inputFilename, "", outputFilename, 0, levels)));
+    operationQueue->add(vsg::ref_ptr<ReadOperation>(new ReadOperation(obs_queue, latch, buildOptions, "", inputFilename, "", outputFilename, 0, levels, numTilesBelow)));
 
     // wait until the latch goes zero i.e. all read operations have completed
     latch->wait();

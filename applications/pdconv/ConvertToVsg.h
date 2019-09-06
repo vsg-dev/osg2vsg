@@ -37,11 +37,12 @@ class ConvertToVsg : public osg::NodeVisitor, public osg2vsg::SceneBuilderBase
 {
 public:
 
-    ConvertToVsg(vsg::ref_ptr<const BuildOptions> options, int in_level, int in_maxLevel):
+    ConvertToVsg(vsg::ref_ptr<const BuildOptions> options, int in_level, int in_maxLevel, uint32_t in_numTilesBelow):
             osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN),
             SceneBuilderBase(options),
             level(in_level),
-            maxLevel(in_maxLevel) {}
+            maxLevel(in_maxLevel),
+            numTilesBelow(in_numTilesBelow) {}
 
     vsg::ref_ptr<vsg::Node> root;
 
@@ -50,11 +51,14 @@ public:
     BindDescriptorSetMap bindDescriptorSetMap;
     int level;
     int maxLevel;
+    uint32_t numTilesBelow;
 
     using NodeMap = std::map<osg::Node*, vsg::ref_ptr<vsg::Node>>;
     NodeMap nodeMap;
 
     FileNameMap filenameMap;
+
+
 
     vsg::ref_ptr<vsg::BindGraphicsPipeline> getOrCreateBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryMask);
 

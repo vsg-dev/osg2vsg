@@ -463,35 +463,23 @@ void ConvertToVsg::apply(osg::PagedLOD& plod)
         vsg_lod->setChild(1, vsg::PagedLOD::Child{children[1].minimumScreenHeightRatio, children[1].node});
     }
 
-    double lod_multiplier = 1.0;
-    if (!children.empty())
-    {
-        double screenRatio = children.front().minimumScreenHeightRatio;
-        lod_multiplier = 6.0 / (screenRatio * screenRatio);
-    }
-
-    double maxNumOfTilesBelow = 0;
+    uint32_t maxNumOfTilesBelow = 0;
     for(int i=level; i<maxLevel; ++i)
     {
-        maxNumOfTilesBelow += std::pow(4.0, static_cast<double>(i-level));
+        maxNumOfTilesBelow += std::pow(4, i-level);
     }
 
-    if (lod_multiplier > maxNumOfTilesBelow)
-    {
-        lod_multiplier = maxNumOfTilesBelow;
-    }
-
-
+    uint32_t tileMultiplier = std::min(maxNumOfTilesBelow, numTilesBelow) + 1;
 
     vsg::CollectDescriptorStats collectStats;
     vsg_lod->accept(collectStats);
 
     vsg_lod->setMaxSlot(collectStats.maxSlot);
-    vsg_lod->setNumDescriptorSets(static_cast<uint32_t>(static_cast<double>(collectStats.computeNumDescriptorSets())  * lod_multiplier));
+    vsg_lod->setNumDescriptorSets(collectStats.computeNumDescriptorSets() * tileMultiplier);
     vsg_lod->setDescriptorPoolSizes(collectStats.computeDescriptorPoolSizes());
     for(auto& poolSize : vsg_lod->getDescriptorPoolSizes())
     {
-        poolSize.descriptorCount = static_cast<uint32_t>(static_cast<double>(poolSize.descriptorCount) * lod_multiplier );
+        poolSize.descriptorCount = poolSize.descriptorCount * tileMultiplier;
     }
 
     root = vsg_lod;
