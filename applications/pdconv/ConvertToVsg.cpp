@@ -487,6 +487,7 @@ void ConvertToVsg::apply(osg::PagedLOD& plod)
     vsg_lod->accept(collectStats);
 
     vsg_lod->setMaxSlot(collectStats.maxSlot);
+    vsg_lod->setNumDescriptorSets(static_cast<uint32_t>(static_cast<double>(collectStats.computeNumDescriptorSets())  * lod_multiplier));
     vsg_lod->setDescriptorPoolSizes(collectStats.computeDescriptorPoolSizes());
     for(auto& poolSize : vsg_lod->getDescriptorPoolSizes())
     {
