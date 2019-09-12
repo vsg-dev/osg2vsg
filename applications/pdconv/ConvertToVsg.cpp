@@ -82,7 +82,7 @@ void ConvertToVsg::optimize(osg::Node* osg_scene)
     vaov.optimizeOrder();
 
     osgUtil::Optimizer optimizer;
-    optimizer.optimize(osg_scene, osgUtil::Optimizer::DEFAULT_OPTIMIZATIONS);
+    optimizer.optimize(osg_scene, osgUtil::Optimizer::DEFAULT_OPTIMIZATIONS & ~osgUtil::Optimizer::FLATTEN_STATIC_TRANSFORMS);
 
     osg2vsg::OptimizeOsgBillboards optimizeBillboards;
     osg_scene->accept(optimizeBillboards);
