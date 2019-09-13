@@ -252,6 +252,42 @@ void ConvertToVsg::apply(osg::MatrixTransform& transform)
         }
     }
 
+    struct CheckForCullNodes : public vsg::ConstVisitor
+    {
+        bool containsCullNodes = false;
+
+        void apply(const vsg::Node& node) override
+        {
+            node.traverse(*this);
+        }
+
+        void apply(const vsg::CullGroup&) override
+        {
+            containsCullNodes = true;
+        }
+
+        void apply(const vsg::CullNode&) override
+        {
+            containsCullNodes = true;
+        }
+
+        void apply(const vsg::LOD&) override
+        {
+            containsCullNodes = true;
+        }
+
+        void apply(const vsg::PagedLOD&) override
+        {
+            containsCullNodes = true;
+        }
+    } checkForCullNodes;
+
+    // search the subgraph to see if any cull ndoes are present so we know whether transform the view frustum in local coords will be reuiqred.
+    vsg_transform->accept(checkForCullNodes);
+
+    // need to run visitor to seeif it contains any CullNode/LOD/PagedLOD
+    vsg_transform->setSubgraphRequiresLocalFrustum(checkForCullNodes.containsCullNodes);
+
     root = vsg_transform;
 
 }
