@@ -190,7 +190,13 @@ void ConvertToVsg::apply(osg::Geometry& geometry)
     auto stategroup = vsg::StateGroup::create();
 
     auto bindGraphicsPipeline = getOrCreateBindGraphicsPipeline(shaderModeMask, geometryMask);
-    if (bindGraphicsPipeline) stategroup->add(bindGraphicsPipeline);
+    if (bindGraphicsPipeline)
+    {
+        if (!inheritedStateGroup || !inheritedStateGroup->contains(bindGraphicsPipeline))
+        {
+            stategroup->add(bindGraphicsPipeline);
+        }
+    }
 
     auto vsg_geometry = osg2vsg::convertToVsg(&geometry, geometryMask, buildOptions->geometryTarget);
 
@@ -201,7 +207,13 @@ void ConvertToVsg::apply(osg::Geometry& geometry)
         if (stateset)
         {
             auto bindDescriptorSet = getOrCreateBindDescriptorSet(shaderModeMask, geometryMask, stateset);
-            if (bindDescriptorSet) stategroup->add(bindDescriptorSet);
+            if (bindDescriptorSet)
+            {
+                if (!inheritedStateGroup || !inheritedStateGroup->contains(bindDescriptorSet))
+                {
+                    stategroup->add(bindDescriptorSet);
+                }
+            }
         }
     }
 

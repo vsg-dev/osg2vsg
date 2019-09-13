@@ -55,7 +55,8 @@ int main(int argc, char** argv)
         ReadOperation(vsg::observer_ptr<vsg::OperationQueue> q, vsg::ref_ptr<vsg::Latch> l, vsg::ref_ptr<const osg2vsg::BuildOptions> bo,
                       const std::string& inPath, const std::string& inFilename,
                       const vsg::Path& outPath, const vsg::Path& outFilename,
-                      int cl, int ml, uint32_t ntb) :
+                      int cl, int ml, uint32_t ntb,
+                      vsg::ref_ptr<vsg::StateGroup> in_inheritedStateGroup = {}) :
             queue(q),
             latch(l),
             buildOptions(bo),
@@ -65,8 +66,55 @@ int main(int argc, char** argv)
             outputFilename(outFilename),
             level(cl),
             maxLevel(ml),
-            numTilesBelow(ntb)
+            numTilesBelow(ntb),
+            inheritedStateGroup(in_inheritedStateGroup)
         {
+        }
+
+        vsg::ref_ptr<vsg::StateGroup> decorateWithStateGroupIfAppropriate(vsg::ref_ptr<vsg::Node> scene)
+        {
+            struct FindStateGroup : public vsg::Visitor
+            {
+                std::map<vsg::ref_ptr<vsg::BindGraphicsPipeline>, std::list<vsg::StateGroup*>> pipleStateGroupMap;
+
+                void apply(vsg::Node& node) override
+                {
+                    node.traverse(*this);
+                }
+
+                void apply(vsg::StateGroup& stateGroup) override
+                {
+                    for(auto& statecommand : stateGroup.getStateCommands())
+                    {
+                        auto bgp = statecommand.cast<vsg::BindGraphicsPipeline>();
+                        if (bgp) pipleStateGroupMap[bgp].push_back(&stateGroup);
+                    }
+                }
+            } findStateGroup;
+
+            scene->accept(findStateGroup);
+
+            if (findStateGroup.pipleStateGroupMap.size()==1)
+            {
+                auto root = vsg::StateGroup::create();
+                auto itr = findStateGroup.pipleStateGroupMap.begin();
+
+                // add BindGraphicsPipeline to new root StateGroup
+                root->add(itr->first);
+
+                // remove from original StateGroup
+                for(auto& sg : itr->second)
+                {
+                    sg->remove(itr->first);
+                }
+
+                root->addChild(scene);
+                return root;
+            }
+            else
+            {
+                return {};
+            }
         }
 
         void run() override
@@ -81,7 +129,7 @@ int main(int argc, char** argv)
 
             if (osg_scene)
             {
-                osg2vsg::ConvertToVsg sceneBuilder(buildOptions, level, maxLevel, numTilesBelow);
+                osg2vsg::ConvertToVsg sceneBuilder(buildOptions, level, maxLevel, numTilesBelow, inheritedStateGroup);
 
                 sceneBuilder.optimize(osg_scene);
 
@@ -89,6 +137,18 @@ int main(int argc, char** argv)
 
                 if (vsg_scene)
                 {
+                    if (level==0 && !inheritedStateGroup)
+                    {
+                        inheritedStateGroup = dynamic_cast<vsg::StateGroup*>(vsg_scene.get());
+                        if (!inheritedStateGroup)
+                        {
+                            inheritedStateGroup = decorateWithStateGroupIfAppropriate(vsg_scene);
+
+                            // if we have inserted a StateGroup to the top, now use this as the scene to write out
+                            if (inheritedStateGroup) vsg_scene = inheritedStateGroup;
+                        }
+                    }
+
                     if (!finalOutputPath.empty() && !vsg::fileExists(finalOutputPath))
                     {
                         osgDB::makeDirectory(finalOutputPath);
@@ -106,7 +166,7 @@ int main(int argc, char** argv)
                         // increment the latch as we are adding another operation to do.
                         latch->count_up();
 
-                        ref_queue->add(vsg::ref_ptr<ReadOperation>(new ReadOperation(queue, latch, buildOptions, finalInputPath, osg_filename, finalOutputPath, vsg_filename, level+1, maxLevel, numTilesBelow)));
+                        ref_queue->add(vsg::ref_ptr<ReadOperation>(new ReadOperation(queue, latch, buildOptions, finalInputPath, osg_filename, finalOutputPath, vsg_filename, level+1, maxLevel, numTilesBelow, inheritedStateGroup)));
                     }
                 }
             }
@@ -132,6 +192,7 @@ int main(int argc, char** argv)
         int level;
         int maxLevel;
         uint32_t numTilesBelow;
+        vsg::ref_ptr<vsg::StateGroup> inheritedStateGroup;
     };
 
     std::cout<<"read/write operations pending = ";

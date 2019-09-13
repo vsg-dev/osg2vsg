@@ -37,12 +37,15 @@ class ConvertToVsg : public osg::NodeVisitor, public osg2vsg::SceneBuilderBase
 {
 public:
 
-    ConvertToVsg(vsg::ref_ptr<const BuildOptions> options, int in_level, int in_maxLevel, uint32_t in_numTilesBelow):
+    ConvertToVsg(vsg::ref_ptr<const BuildOptions> options, int in_level, int in_maxLevel, uint32_t in_numTilesBelow, vsg::ref_ptr<vsg::StateGroup> in_inheritedStateGroup = {}):
             osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN),
             SceneBuilderBase(options),
             level(in_level),
             maxLevel(in_maxLevel),
-            numTilesBelow(in_numTilesBelow) {}
+            numTilesBelow(in_numTilesBelow),
+            inheritedStateGroup(in_inheritedStateGroup)
+    {
+    }
 
     vsg::ref_ptr<vsg::Node> root;
 
@@ -52,6 +55,7 @@ public:
     int level;
     int maxLevel;
     uint32_t numTilesBelow;
+    vsg::ref_ptr<vsg::StateGroup> inheritedStateGroup;
 
     using NodeMap = std::map<osg::Node*, vsg::ref_ptr<vsg::Node>>;
     NodeMap nodeMap;
