@@ -39,6 +39,7 @@ namespace vsg
         const bool dedicated() { return _dedicated; }
 
         const HandleType handle() { return _memoryHandle; }
+        ImageView* imageView() { return _imageData._imageView; }
 
         const uint32_t byteSize() { return _byteSize; }
 
