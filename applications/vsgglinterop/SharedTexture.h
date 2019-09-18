@@ -73,6 +73,8 @@ namespace osg
 
         virtual void apply(State& state) const;
 
+        static std::vector<GLint> getSupportedTilingTypesForFormat(const osg::State& state, GLenum format = GL_RGBA8);
+
     protected:
         virtual ~SharedTexture();
 

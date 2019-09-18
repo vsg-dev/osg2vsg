@@ -7,10 +7,10 @@ else()
 endif()
 
 set(SOURCES vsgglinterop.cpp 
-            SharedDescriptorImage.h SharedDescriptorImage.cpp
-            SharedTexture.h SharedTexture.cpp
+            SharedImage.h SharedImage.cpp
             SharedSemaphore.h SharedSemaphore.cpp
-            ImageViewUtils.h ImageViewUtils.cpp
+            SharedTexture.h SharedTexture.cpp
+            GLSemaphore.h GLSemaphore.cpp
             SyncTextureDrawCallbacks.h
             GLMemoryExtensions.h GLMemoryExtensions.cpp)
 

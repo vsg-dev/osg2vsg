@@ -1,70 +1,35 @@
-/* <editor-fold desc="MIT License">
-
-Copyright(c) 2019 Thomas Hogarth
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-</editor-fold> */
-
 #include "SharedSemaphore.h"
 
-#include "GLMemoryExtensions.h"
+using namespace vsg;
 
-#include <osg/State>
-
-using namespace osg;
-
-SharedSemaphore::SharedSemaphore(HandleType handle) :
-    Referenced(),
-    _handle(handle),
-    _semaphore(0)
+ref_ptr<SharedSemaphore> vsg::createSharedSemaphore(Device* device)
 {
-}
+    VkExportSemaphoreCreateInfo esci;
+    esci.sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO;
+    esci.pNext = nullptr;
+    esci.handleTypes = SharedSemaphore::kSemaphoreHandleType;
 
+    ref_ptr<SharedSemaphore> semaphore = SharedSemaphore::create(device, &esci);
 
-SharedSemaphore::~SharedSemaphore()
-{
-}
-
-void SharedSemaphore::compileGLObjects(State& state)
-{
-    if(_handle == 0 || _semaphore != 0) return;
-
-    GLMemoryExtensions* extensions = GLMemoryExtensions::Get(state.getContextID(), true);
-    if(!extensions->glGenSemaphoresEXT) return;
-
-    extensions->glGenSemaphoresEXT(1, &_semaphore);
 #if WIN32
-    extensions->glImportSemaphoreWin32HandleEXT(_semaphore, GL_HANDLE_TYPE_OPAQUE_WIN32_EXT, _handle);
+    auto vkGetSemaphoreHandle = PFN_vkGetSemaphoreWin32HandleKHR(vkGetDeviceProcAddr(device->getDevice(), "vkGetSemaphoreWin32HandleKHR"));
+
+    VkSemaphoreGetWin32HandleInfoKHR getHandleInfo;
+    getHandleInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_WIN32_HANDLE_INFO_KHR;
 #else
-    extensions->glImportSemaphoreFdEXT(_semaphore, GL_HANDLE_TYPE_OPAQUE_FD_EXT, _handle)
+    auto vkGetSemaphoreHandle = PFN_vkGetSemaphoreFdKHR(vkGetDeviceProcAddr(device->getDevice(), "vkGetSemaphoreFdKHR"));
+
+    VkSemaphoreGetFdHandleInfoKHR getHandleInfo;
+    getHandleInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR;
 #endif
-}
 
-void SharedSemaphore::wait(State& state, const std::vector<GLuint>& buffers, const std::vector<GLuint>& textures, const std::vector<GLenum>& srcLayouts)
-{
-    wait(state, buffers.size(), buffers.data(), textures.size(), textures.data(), srcLayouts.data());
-}
+    getHandleInfo.pNext = nullptr;
+    getHandleInfo.handleType = SharedSemaphore::kSemaphoreHandleType;
+    getHandleInfo.semaphore = *semaphore;
 
-void SharedSemaphore::wait(State& state, GLuint numBufferBarriers, const GLuint *buffers, GLuint numTextureBarriers, const GLuint *textures, const GLenum *srcLayouts)
-{
-    GLMemoryExtensions* extensions = GLMemoryExtensions::Get(state.getContextID(), true);
+    SharedSemaphore::HandleType handle = 0;
+    VkResult result = vkGetSemaphoreHandle(device->getDevice(), &getHandleInfo, &handle);
 
-    extensions->glWaitSemaphoreEXT(_semaphore, numBufferBarriers, buffers, numTextureBarriers, textures, srcLayouts);
-}
-
-void SharedSemaphore::signal(State& state, const std::vector<GLuint>& buffers, const std::vector<GLuint>& textures, const std::vector<GLenum>& srcLayouts)
-{
-    signal(state, buffers.size(), buffers.data(), textures.size(), textures.data(), srcLayouts.data());
-}
-
-void SharedSemaphore::signal(State& state, GLuint numBufferBarriers, const GLuint *buffers, GLuint numTextureBarriers, const GLuint *textures, const GLenum *srcLayouts)
-{
-    GLMemoryExtensions* extensions = GLMemoryExtensions::Get(state.getContextID(), true);
-
-    extensions->glSignalSemaphoreEXT(_semaphore, numBufferBarriers, buffers, numTextureBarriers, textures, srcLayouts);
+    semaphore->_handle = handle;
+    return semaphore;
 }

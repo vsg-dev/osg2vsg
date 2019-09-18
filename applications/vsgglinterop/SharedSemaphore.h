@@ -1,52 +1,69 @@
-/* <editor-fold desc="MIT License">
-
-Copyright(c) 2019 Thomas Hogarth
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-</editor-fold> */
-
 #pragma once
 
-#include <vector>
+#define NOMINMAX
 
-#include <osg/GL>
-#include <osg/Referenced>
+#if defined(WIN32)
+#    define VK_USE_PLATFORM_WIN32_KHR
+#elif defined(ANDROID)
+#    define VK_USE_PLATFORM_ANDROID_KHR
+#elif defined(APPLE)
+#    define VK_USE_PLATFORM_MACOS_MVK
+#elif defined(UNIX)
+#    define VK_USE_PLATFORM_XCB_KHR
+#endif
+
+#include <vulkan/vulkan.h>
+
+#include <vsg/all.h>
 
 #if WIN32
 #include <Windows.h>
 #endif
 
-namespace osg
+namespace vsg
 {
-    class SharedSemaphore : public osg::Referenced
+    class SharedSemaphore : public Inherit<Semaphore, SharedSemaphore>
     {
     public:
-#if WIN32
+        SharedSemaphore(VkSemaphore Semaphore, Device* device, AllocationCallbacks* allocator = nullptr) :
+            Inherit(Semaphore, device, allocator)
+        {}
+
+        using Result = vsg::Result<SharedSemaphore, VkResult, VK_SUCCESS>;
+        static Result create(Device* device, void* pNextCreateInfo = nullptr, AllocationCallbacks* allocator = nullptr)
+        {
+            if (!device)
+            {
+                return Result("Error: vsg::SharedSemaphore::create(...) failed to create command pool, undefined Device.", VK_ERROR_INVALID_EXTERNAL_HANDLE);
+            }
+
+            VkSemaphoreCreateInfo semaphoreInfo = {};
+            semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+            semaphoreInfo.pNext = pNextCreateInfo;
+
+            VkSemaphore semaphore;
+            VkResult result = vkCreateSemaphore(*device, &semaphoreInfo, allocator, &semaphore);
+            if (result == VK_SUCCESS)
+            {
+                return Result(new SharedSemaphore(semaphore, device, allocator));
+            }
+            else
+            {
+                return Result("Error: Failed to create SharedSemaphore.", result);
+            }
+        }
+
+#ifdef WIN32
         typedef HANDLE HandleType;
+        static const VkExternalSemaphoreHandleTypeFlagBits kSemaphoreHandleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT;
 #else
         typedef int HandleType;
+        static const VkExternalSemaphoreHandleTypeFlagBits kSemaphoreHandleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT;
 #endif
 
-        SharedSemaphore(HandleType handle);
-
-        void compileGLObjects(State& state);
-
-        void wait(State& state, const std::vector<GLuint>& buffers, const std::vector<GLuint>& textures, const std::vector<GLenum>& srcLayouts);
-        void wait(State& state, GLuint numBufferBarriers, const GLuint *buffers, GLuint numTextureBarriers, const GLuint *textures, const GLenum *srcLayouts);
-
-        void signal(State& state, const std::vector<GLuint>& buffers, const std::vector<GLuint>& textures, const std::vector<GLenum>& srcLayouts);
-        void signal(State& state, GLuint numBufferBarriers, const GLuint *buffers, GLuint numTextureBarriers, const GLuint *textures, const GLenum *srcLayouts);
-
-    protected:
-        ~SharedSemaphore();
-
         HandleType _handle;
-        GLuint _semaphore;
     };
+
+    extern ref_ptr<SharedSemaphore> createSharedSemaphore(Device* device);
 }
 

@@ -111,3 +111,25 @@ void SharedTexture::apply(State& state) const
         textureObject->setAllocated(true);
     }
 }
+
+std::vector<GLint> SharedTexture::getSupportedTilingTypesForFormat(const osg::State& state, GLenum format)
+{
+    std::vector<GLint> results;
+
+    const osg::GLMemoryExtensions* extensions = osg::GLMemoryExtensions::Get(state.getContextID(), true);
+
+    GLint numTilingTypes = 0;
+    extensions->glGetInternalformativ(GL_TEXTURE_2D, format, GL_NUM_TILING_TYPES_EXT, 1, &numTilingTypes);
+
+    // Broken tiling detection on AMD
+    if (numTilingTypes == 0)
+    {
+        results.push_back(GL_LINEAR_TILING_EXT);
+        return results;
+    }
+
+    results.resize(numTilingTypes);
+    extensions->glGetInternalformativ(GL_TEXTURE_2D, format, GL_TILING_TYPES_EXT, numTilingTypes, results.data());
+
+    return results;
+}

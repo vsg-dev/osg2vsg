@@ -1,4 +1,4 @@
-#include "ImageViewUtils.h"
+#include "SharedImage.h"
 
 using namespace vsg;
 
@@ -23,29 +23,47 @@ VkImageCreateInfo vsg::createImageCreateInfo(VkExtent2D extents, VkFormat format
     return imageCreateInfo;
 }
 
-VsgImage vsg::createImageView(vsg::Device* device, const VkImageCreateInfo& imageCreateInfo, VkImageAspectFlagBits aspectFlags, VkImageLayout targetImageLayout)
-{
-    vsg::ref_ptr<vsg::Image> image = vsg::Image::create(device, imageCreateInfo);
-    vsg::ref_ptr<vsg::DeviceMemory> imageMemory = vsg::DeviceMemory::create(device, image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-    vkBindImageMemory(*device, *image, *imageMemory, 0);
-
-    vsg::ImageData imagedata;
-
-    VsgImage result;
-    result.imageView = vsg::ImageView::create(device, image, VK_IMAGE_VIEW_TYPE_2D, imageCreateInfo.format, aspectFlags);
-    result.imageMemory = imageMemory;
-    result.createInfo = imageCreateInfo;
-    result.aspectFlags = aspectFlags;
-    result.targetImageLayout = targetImageLayout;
-    return result;
-}
-
-VsgImage vsg::createSharedMemoryImageView(Context& context, const VkImageCreateInfo& imageCreateInfo, VkImageAspectFlagBits aspectFlags, VkImageLayout targetImageLayout)
+ImageData vsg::createImageView(Context& context, const VkImageCreateInfo& imageCreateInfo, VkImageAspectFlags aspectFlags, bool shared, VkImageLayout targetImageLayout)
 {
     Device* device = context.device;
 
-    // query chain
+    vsg::ref_ptr<vsg::Image> image;
+
+    if (shared)
+    {
+        image = createSharedMemoryImage(context, imageCreateInfo);
+    }
+    else
+    {
+        image = vsg::Image::create(device, imageCreateInfo);
+
+        // get memory requirements
+        VkMemoryRequirements memRequirements;
+        vkGetImageMemoryRequirements(*device, *image, &memRequirements);
+
+        // allocate memory with out export memory info extension
+        auto[deviceMemory, offset] = context.deviceMemoryBufferPools.reserveMemory(memRequirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+        if (!deviceMemory)
+        {
+            std::cout << "Warning: Failed allocate memory to reserve slot" << std::endl;
+            return ImageData();
+        }
+
+        image->bind(deviceMemory, offset);
+    }
+
+    ref_ptr<ImageView> imageview = vsg::ImageView::create(device, image, VK_IMAGE_VIEW_TYPE_2D, imageCreateInfo.format, aspectFlags);
+
+    return ImageData(nullptr, imageview, targetImageLayout);
+}
+
+ref_ptr<SharedImage> vsg::createSharedMemoryImage(Context& context, const VkImageCreateInfo& imageCreateInfo)
+{
+    Device* device = context.device;
+
+    // query if this needs to be a dedicated resource
+
     VkPhysicalDeviceImageFormatInfo2 imageFormatInfo;
     imageFormatInfo.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2;
     imageFormatInfo.format = imageCreateInfo.format;
@@ -55,7 +73,7 @@ VsgImage vsg::createSharedMemoryImageView(Context& context, const VkImageCreateI
 
     VkPhysicalDeviceExternalImageFormatInfo externalImageFormatInfo;
     externalImageFormatInfo.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO;
-    externalImageFormatInfo.handleType = memoryHandleType;
+    externalImageFormatInfo.handleType = SharedImage::kMemoryHandleType;
     externalImageFormatInfo.pNext = nullptr;
 
     imageFormatInfo.pNext = &externalImageFormatInfo;
@@ -80,80 +98,67 @@ VsgImage vsg::createSharedMemoryImageView(Context& context, const VkImageCreateI
         dedicated = true;
     }
 
-    ref_ptr<Image> textureImage = Image::create(device, imageCreateInfo);
-    if (!textureImage)
+    // create the image
+    ref_ptr<SharedImage> image = SharedImage::create(device, imageCreateInfo);
+    if (!image)
     {
-        return VsgImage();
+        return image;
     }
 
-    // Always add the export info to the memory allocation chain
+    // always add the export info to the memory allocation chain
     VkExportMemoryAllocateInfo exportAllocInfo;
     exportAllocInfo.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO;
-    exportAllocInfo.handleTypes = memoryHandleType;
+    exportAllocInfo.handleTypes = SharedImage::kMemoryHandleType;
     exportAllocInfo.pNext = nullptr;
 
     VkMemoryDedicatedAllocateInfo dedicatedMemAllocInfo;
     if (dedicated)
     {
-        // Potentially add the dedicated memory allocation
+        // potentially add the dedicated memory allocation
         dedicatedMemAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO;
-        dedicatedMemAllocInfo.image = textureImage->image();
+        dedicatedMemAllocInfo.image = image->image();
         dedicatedMemAllocInfo.buffer = VK_NULL_HANDLE;
         dedicatedMemAllocInfo.pNext = nullptr;
         exportAllocInfo.pNext = &dedicatedMemAllocInfo;
     }
 
+    // get memory requirements
     VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(*device, *textureImage, &memRequirements);
+    vkGetImageMemoryRequirements(*device, *image, &memRequirements);
 
+    // allocate memory with out export memory info extension
     auto[deviceMemory, offset] = context.deviceMemoryBufferPools.reserveMemory(memRequirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &exportAllocInfo);
 
     if (!deviceMemory)
     {
-        std::cout << "Warning: vsg::transferImageData() Failed allocate memory to reserve slot" << std::endl;
-        return VsgImage();
+        std::cout << "Warning: Failed allocate memory to reserve slot" << std::endl;
+        return image;
     }
 
-    textureImage->bind(deviceMemory, offset);
+    image->bind(deviceMemory, offset);
 
+    // get the memory handle
 #if WIN32
+    auto vkGetMemoryHandle = PFN_vkGetMemoryWin32HandleKHR(vkGetDeviceProcAddr(device->getDevice(), "vkGetMemoryWin32HandleKHR"));
+
     VkMemoryGetWin32HandleInfoKHR getHandleInfo;
     getHandleInfo.sType = VK_STRUCTURE_TYPE_MEMORY_GET_WIN32_HANDLE_INFO_KHR;
 #else
+    auto vkGetMemoryHandle = PFN_vkGetMemoryFdKHR(vkGetDeviceProcAddr(device->getDevice(), "vkGetMemoryFdKHR"));
+
     VkMemoryGetFdInfoKHR getHandleInfo;
     getHandleInfo.sType = VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR;
 #endif
-    getHandleInfo.handleType = memoryHandleType;
+    getHandleInfo.handleType = SharedImage::kMemoryHandleType;
     getHandleInfo.memory = *deviceMemory;
     getHandleInfo.pNext = nullptr;
 
-    HandleType memoryHandle = 0;
+    SharedImage::HandleType memoryHandle = 0;
+    vkGetMemoryHandle(device->getDevice(), &getHandleInfo, &memoryHandle);
+    
+    image->_memoryHandle = memoryHandle;
+    image->_byteSize = static_cast<uint32_t>(memRequirements.size);
+    image->_dedicated = dedicated;
 
-    auto vkGetMemoryWin32HandleKHR2 = PFN_vkGetMemoryWin32HandleKHR(vkGetDeviceProcAddr(device->getDevice(), "vkGetMemoryWin32HandleKHR"));
-    vkGetMemoryWin32HandleKHR2(device->getDevice(), &getHandleInfo, &memoryHandle);
-
-    VkImageViewCreateInfo createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    createInfo.image = *textureImage;
-    createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    createInfo.format = imageCreateInfo.format;
-    createInfo.subresourceRange.aspectMask = aspectFlags;
-    createInfo.subresourceRange.baseMipLevel = 0;
-    createInfo.subresourceRange.levelCount = 1;
-    createInfo.subresourceRange.baseArrayLayer = 0;
-    createInfo.subresourceRange.layerCount = 1;
-    createInfo.pNext = nullptr;
-
-    VsgImage result;
-    result.imageView = ImageView::create(device, createInfo);
-    result.imageView->setImage(textureImage);
-    result.createInfo = imageCreateInfo;
-    result.aspectFlags = aspectFlags;
-    result.targetImageLayout = targetImageLayout;
-
-    result.memoryHandle = memoryHandle;
-    result.byteSize = static_cast<uint32_t>(memRequirements.size);
-    result.dedicated = dedicated;
-
-    return result;
+    return image;
 }

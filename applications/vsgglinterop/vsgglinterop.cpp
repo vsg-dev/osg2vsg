@@ -29,17 +29,18 @@
 #include <osg/Texture2D>
 #include <osg/MatrixTransform>
 #include <osgDB/ReadFile>
+#include <osgGA/TrackballManipulator>
 #include <osgViewer/Viewer>
 
 // osg
 #include "SharedTexture.h"
-#include "SharedSemaphore.h"
+#include "GLSemaphore.h"
 #include "GLMemoryExtensions.h"
 #include "SyncTextureDrawCallbacks.h"
 
 // vsg
-#include "SharedDescriptorImage.h"
-#include "ImageViewUtils.h"
+#include "SharedImage.h"
+#include "CommandUtils.h"
 
 #ifdef WIN32
 const auto semaphoreHandleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT;
@@ -83,10 +84,12 @@ const char* ModelShaderVert =
 "in vec4 osg_MultiTexCoord0;\n"
 "out highp vec2 texcoord;\n"
 "uniform mat4 osg_ModelViewProjectionMatrix;\n"
+"uniform mat4 osg_ModelViewMatrix;\n"
 "uniform mat3 osg_NormalMatrix;\n"
 "void main()\n"
 "{\n"
 "    gl_Position = osg_ModelViewProjectionMatrix * osg_Vertex;\n"
+"    viewVertex = osg_ModelViewMatrix * osg_Vertex;\n"
 "    viewNormal = normalize(osg_NormalMatrix * osg_Normal);\n"
 "    texcoord = osg_MultiTexCoord0.xy;\n"
 "}\n";
@@ -100,32 +103,16 @@ const char* ModelShaderFrag =
 "out lowp vec4 fragColor;\n"
 "void main()\n"
 "{\n"
-"    float ndotl = dot(viewNormal, normalize(vec3(0.0,0.0,0.0) - viewVertex.xyz));\n"
+"    float ndotl = dot(viewNormal, normalize(vec3(0.0,0.0,0.0) - viewVertex.xyz ));\n"
 "    fragColor = vec4(0.0,1.0,0.0,1.0) * max(ndotl, 0.0); //texture(texture0, texcoord.xy);\n"
 "}\n";
 
 
-std::set<VkImageTiling> getSupportedTiling(const osg::State& state)
+std::set<VkImageTiling> getSupportedTiling(const osg::State& state, GLenum format)
 {
     std::set<VkImageTiling> result;
 
-    GLint numTilingTypes = 0;
-
-    const osg::GLMemoryExtensions* extensions = osg::GLMemoryExtensions::Get(state.getContextID(), true);
-
-    extensions->glGetInternalformativ(GL_TEXTURE_2D, GL_RGBA8, GL_NUM_TILING_TYPES_EXT, 1, &numTilingTypes);
-    // Broken tiling detection on AMD
-    if (0 == numTilingTypes)
-    {
-        result.insert(VK_IMAGE_TILING_LINEAR);
-        return result;
-    }
-
-    std::vector<GLint> glTilingTypes;
-    {
-        glTilingTypes.resize(numTilingTypes);
-        extensions->glGetInternalformativ(GL_TEXTURE_2D, GL_RGBA8, GL_TILING_TYPES_EXT, numTilingTypes, glTilingTypes.data());
-    }
+    auto glTilingTypes = osg::SharedTexture::getSupportedTilingTypesForFormat(state, format);
 
     for (const auto& glTilingType : glTilingTypes)
     {
@@ -159,9 +146,6 @@ struct VsgData
     vsg::ref_ptr<vsg::Device> device;
 
     vsg::ref_ptr<vsg::OffscreenGraphicsStage> offsreenStage;
-
-    vsg::ref_ptr<vsg::Semaphore> readySemaphore;
-    vsg::ref_ptr<vsg::Semaphore> completeSemaphore;
 };
 
 struct OsgScene
@@ -178,11 +162,11 @@ struct OsgData
     osg::ref_ptr<osgViewer::Viewer> viewer;
     osg::ref_ptr<osg::GraphicsContext> gc;
 
-    osg::ref_ptr<osg::SharedSemaphore> readySemaphore;
-    osg::ref_ptr<osg::SharedSemaphore> completeSemaphore;
+    osg::ref_ptr<osg::GLSemaphore> readySemaphore;
+    osg::ref_ptr<osg::GLSemaphore> completeSemaphore;
 };
 
-VsgScene createVsgScene(vsg::ref_ptr<vsg::Descriptor> image, VkExtent2D viewDimensions, bool oneQuad)
+VsgScene createVsgScene(vsg::ref_ptr<vsg::Descriptor> image, VkExtent2D viewDimensions, bool useGLPipelineStates, bool oneQuad)
 {
     VsgScene scene;
 
@@ -225,14 +209,20 @@ VsgScene createVsgScene(vsg::ref_ptr<vsg::Descriptor> image, VkExtent2D viewDime
         VkVertexInputAttributeDescription{2, 2, VK_FORMAT_R32G32_SFLOAT, 0},    // tex coord data
     };
 
+    auto depthStencilState = vsg::DepthStencilState::create();
+    depthStencilState->depthCompareOp = useGLPipelineStates ? VK_COMPARE_OP_GREATER : VK_COMPARE_OP_LESS;
+
+    auto rasterState = vsg::RasterizationState::create();
+    rasterState->frontFace = useGLPipelineStates ? VK_FRONT_FACE_CLOCKWISE : VK_FRONT_FACE_COUNTER_CLOCKWISE;
+
     vsg::GraphicsPipelineStates pipelineStates
     {
         vsg::VertexInputState::create(vertexBindingsDescriptions, vertexAttributeDescriptions),
         vsg::InputAssemblyState::create(),
-        vsg::RasterizationState::create(),
+        rasterState,
         vsg::MultisampleState::create(),
         vsg::ColorBlendState::create(),
-        vsg::DepthStencilState::create()
+        depthStencilState
     };
 
     auto pipelineLayout = vsg::PipelineLayout::create(descriptorSetLayouts, pushConstantRanges);
@@ -313,6 +303,13 @@ VsgScene createVsgScene(vsg::ref_ptr<vsg::Descriptor> image, VkExtent2D viewDime
 
     // camera related details
     auto viewport = vsg::ViewportState::create(viewDimensions);
+
+    if (useGLPipelineStates)
+    {
+        viewport->getViewport().height = -static_cast<float>(viewDimensions.height);
+        viewport->getViewport().y = static_cast<float>(viewDimensions.height);
+    }
+
     auto perspective = vsg::Perspective::create(60.0, static_cast<double>(viewDimensions.width) / static_cast<double>(viewDimensions.height), 0.1, 10.0);
     auto lookAt = vsg::LookAt::create(vsg::dvec3(1.0, 1.0, 1.0), vsg::dvec3(0.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 1.0));
     auto camera = vsg::Camera::create(perspective, lookAt, viewport);
@@ -355,7 +352,7 @@ VsgData createVsgViewer()
 #endif
     };
 
-    vsg::ref_ptr<vsg::Window> window(vsg::Window::create(windowTraits, true));
+    vsg::ref_ptr<vsg::Window> window(vsg::Window::create(windowTraits));
     if (!window)
     {
         std::cout << "Could not create windows." << std::endl;
@@ -377,22 +374,23 @@ VsgData createVsgViewer()
 void createVsgDisplaySharedTextureScene(VsgData& vsgsata, vsg::ref_ptr<vsg::Descriptor> image)
 {
     // create main scene
-    VsgScene mainscene = createVsgScene(image, vsgsata.window->extent2D(), false);
+    VsgScene mainscene = createVsgScene(image, vsgsata.window->extent2D(), false, false);
 
     // add a GraphicsStage to the Window to do dispatch of the command graph to the commnad buffer(s)
     vsgsata.window->addStage(vsg::GraphicsStage::create(mainscene.scenegraph, mainscene.camera));
 }
 
-void createVsgRttScene(VsgData& vsgdata, vsg::ref_ptr<vsg::Descriptor> image)
+void createVsgRttScene(VsgData& vsgdata, vsg::ref_ptr<vsg::ImageView> colorImage, vsg::ref_ptr<vsg::ImageView> depthImage, vsg::ref_ptr<vsg::Descriptor> image)
 {
     // create the rtt scene
-    VsgScene rttscene = createVsgScene(image, vsgdata.window->extent2D(), true);
+    VsgScene rttscene = createVsgScene(image, vsgdata.window->extent2D(), true, true);
 
-    vsg::ref_ptr<vsg::OffscreenGraphicsStage> offsreenStage = vsg::OffscreenGraphicsStage::create(vsgdata.window->device(), rttscene.scenegraph, rttscene.camera, vsgdata.window->extent2D());
+    vsg::ref_ptr<vsg::OffscreenGraphicsStage> offsreenStage = vsg::OffscreenGraphicsStage::create(vsgdata.window->device(), rttscene.scenegraph, rttscene.camera, vsgdata.window->extent2D(), colorImage, depthImage, VK_ATTACHMENT_LOAD_OP_LOAD);
+    //vsg::ref_ptr<vsg::OffscreenGraphicsStage> offsreenStage = vsg::OffscreenGraphicsStage::create(vsgdata.window->device(), rttscene.scenegraph, rttscene.camera, vsgdata.window->extent2D());
 
     // create main scene
     vsg::ref_ptr<vsg::DescriptorImage> rttimage = vsg::DescriptorImage::create(vsg::Sampler::create(), offsreenStage->_colorImageView);
-    VsgScene mainscene = createVsgScene(rttimage, vsgdata.window->extent2D(), false);
+    VsgScene mainscene = createVsgScene(rttimage, vsgdata.window->extent2D(), false, false);
 
     vsgdata.window->addStage(offsreenStage);
 
@@ -459,7 +457,7 @@ OsgScene createOsgScene(OsgData& osgdata, osg::SharedTexture* sharedTexture)
 
     osg::ref_ptr<osg::Texture2D> depthRendertex = new osg::Texture2D();
     depthRendertex->setTextureSize(width, height);
-    depthRendertex->setInternalFormat(GL_DEPTH_COMPONENT);
+    depthRendertex->setInternalFormat(GL_DEPTH24_STENCIL8);
     depthRendertex->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
     depthRendertex->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
     depthRendertex->setUseHardwareMipMapGeneration(false);
@@ -468,7 +466,7 @@ OsgScene createOsgScene(OsgData& osgdata, osg::SharedTexture* sharedTexture)
     osg::ref_ptr<osg::Camera> rttcam = new osg::Camera();
     rttcam->setProjectionMatrixAsPerspective(60.0f, (float)width / (float)height, 0.01f, bs.radius() * 1000.0f);
     rttcam->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
-    rttcam->setViewMatrixAsLookAt(bs.center() + osg::Vec3(0.0f, -(bs.radius() * 5.0f), 0.0f), bs.center(), osg::Vec3(0.0f, 0.0f, 1.0f));
+    rttcam->setViewMatrixAsLookAt(bs.center() + osg::Vec3(0.0f, -(bs.radius() * 2.0f), 0.0f), bs.center(), osg::Vec3(0.0f, 0.0f, 1.0f));
     rttcam->setViewport(0, 0, width, height);
     rttcam->setClearColor(osg::Vec4(1.0f, 0.0f, 0.0f, 1.0f));
     rttcam->setRenderOrder(osg::Camera::PRE_RENDER);
@@ -488,18 +486,6 @@ OsgScene createOsgScene(OsgData& osgdata, osg::SharedTexture* sharedTexture)
     result.depthTexture = depthRendertex;
 
     osgdata.viewer->setSceneData(scenegraph);
-
-    // setup semaphores
-
-    /*
-    osg::ref_ptr<osg::SemaphoreDrawCallback> waitCallback = new osg::SemaphoreDrawCallback(sharedTexture, GL_LAYOUT_COLOR_ATTACHMENT_EXT, osgdata.readySemaphore, true);
-    //rttcam->setInitialDrawCallback(waitCallback);
-    osgdata.viewer->getCamera()->setInitialDrawCallback(waitCallback);
-
-    osg::ref_ptr<osg::SemaphoreDrawCallback> signalCallback = new osg::SemaphoreDrawCallback(sharedTexture, GL_LAYOUT_COLOR_ATTACHMENT_EXT, osgdata.completeSemaphore, false);
-    //orthocam->setFinalDrawCallback(signalCallback);
-    osgdata.viewer->getCamera()->setFinalDrawCallback(signalCallback);
-    */
 
     return result;
 }
@@ -526,7 +512,7 @@ OsgData createOsgViewer()
 
     osg::ref_ptr<osgViewer::Viewer> viewer = new osgViewer::Viewer();
     viewer->setThreadingModel(osgViewer::ViewerBase::SingleThreaded);
-    //viewer->setCameraManipulator(nullptr);
+    viewer->setCameraManipulator(new osgGA::TrackballManipulator());
     viewer->getCamera()->setViewport(new osg::Viewport(0.0f, 0.0f, width, height));
     viewer->getCamera()->setViewMatrix(osg::Matrix::identity());
     viewer->getCamera()->setProjectionMatrixAsOrtho(0, width, 0, height, 0.0, 100);
@@ -538,53 +524,11 @@ OsgData createOsgViewer()
     return result;
 }
 
-vsg::ref_ptr<vsg::CommandBuffer> gCommandBuffer;
-
-template<typename F>
-void dispatchCommandsToQueue(vsg::Device* device, vsg::CommandPool* commandPool, std::vector<VkSemaphore> waits, std::vector<VkPipelineStageFlags> waitStages, std::vector<VkSemaphore> signals, VkQueue queue, F function)
-{
-    if(!gCommandBuffer) gCommandBuffer = vsg::CommandBuffer::create(device, commandPool, VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
-
-    VkCommandBufferBeginInfo beginInfo = {};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = gCommandBuffer->flags();
-
-    vkBeginCommandBuffer(*gCommandBuffer, &beginInfo);
-
-    function(*gCommandBuffer);
-
-    vkEndCommandBuffer(*gCommandBuffer);
-
-    VkSubmitInfo submitInfo = {};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = gCommandBuffer->data();
-    submitInfo.waitSemaphoreCount = static_cast<uint32_t>(waits.size());
-    submitInfo.pWaitSemaphores = waits.data();
-    submitInfo.pWaitDstStageMask = waitStages.data();
-    submitInfo.signalSemaphoreCount = static_cast<uint32_t>(signals.size());
-    submitInfo.pSignalSemaphores = signals.data();
-
-    vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
-}
-
-void populateSetLayoutCommands(VkCommandBuffer commandBuffer, vsg::VsgImage image, VkAccessFlagBits srcAccessFlags, VkAccessFlagBits dstAccessFlags, VkImageLayout srcLayout, VkImageLayout dstLayout, VkPipelineStageFlagBits srcStageFlags, VkPipelineStageFlagBits dstStageFlags, VkImageAspectFlagBits aspectFlags)
-{
-    vsg::ImageMemoryBarrier imageMemoryBarrier(
-        srcAccessFlags, dstAccessFlags,
-        srcLayout, dstLayout,
-        image.imageView->getImage());
-
-    imageMemoryBarrier.subresourceRange.aspectMask = aspectFlags;
-
-    imageMemoryBarrier.cmdPiplineBarrier(commandBuffer,
-        srcStageFlags, dstStageFlags);
-}
-
-void moveToTargetLayout(vsg::Device* device, vsg::CommandPool* commandPool, vsg::VsgImage image, VkAccessFlagBits dstAccessFlags, VkPipelineStageFlagBits dstStageFlags, std::vector<VkSemaphore> waits, std::vector<VkPipelineStageFlags> waitStages, std::vector<VkSemaphore> signals)
+/*
+void moveToTargetLayout(vsg::Device* device, vsg::CommandPool* commandPool, vsg::VsgImage image, VkAccessFlagBits dstAccessFlags, VkPipelineStageFlagBits dstStageFlags, VkImageAspectFlags aspectFlags, std::vector<VkSemaphore> waits, std::vector<VkPipelineStageFlags> waitStages, std::vector<VkSemaphore> signals)
 {
     dispatchCommandsToQueue(device, commandPool, waits, waitStages, signals, device->getQueue(device->getPhysicalDevice()->getGraphicsFamily()), [&](VkCommandBuffer commandBuffer) {
-        populateSetLayoutCommands(commandBuffer, image, (VkAccessFlagBits)0, dstAccessFlags, VK_IMAGE_LAYOUT_UNDEFINED, image.targetImageLayout, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, dstStageFlags, image.aspectFlags);
+        populateSetLayoutCommands(commandBuffer, image.imageView->getImage(), (VkAccessFlagBits)0, dstAccessFlags, VK_IMAGE_LAYOUT_UNDEFINED, image.targetImageLayout, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, dstStageFlags, aspectFlags);
     });
 }
 
@@ -592,8 +536,8 @@ void syncImages(vsg::Device* device, vsg::CommandPool* commandPool, vsg::VsgImag
 {
     dispatchCommandsToQueue(device, commandPool, waits, waitStages, signals, device->getQueue(device->getPhysicalDevice()->getGraphicsFamily()), [&](VkCommandBuffer commandBuffer) {
         // move to transfer layouts
-        populateSetLayoutCommands(commandBuffer, srcImage, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT, srcImage.targetImageLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, srcImage.aspectFlags);
-        populateSetLayoutCommands(commandBuffer, dstImage, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, dstImage.targetImageLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, dstImage.aspectFlags);
+        populateSetLayoutCommands(commandBuffer, srcImage.imageView->getImage(), VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT, srcImage.targetImageLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, srcImage.aspectFlags);
+        populateSetLayoutCommands(commandBuffer, dstImage.imageView->getImage(), VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, dstImage.targetImageLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, dstImage.aspectFlags);
     
         // copy
         VkImageCopy imageCopy{ VkImageSubresourceLayers{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 },
@@ -604,12 +548,12 @@ void syncImages(vsg::Device* device, vsg::CommandPool* commandPool, vsg::VsgImag
         vkCmdCopyImage(commandBuffer, *srcImage.imageView->getImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, *dstImage.imageView->getImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageCopy);
 
         // back to original layouts
-        populateSetLayoutCommands(commandBuffer, srcImage, VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, srcImage.targetImageLayout, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, srcImage.aspectFlags);
-        populateSetLayoutCommands(commandBuffer, dstImage, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dstImage.targetImageLayout, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, dstImage.aspectFlags);
+        populateSetLayoutCommands(commandBuffer, srcImage.imageView->getImage(), VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, srcImage.targetImageLayout, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, srcImage.aspectFlags);
+        populateSetLayoutCommands(commandBuffer, dstImage.imageView->getImage(), VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dstImage.targetImageLayout, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, dstImage.aspectFlags);
 
     });
 }
-
+*/
 
 int main(int /*argc*/, char** /*argv*/)
 {
@@ -632,27 +576,39 @@ int main(int /*argc*/, char** /*argv*/)
     osgdata.gc->makeCurrent();
 
     // get tiling mode
-    std::set<VkImageTiling> supportedTilingModes = getSupportedTiling(*osgdata.gc->getState());
+    std::set<VkImageTiling> supportedTilingModes = getSupportedTiling(*osgdata.gc->getState(), GL_RGBA8);
     VkImageTiling tilingMode = VK_IMAGE_TILING_LINEAR;
     if (supportedTilingModes.find(VK_IMAGE_TILING_OPTIMAL) != supportedTilingModes.end())
     {
         tilingMode = VK_IMAGE_TILING_OPTIMAL;
     }
 
+    supportedTilingModes = getSupportedTiling(*osgdata.gc->getState(), GL_DEPTH24_STENCIL8);
+    VkImageTiling depthTilingMode = VK_IMAGE_TILING_LINEAR;
+    if (supportedTilingModes.find(VK_IMAGE_TILING_OPTIMAL) != supportedTilingModes.end())
+    {
+        depthTilingMode = VK_IMAGE_TILING_OPTIMAL;
+    }
+
     //
     // create our vsg shared image view
 
-    VkImageCreateInfo sharedColorImageCreateInfo = vsg::createImageCreateInfo(VkExtent2D{ width, height }, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, tilingMode);
-    vsg::VsgImage sharedColorImage = vsg::createSharedMemoryImageView(compile.context, sharedColorImageCreateInfo, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-    
-    //vsg::ref_ptr<vsg::SharedDescriptorImage> sharedImage = vsg::SharedDescriptorImage::create(vsg::Sampler::create(), VkExtent2D{ width, height }, VK_FORMAT_R8G8B8A8_UNORM, tilingMode, 0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    //sharedImage->compile(compile.context);
+    VkImageCreateInfo sharedColorImageCreateInfo = vsg::createImageCreateInfo(VkExtent2D{ width, height }, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT /*VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT*/, tilingMode);
+    vsg::ImageData sharedColorImageData = vsg::createImageView(compile.context, sharedColorImageCreateInfo, VK_IMAGE_ASPECT_COLOR_BIT, true, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL); // VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    vsg::SharedImage* sharedColorImage = dynamic_cast<vsg::SharedImage*>(sharedColorImageData._imageView->getImage());
+
+    VkImageCreateInfo sharedDepthImageCreateInfo = vsg::createImageCreateInfo(VkExtent2D{ width, height }, VK_FORMAT_D24_UNORM_S8_UINT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, tilingMode);
+    vsg::ImageData sharedDepthImageData = vsg::createImageView(compile.context, sharedDepthImageCreateInfo, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, true, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    vsg::SharedImage* sharedDepthImage = dynamic_cast<vsg::SharedImage*>(sharedDepthImageData._imageView->getImage());
 
     //
     // create our osg shared texture
 
-    osg::ref_ptr<osg::SharedTexture> sharedTexture = new osg::SharedTexture(sharedColorImage.memoryHandle, sharedColorImage.byteSize, sharedColorImage.createInfo.extent.width, sharedColorImage.createInfo.extent.height, GL_RGBA8, tilingMode == VK_IMAGE_TILING_OPTIMAL ? GL_OPTIMAL_TILING_EXT : GL_LINEAR_TILING_EXT, sharedColorImage.dedicated);
-    sharedTexture->apply(*osgdata.viewer->getCamera()->getGraphicsContext()->getState());
+    osg::ref_ptr<osg::SharedTexture> sharedColorTexture = new osg::SharedTexture(sharedColorImage->_memoryHandle, sharedColorImage->_byteSize, width, height, GL_RGBA8, tilingMode == VK_IMAGE_TILING_OPTIMAL ? GL_OPTIMAL_TILING_EXT : GL_LINEAR_TILING_EXT, sharedColorImage->_dedicated);
+    sharedColorTexture->apply(*osgdata.viewer->getCamera()->getGraphicsContext()->getState());
+
+    osg::ref_ptr<osg::SharedTexture> sharedDepthTexture = new osg::SharedTexture(sharedDepthImage->_memoryHandle, sharedDepthImage->_byteSize, width, height, GL_DEPTH24_STENCIL8, depthTilingMode == VK_IMAGE_TILING_OPTIMAL ? GL_OPTIMAL_TILING_EXT : GL_LINEAR_TILING_EXT, sharedDepthImage->_dedicated);
+    sharedDepthTexture->apply(*osgdata.viewer->getCamera()->getGraphicsContext()->getState());
     
     //
     // create our vsg and osg shared semaphores
@@ -662,27 +618,13 @@ int main(int /*argc*/, char** /*argv*/)
     esci.pNext = nullptr;
     esci.handleTypes = semaphoreHandleType;
 
-    vsgdata.readySemaphore = vsg::Semaphore::create(vsgdata.device, &esci);
-    osg::SharedSemaphore::HandleType readySemaphoreHandle = 0;
-    vsgdata.completeSemaphore = vsg::Semaphore::create(vsgdata.device, &esci);
-    osg::SharedSemaphore::HandleType completeSemaphoreHandle = 0;
 
-    VkSemaphoreGetWin32HandleInfoKHR getHandleInfo;
-    getHandleInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_WIN32_HANDLE_INFO_KHR;
-    getHandleInfo.pNext = nullptr;
-    getHandleInfo.handleType = semaphoreHandleType;
-    
-    auto vkGetSemaphoreWin32HandleKHR2 = PFN_vkGetSemaphoreWin32HandleKHR(vkGetDeviceProcAddr(vsgdata.device->getDevice(), "vkGetSemaphoreWin32HandleKHR"));
+    vsg::ref_ptr<vsg::SharedSemaphore> readySemaphore = vsg::createSharedSemaphore(vsgdata.device);
+    vsg::ref_ptr<vsg::SharedSemaphore> completeSemaphore = vsg::createSharedSemaphore(vsgdata.device);
 
-    getHandleInfo.semaphore = *vsgdata.readySemaphore;
-    VkResult result = vkGetSemaphoreWin32HandleKHR2(vsgdata.device->getDevice(), &getHandleInfo, &readySemaphoreHandle);
-
-    getHandleInfo.semaphore = *vsgdata.completeSemaphore;
-    result = vkGetSemaphoreWin32HandleKHR2(vsgdata.device->getDevice(), &getHandleInfo, &completeSemaphoreHandle);
-
-    osgdata.readySemaphore = new osg::SharedSemaphore(readySemaphoreHandle);
+    osgdata.readySemaphore = new osg::GLSemaphore(readySemaphore->_handle);
     osgdata.readySemaphore->compileGLObjects(*osgdata.gc->getState());
-    osgdata.completeSemaphore = new osg::SharedSemaphore(completeSemaphoreHandle);
+    osgdata.completeSemaphore = new osg::GLSemaphore(completeSemaphore->_handle);
     osgdata.completeSemaphore->compileGLObjects(*osgdata.gc->getState());
 
     glFlush();
@@ -692,31 +634,24 @@ int main(int /*argc*/, char** /*argv*/)
     //
     // build our scene
 
-    VkImageCreateInfo colorImageCreateInfo = vsg::createImageCreateInfo(VkExtent2D{ width, height }, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
-    vsg::VsgImage colorImage = vsg::createImageView(vsgdata.device, colorImageCreateInfo, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    auto colorDescriptor = vsg::DescriptorImage::create(vsg::Sampler::create(), colorImage.imageView, 0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-
-    //auto swaptexture = vsg::DescriptorImage::create(vsg::Sampler::create(), vsg::read_cast<vsg::Data>(vsg::findFile("textures/lz.vsgb", searchPaths)), 0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    createVsgDisplaySharedTextureScene(vsgdata, colorDescriptor);
-
-    // move our sharedImage to its targetlayout and signal our ready semaphore
-    moveToTargetLayout(vsgdata.device, compile.context.commandPool, sharedColorImage, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, {}, {}, { *vsgdata.readySemaphore });
+    auto vsgscenetexture = vsg::DescriptorImage::create(vsg::Sampler::create(), vsg::read_cast<vsg::Data>(vsg::findFile("textures/lz.vsgb", searchPaths)), 0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    createVsgRttScene(vsgdata, sharedColorImageData._imageView, sharedDepthImageData._imageView, vsgscenetexture);
+    //createVsgDisplaySharedTextureScene(vsgdata, vsg::DescriptorImage::create(vsg::Sampler::create(), sharedColorImage.imageView, 0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
 
     // compile the Vulkan objects
     vsgdata.viewer->compile();
 
     OsgScene osgscene = createOsgScene(osgdata, nullptr);
 
-    osg::ref_ptr<osg::SyncToSharedTextureDrawCallback> syncToSharedCallback = new osg::SyncToSharedTextureDrawCallback({ { osgscene.colorTexture, sharedTexture } }, { GL_LAYOUT_COLOR_ATTACHMENT_EXT}, { GL_LAYOUT_COLOR_ATTACHMENT_EXT }, osgdata.readySemaphore, osgdata.completeSemaphore);
+    osg::ref_ptr<osg::SyncToSharedTextureDrawCallback> syncToSharedCallback = new osg::SyncToSharedTextureDrawCallback({ { osgscene.colorTexture, sharedColorTexture }, { osgscene.depthTexture, sharedDepthTexture } }, { GL_LAYOUT_COLOR_ATTACHMENT_EXT,  GL_LAYOUT_DEPTH_STENCIL_ATTACHMENT_EXT }, { GL_LAYOUT_COLOR_ATTACHMENT_EXT, GL_LAYOUT_DEPTH_STENCIL_ATTACHMENT_EXT }, osgdata.readySemaphore, osgdata.completeSemaphore);
     osgdata.viewer->getCamera()->setFinalDrawCallback(syncToSharedCallback);
-
+    
     // main frame loop
-
     while (true)
     {
         osgdata.viewer->frame();
 
-        syncImages(vsgdata.device, compile.context.commandPool, sharedColorImage, colorImage, { *vsgdata.completeSemaphore }, { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT }, { *vsgdata.readySemaphore });
+        //syncImages(vsgdata.device, compile.context.commandPool, sharedColorImage, colorImage, { *vsgdata.completeSemaphore }, { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT }, { *vsgdata.readySemaphore });
 
         vsgdata.viewer->advanceToNextFrame();
 
@@ -725,8 +660,8 @@ int main(int /*argc*/, char** /*argv*/)
 
         vsgdata.viewer->populateNextFrame();
 
-        //vsgdata.viewer->submitNextFrame({ *vsgdata.completeSemaphore }, { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT }, { *vsgdata.readySemaphore });
-        vsgdata.viewer->submitNextFrame();
+        vsgdata.viewer->submitNextFrame({ *completeSemaphore }, { VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT }, { *readySemaphore });
+       //vsgdata.viewer->submitNextFrame();
     }
     
     return 0;
