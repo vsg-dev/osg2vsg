@@ -161,9 +161,6 @@ struct OsgData
 {
     osg::ref_ptr<osgViewer::Viewer> viewer;
     osg::ref_ptr<osg::GraphicsContext> gc;
-
-    osg::ref_ptr<osg::GLSemaphore> readySemaphore;
-    osg::ref_ptr<osg::GLSemaphore> completeSemaphore;
 };
 
 VsgScene createVsgScene(vsg::ref_ptr<vsg::Descriptor> image, VkExtent2D viewDimensions, bool useGLPipelineStates, bool oneQuad)
@@ -369,15 +366,6 @@ VsgData createVsgViewer()
     result.device = vsg::ref_ptr<vsg::Device>(window->device());
 
     return result;
-}
-
-void createVsgDisplaySharedTextureScene(VsgData& vsgsata, vsg::ref_ptr<vsg::Descriptor> image)
-{
-    // create main scene
-    VsgScene mainscene = createVsgScene(image, vsgsata.window->extent2D(), false, false);
-
-    // add a GraphicsStage to the Window to do dispatch of the command graph to the commnad buffer(s)
-    vsgsata.window->addStage(vsg::GraphicsStage::create(mainscene.scenegraph, mainscene.camera));
 }
 
 void createVsgRttScene(VsgData& vsgdata, vsg::ref_ptr<vsg::ImageView> colorImage, vsg::ref_ptr<vsg::ImageView> depthImage, vsg::ref_ptr<vsg::Descriptor> image)
@@ -613,19 +601,14 @@ int main(int /*argc*/, char** /*argv*/)
     //
     // create our vsg and osg shared semaphores
 
-    VkExportSemaphoreCreateInfo esci;
-    esci.sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO;
-    esci.pNext = nullptr;
-    esci.handleTypes = semaphoreHandleType;
-
-
     vsg::ref_ptr<vsg::SharedSemaphore> readySemaphore = vsg::createSharedSemaphore(vsgdata.device);
     vsg::ref_ptr<vsg::SharedSemaphore> completeSemaphore = vsg::createSharedSemaphore(vsgdata.device);
 
-    osgdata.readySemaphore = new osg::GLSemaphore(readySemaphore->_handle);
-    osgdata.readySemaphore->compileGLObjects(*osgdata.gc->getState());
-    osgdata.completeSemaphore = new osg::GLSemaphore(completeSemaphore->_handle);
-    osgdata.completeSemaphore->compileGLObjects(*osgdata.gc->getState());
+    osg::ref_ptr<osg::GLSemaphore> glreadySemaphore = new osg::GLSemaphore(readySemaphore->_handle);
+    glreadySemaphore->compileGLObjects(*osgdata.gc->getState());
+
+    osg::ref_ptr<osg::GLSemaphore> glcompleteSemaphore = new osg::GLSemaphore(completeSemaphore->_handle);
+    glcompleteSemaphore->compileGLObjects(*osgdata.gc->getState());
 
     glFlush();
     // we're done doing direct stuff with the gl context so release
@@ -643,7 +626,7 @@ int main(int /*argc*/, char** /*argv*/)
 
     OsgScene osgscene = createOsgScene(osgdata, nullptr);
 
-    osg::ref_ptr<osg::SyncToSharedTextureDrawCallback> syncToSharedCallback = new osg::SyncToSharedTextureDrawCallback({ { osgscene.colorTexture, sharedColorTexture }, { osgscene.depthTexture, sharedDepthTexture } }, { GL_LAYOUT_COLOR_ATTACHMENT_EXT,  GL_LAYOUT_DEPTH_STENCIL_ATTACHMENT_EXT }, { GL_LAYOUT_COLOR_ATTACHMENT_EXT, GL_LAYOUT_DEPTH_STENCIL_ATTACHMENT_EXT }, osgdata.readySemaphore, osgdata.completeSemaphore);
+    osg::ref_ptr<osg::SyncToSharedTextureDrawCallback> syncToSharedCallback = new osg::SyncToSharedTextureDrawCallback({ { osgscene.colorTexture, sharedColorTexture }, { osgscene.depthTexture, sharedDepthTexture } }, { GL_LAYOUT_COLOR_ATTACHMENT_EXT,  GL_LAYOUT_DEPTH_STENCIL_ATTACHMENT_EXT }, { GL_LAYOUT_COLOR_ATTACHMENT_EXT, GL_LAYOUT_DEPTH_STENCIL_ATTACHMENT_EXT }, glreadySemaphore, glcompleteSemaphore);
     osgdata.viewer->getCamera()->setFinalDrawCallback(syncToSharedCallback);
     
     // main frame loop
