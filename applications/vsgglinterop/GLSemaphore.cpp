@@ -41,7 +41,7 @@ void GLSemaphore::compileGLObjects(State& state)
 #if WIN32
     extensions->glImportSemaphoreWin32HandleEXT(_semaphore, GL_HANDLE_TYPE_OPAQUE_WIN32_EXT, _handle);
 #else
-    extensions->glImportSemaphoreFdEXT(_semaphore, GL_HANDLE_TYPE_OPAQUE_FD_EXT, _handle)
+    extensions->glImportSemaphoreFdEXT(_semaphore, GL_HANDLE_TYPE_OPAQUE_FD_EXT, _handle);
 #endif
 }
 

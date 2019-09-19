@@ -14,6 +14,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 #include "GLMemoryExtensions.h"
 
+#include <osg/Version>
+
 using namespace osg;
 
 SharedTexture::SharedTexture() :
@@ -57,7 +59,11 @@ void SharedTexture::apply(State& state) const
 
     if (textureObject)
     {
+#if OSG_VERSION_GREATER_OR_EQUAL(3, 7, 0)
         textureObject->bind(state);
+#else
+        textureObject->bind();
+#endif
     }
     else
     {
@@ -74,7 +80,11 @@ void SharedTexture::apply(State& state) const
             texStorageSizedInternalFormat != 0 ? texStorageSizedInternalFormat : _internalFormat,
             _textureWidth, _textureHeight, 1, 0);
 
+#if OSG_VERSION_GREATER_OR_EQUAL(3, 7, 0)
         textureObject->bind(state);
+#else
+        textureObject->bind();
+#endif
 
         applyTexParameters(GL_TEXTURE_2D, state);
 

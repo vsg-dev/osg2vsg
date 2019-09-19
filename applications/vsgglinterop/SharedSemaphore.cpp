@@ -19,7 +19,7 @@ ref_ptr<SharedSemaphore> vsg::createSharedSemaphore(Device* device)
 #else
     auto vkGetSemaphoreHandle = PFN_vkGetSemaphoreFdKHR(vkGetDeviceProcAddr(device->getDevice(), "vkGetSemaphoreFdKHR"));
 
-    VkSemaphoreGetFdHandleInfoKHR getHandleInfo;
+    VkSemaphoreGetFdInfoKHR getHandleInfo;
     getHandleInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR;
 #endif
 

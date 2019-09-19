@@ -25,8 +25,8 @@ namespace vsg
     class SharedSemaphore : public Inherit<Semaphore, SharedSemaphore>
     {
     public:
-        SharedSemaphore(VkSemaphore Semaphore, Device* device, AllocationCallbacks* allocator = nullptr) :
-            Inherit(Semaphore, device, allocator)
+        SharedSemaphore(VkSemaphore semaphore, Device* device, AllocationCallbacks* allocator = nullptr) :
+            Inherit(semaphore, device, allocator)
         {}
 
         using Result = vsg::Result<SharedSemaphore, VkResult, VK_SUCCESS>;

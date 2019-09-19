@@ -35,12 +35,13 @@ namespace osg
         SharedTexture(HandleType handle, GLuint64 byteSize, int width, int height, GLenum format, GLuint tiling, bool isDedicated);
 
         /** Copy constructor using CopyOp to manage deep vs shallow copy. */
-        SharedTexture(const SharedTexture& text, const CopyOp& copyop = CopyOp::SHALLOW_COPY) {}
+        SharedTexture(const SharedTexture& text, const CopyOp& copyop = CopyOp::SHALLOW_COPY) :
+            Texture(text, copyop) {}
 
         META_StateAttribute(osg, SharedTexture, TEXTURE);
 
         /** Return -1 if *this < *rhs, 0 if *this==*rhs, 1 if *this>*rhs. */
-        virtual int compare(const StateAttribute& rhs) const { return -1; }
+        virtual int compare(const StateAttribute& rhs) const { return (this<&rhs) ? -1 : ((this==&rhs) ? 0 : 1 ); }
 
         virtual GLenum getTextureTarget() const { return GL_TEXTURE_2D; }
 
@@ -79,7 +80,7 @@ namespace osg
         virtual ~SharedTexture();
 
         virtual void computeInternalFormat() const { computeInternalFormatType(); }
-        void allocateMipmap(State& state) const {}
+        void allocateMipmap(State& /*state*/) const {}
 
         GLuint64 _byteSize;
         GLsizei _textureWidth;
