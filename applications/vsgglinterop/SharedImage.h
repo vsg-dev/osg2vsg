@@ -63,7 +63,7 @@ namespace vsg
         bool _dedicated;
     };
 
-    extern VkImageCreateInfo createImageCreateInfo(VkExtent2D extents, VkFormat format, VkImageUsageFlagBits usage = VK_IMAGE_USAGE_SAMPLED_BIT, VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL);
+    extern VkImageCreateInfo createImageCreateInfo(VkExtent2D extents, VkFormat format, VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT, VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL);
 
     extern ImageData createImageView(Context& context, const VkImageCreateInfo& imageCreateInfo, VkImageAspectFlags aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT, bool shared = false, VkImageLayout targetImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 

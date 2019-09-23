@@ -2,7 +2,7 @@
 
 using namespace vsg;
 
-VkImageCreateInfo vsg::createImageCreateInfo(VkExtent2D extents, VkFormat format, VkImageUsageFlagBits usage, VkImageTiling tiling)
+VkImageCreateInfo vsg::createImageCreateInfo(VkExtent2D extents, VkFormat format, VkImageUsageFlags usage, VkImageTiling tiling)
 {
     VkImageCreateInfo imageCreateInfo = {};
     imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
