@@ -591,7 +591,7 @@ int main(int argc, char** argv)
         depthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     }
 
-    bool vsgpreview = arguments.read("--VSGPREVIEW");
+    bool vsgpreview = !arguments.read("--NOPREVIEW");
 
 
     vsg::Paths searchPaths = vsg::getEnvPaths("VSG_FILE_PATH");
