@@ -25,9 +25,11 @@
 
 #include <osg/GL>
 #include <osg/GLExtensions>
+#include <osg/Image>
 #include <osg/Texture>
 #include <osg/Texture2D>
 #include <osg/MatrixTransform>
+#include <osg/ShapeDrawable>
 #include <osgDB/ReadFile>
 #include <osgGA/TrackballManipulator>
 #include <osgViewer/Viewer>
@@ -40,18 +42,21 @@
 
 // vsg
 #include "SharedImage.h"
+#include "SharedSemaphore.h"
 #include "CommandUtils.h"
 
-#ifdef WIN32
-const auto semaphoreHandleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT;
-#else
-const auto semaphoreHandleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT;
-#endif
 
 #define WGL_CONTEXT_DEBUG_BIT_ARB         0x00000001
 
 const uint32_t width = 800;
 const uint32_t height = 600;
+
+const vsg::dvec3 camPos = vsg::dvec3(0.5f, -2.0f, 1.0f);
+const vsg::dvec3 camLookat = vsg::dvec3(0.0f, 0.0f, 0.0f);
+const vsg::dvec3 camUp = vsg::dvec3(0.0f, 0.0f, 1.0f);
+const float camFov = 60.0f;
+const float camZNear = 0.1f;
+const float camZFar = 10.0f;
 
 const char* QuadShaderVert =
 "#version 450\n"
@@ -100,13 +105,13 @@ const char* ModelShaderFrag =
 "in highp vec3 viewNormal;\n"
 "in highp vec2 texcoord;\n"
 "uniform sampler2D texture0;\n"
+"uniform vec4 albedo;\n"
 "out lowp vec4 fragColor;\n"
 "void main()\n"
 "{\n"
 "    float ndotl = dot(viewNormal, normalize(vec3(0.0,0.0,0.0) - viewVertex.xyz ));\n"
-"    fragColor = vec4(0.0,1.0,0.0,1.0) * max(ndotl, 0.0); //texture(texture0, texcoord.xy);\n"
+"    fragColor = albedo * max(ndotl, 0.0); //texture(texture0, texcoord.xy);\n"
 "}\n";
-
 
 std::set<VkImageTiling> getSupportedTiling(const osg::State& state, GLenum format)
 {
@@ -150,8 +155,8 @@ struct VsgData
 
 struct OsgScene
 {
-    osg::ref_ptr<osg::Camera> camera;
-    osg::ref_ptr<osg::Group> scenegraph;
+    osg::ref_ptr<osg::Camera> predrawCamera; // pre vsg
+    osg::ref_ptr<osg::Camera> postdrawCamera; // post vsg
 
     osg::ref_ptr<osg::Texture2D> colorTexture;
     osg::ref_ptr<osg::Texture2D> depthTexture;
@@ -163,7 +168,7 @@ struct OsgData
     osg::ref_ptr<osg::GraphicsContext> gc;
 };
 
-VsgScene createVsgScene(vsg::ref_ptr<vsg::Descriptor> image, VkExtent2D viewDimensions, bool useGLPipelineStates, bool oneQuad)
+VsgScene createVsgScene(vsg::ref_ptr<vsg::Descriptor> image, VkExtent2D viewDimensions, bool useGLPipelineStates)
 {
     VsgScene scene;
 
@@ -207,7 +212,7 @@ VsgScene createVsgScene(vsg::ref_ptr<vsg::Descriptor> image, VkExtent2D viewDime
     };
 
     auto depthStencilState = vsg::DepthStencilState::create();
-    depthStencilState->depthCompareOp = useGLPipelineStates ? VK_COMPARE_OP_GREATER : VK_COMPARE_OP_LESS;
+    //depthStencilState->depthCompareOp = useGLPipelineStates ? VK_COMPARE_OP_GREATER : VK_COMPARE_OP_LESS;
 
     auto rasterState = vsg::RasterizationState::create();
     rasterState->frontFace = useGLPipelineStates ? VK_FRONT_FACE_CLOCKWISE : VK_FRONT_FACE_COUNTER_CLOCKWISE;
@@ -244,17 +249,14 @@ VsgScene createVsgScene(vsg::ref_ptr<vsg::Descriptor> image, VkExtent2D viewDime
     // add transform to root of the scene graph
     scenegraph->addChild(transform);
 
+    float hquadsize = 1.0f;
     // set up vertex and index arrays
     auto vertices = vsg::vec3Array::create(
         {
-            {-0.5f, -0.5f, 0.0f},
-            {0.5f,  -0.5f, 0.05f},
-            {0.5f , 0.5f, 0.0f},
-            {-0.5f, 0.5f, 0.0f},
-            {-0.5f, -0.5f, -0.5f},
-            {0.5f,  -0.5f, -0.5f},
-            {0.5f , 0.5f, -0.5},
-            {-0.5f, 0.5f, -0.5}
+            {-hquadsize, -hquadsize, 0.0f},
+            {hquadsize, -hquadsize, 0.0f},
+            {hquadsize, hquadsize, 0.0f},
+            {-hquadsize, hquadsize, 0.0f}
         }); // VK_FORMAT_R32G32B32_SFLOAT, VK_VERTEX_INPUT_RATE_INSTANCE, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE
 
     auto colors = vsg::vec3Array::create(
@@ -262,19 +264,11 @@ VsgScene createVsgScene(vsg::ref_ptr<vsg::Descriptor> image, VkExtent2D viewDime
             {1.0f, 0.0f, 0.0f},
             {0.0f, 1.0f, 0.0f},
             {0.0f, 0.0f, 1.0f},
-            {1.0f, 1.0f, 1.0f},
-            {1.0f, 0.0f, 0.0f},
-            {0.0f, 1.0f, 0.0f},
-            {0.0f, 0.0f, 1.0f},
-            {1.0f, 1.0f, 1.0f},
+            {1.0f, 1.0f, 1.0f}
         }); // VK_FORMAT_R32G32B32_SFLOAT, VK_VERTEX_INPUT_RATE_VERTEX, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE
 
     auto texcoords = vsg::vec2Array::create(
         {
-            {0.0f, 0.0f},
-            {1.0f, 0.0f},
-            {1.0f, 1.0f},
-            {0.0f, 1.0f},
             {0.0f, 0.0f},
             {1.0f, 0.0f},
             {1.0f, 1.0f},
@@ -284,16 +278,14 @@ VsgScene createVsgScene(vsg::ref_ptr<vsg::Descriptor> image, VkExtent2D viewDime
     auto indices = vsg::ushortArray::create(
         {
             0, 1, 2,
-            2, 3, 0,
-            4, 5, 6,
-            6, 7, 4
+            2, 3, 0
         }); // VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE
 
         // setup geometry
     auto drawCommands = vsg::Commands::create();
     drawCommands->addChild(vsg::BindVertexBuffers::create(0, vsg::DataList{ vertices, colors, texcoords }));
     drawCommands->addChild(vsg::BindIndexBuffer::create(indices));
-    drawCommands->addChild(vsg::DrawIndexed::create(oneQuad ? 6 : 12, 1, 0, 0, 0));
+    drawCommands->addChild(vsg::DrawIndexed::create(6, 1, 0, 0, 0));
 
     // add drawCommands to transform
     transform->addChild(drawCommands);
@@ -307,8 +299,8 @@ VsgScene createVsgScene(vsg::ref_ptr<vsg::Descriptor> image, VkExtent2D viewDime
         viewport->getViewport().y = static_cast<float>(viewDimensions.height);
     }
 
-    auto perspective = vsg::Perspective::create(60.0, static_cast<double>(viewDimensions.width) / static_cast<double>(viewDimensions.height), 0.1, 10.0);
-    auto lookAt = vsg::LookAt::create(vsg::dvec3(1.0, 1.0, 1.0), vsg::dvec3(0.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 1.0));
+    auto perspective = vsg::Perspective::create(camFov, static_cast<double>(viewDimensions.width) / static_cast<double>(viewDimensions.height), camZNear, camZFar);
+    auto lookAt = vsg::LookAt::create(camPos, camLookat, camUp);
     auto camera = vsg::Camera::create(perspective, lookAt, viewport);
 
     scene.camera = camera;
@@ -368,17 +360,17 @@ VsgData createVsgViewer()
     return result;
 }
 
-void createVsgRttScene(VsgData& vsgdata, vsg::ref_ptr<vsg::ImageView> colorImage, vsg::ref_ptr<vsg::ImageView> depthImage, vsg::ref_ptr<vsg::Descriptor> image)
+void createVsgRttScene(VsgData& vsgdata, vsg::ref_ptr<vsg::ImageView> colorImage, vsg::ref_ptr<vsg::ImageView> depthImage, vsg::ref_ptr<vsg::DescriptorImage> image, bool preview)
 {
     // create the rtt scene
-    VsgScene rttscene = createVsgScene(image, vsgdata.window->extent2D(), true, true);
+    VsgScene rttscene = createVsgScene(image, vsgdata.window->extent2D(), true);
 
     vsg::ref_ptr<vsg::OffscreenGraphicsStage> offsreenStage = vsg::OffscreenGraphicsStage::create(vsgdata.window->device(), rttscene.scenegraph, rttscene.camera, vsgdata.window->extent2D(), colorImage, depthImage, VK_ATTACHMENT_LOAD_OP_LOAD);
     //vsg::ref_ptr<vsg::OffscreenGraphicsStage> offsreenStage = vsg::OffscreenGraphicsStage::create(vsgdata.window->device(), rttscene.scenegraph, rttscene.camera, vsgdata.window->extent2D());
 
     // create main scene
     vsg::ref_ptr<vsg::DescriptorImage> rttimage = vsg::DescriptorImage::create(vsg::Sampler::create(), offsreenStage->_colorImageView);
-    VsgScene mainscene = createVsgScene(rttimage, vsgdata.window->extent2D(), false, false);
+    VsgScene mainscene = createVsgScene(preview ? rttimage : image, vsgdata.window->extent2D(), false);
 
     vsgdata.window->addStage(offsreenStage);
 
@@ -421,20 +413,7 @@ OsgScene createOsgScene(OsgData& osgdata, osg::SharedTexture* sharedTexture)
     quadStateset->addUniform(new osg::Uniform("texture0", (unsigned int)0));
 
     //
-    // create out rtt camera
-    
-    osg::ref_ptr<osg::Node> model = osgDB::readNodeFile("dumptruck.osgt");
-    osg::Program* modelprogram = new osg::Program();
-    modelprogram->addShader(new osg::Shader(osg::Shader::VERTEX, ModelShaderVert));
-    modelprogram->addShader(new osg::Shader(osg::Shader::FRAGMENT, ModelShaderFrag));
-    model->getOrCreateStateSet()->setAttributeAndModes(modelprogram, osg::StateAttribute::ON);
-
-
-    const osg::BoundingSphere& bs = model->getBound();
-
-    osg::ref_ptr<osg::MatrixTransform> xform = new osg::MatrixTransform();
-    xform->addChild(model.get());
-
+    // create our textures
     osg::ref_ptr<osg::Texture2D> colorRendertex = new osg::Texture2D();
     colorRendertex->setTextureSize(width, height);
     colorRendertex->setInternalFormat(GL_RGBA);
@@ -446,30 +425,81 @@ OsgScene createOsgScene(OsgData& osgdata, osg::SharedTexture* sharedTexture)
     osg::ref_ptr<osg::Texture2D> depthRendertex = new osg::Texture2D();
     depthRendertex->setTextureSize(width, height);
     depthRendertex->setInternalFormat(GL_DEPTH24_STENCIL8);
+    depthRendertex->setSourceFormat(GL_DEPTH_STENCIL);
+    depthRendertex->setSourceType(GL_UNSIGNED_INT_24_8);
     depthRendertex->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
     depthRendertex->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
     depthRendertex->setUseHardwareMipMapGeneration(false);
     depthRendertex->setResizeNonPowerOfTwoHint(false);
 
-    osg::ref_ptr<osg::Camera> rttcam = new osg::Camera();
-    rttcam->setProjectionMatrixAsPerspective(60.0f, (float)width / (float)height, 0.01f, bs.radius() * 1000.0f);
-    rttcam->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
-    rttcam->setViewMatrixAsLookAt(bs.center() + osg::Vec3(0.0f, -(bs.radius() * 2.0f), 0.0f), bs.center(), osg::Vec3(0.0f, 0.0f, 1.0f));
-    rttcam->setViewport(0, 0, width, height);
-    rttcam->setClearColor(osg::Vec4(1.0f, 0.0f, 0.0f, 1.0f));
-    rttcam->setRenderOrder(osg::Camera::PRE_RENDER);
-
-    rttcam->setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
-    rttcam->attach(osg::Camera::COLOR_BUFFER, colorRendertex);
-    rttcam->attach(osg::Camera::DEPTH_BUFFER, depthRendertex);
-
+    // display the color tex on our quad
     quadStateset->setTextureAttribute(0, colorRendertex);
 
-    rttcam->addChild(xform);
 
-    scenegraph->addChild(rttcam);
+    // program for scene models
+    osg::Program* modelprogram = new osg::Program();
+    modelprogram->addShader(new osg::Shader(osg::Shader::VERTEX, ModelShaderVert));
+    modelprogram->addShader(new osg::Shader(osg::Shader::FRAGMENT, ModelShaderFrag));
 
-    result.scenegraph = scenegraph;
+    //
+    // predraw scene
+    
+    osg::ref_ptr<osg::Geode> premodel = new osg::Geode();
+    premodel->addDrawable(new osg::ShapeDrawable(new osg::Sphere(osg::Vec3(0.0f, 0.0f, 0.5f), 0.5)));
+    premodel->getOrCreateStateSet()->setAttributeAndModes(modelprogram, osg::StateAttribute::ON);
+    premodel->getOrCreateStateSet()->addUniform(new osg::Uniform("albedo", osg::Vec4(0.0f,1.0f,0.0f,1.0f)));
+
+    osg::ref_ptr<osg::MatrixTransform> prexform = new osg::MatrixTransform();
+    prexform->addChild(premodel.get());
+
+    osg::ref_ptr<osg::Camera> prerttcam = new osg::Camera();
+    prerttcam->setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    prerttcam->setProjectionMatrixAsPerspective(camFov, (float)width / (float)height, camZNear, camZFar);
+    prerttcam->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+    prerttcam->setViewMatrixAsLookAt(osg::Vec3(camPos.x, camPos.y, camPos.z), osg::Vec3(camLookat.x, camLookat.y, camLookat.z), osg::Vec3(camUp.x, camUp.y, camUp.z));
+    prerttcam->setViewport(0, 0, width, height);
+    prerttcam->setClearColor(osg::Vec4(1.0f, 0.0f, 0.0f, 1.0f));
+    prerttcam->setRenderOrder(osg::Camera::PRE_RENDER, 0);
+
+    prerttcam->setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+    prerttcam->attach(osg::Camera::COLOR_BUFFER, colorRendertex);
+    prerttcam->attach(osg::Camera::DEPTH_BUFFER, depthRendertex);
+
+    prerttcam->addChild(prexform);
+
+    scenegraph->addChild(prerttcam);
+
+    //
+    // post draw scene
+
+    osg::ref_ptr<osg::Geode> postmodel = new osg::Geode();
+    postmodel->addDrawable(new osg::ShapeDrawable(new osg::Sphere(osg::Vec3(0.0f, 0.0f, -0.5f), 0.5)));
+    postmodel->getOrCreateStateSet()->setAttributeAndModes(modelprogram, osg::StateAttribute::ON);
+    postmodel->getOrCreateStateSet()->addUniform(new osg::Uniform("albedo", osg::Vec4(0.0f, 0.0f, 1.0f, 1.0f)));
+
+    osg::ref_ptr<osg::MatrixTransform> postxform = new osg::MatrixTransform();
+    postxform->addChild(postmodel.get());
+
+    osg::ref_ptr<osg::Camera> postrttcam = new osg::Camera();
+    postrttcam->setClearMask(0);
+    postrttcam->setProjectionMatrixAsPerspective(camFov, (float)width / (float)height, camZNear, camZFar);
+    postrttcam->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+    postrttcam->setViewMatrixAsLookAt(osg::Vec3(camPos.x, camPos.y, camPos.z), osg::Vec3(camLookat.x, camLookat.y, camLookat.z), osg::Vec3(camUp.x, camUp.y, camUp.z));
+    postrttcam->setViewport(0, 0, width, height);
+    postrttcam->setRenderOrder(osg::Camera::PRE_RENDER, 1);
+
+    postrttcam->setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+    postrttcam->attach(osg::Camera::COLOR_BUFFER, colorRendertex);
+    postrttcam->attach(osg::Camera::DEPTH_BUFFER, depthRendertex);
+
+    postrttcam->addChild(postxform);
+
+    scenegraph->addChild(postrttcam);
+
+
+    // set scene data and return
+    result.predrawCamera = prerttcam;
+    result.postdrawCamera = postrttcam;
     result.colorTexture = colorRendertex;
     result.depthTexture = depthRendertex;
 
@@ -543,16 +573,34 @@ void syncImages(vsg::Device* device, vsg::CommandPool* commandPool, vsg::VsgImag
 }
 */
 
-int main(int /*argc*/, char** /*argv*/)
+int main(int argc, char** argv)
 {
+    vsg::CommandLine arguments(&argc, argv);
+
+    // these flags work on windows but produces vulkan debug warnings and depth buffer seems noisy somehow
+    VkImageUsageFlags colorUsageFlags = VK_IMAGE_USAGE_SAMPLED_BIT;
+    VkImageLayout colorLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    VkImageUsageFlags depthUsageFlags = VK_IMAGE_USAGE_SAMPLED_BIT;
+    VkImageLayout depthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    if (arguments.read("--CORRECTFLAGS"))
+    {
+        // these are what I beleive are the correct flags, but cause the shared textures to be empty
+        colorUsageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        colorLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        depthUsageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        depthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    }
+
+    bool vsgpreview = arguments.read("--VSGPREVIEW");
+
+
     vsg::Paths searchPaths = vsg::getEnvPaths("VSG_FILE_PATH");
 
     osg::setNotifyLevel(osg::WARN);
 
-    // create our osg viewer
-    OsgData osgdata = createOsgViewer();
-
+    // create our viewers
     VsgData vsgdata = createVsgViewer();
+    OsgData osgdata = createOsgViewer();
 
     vsg::CompileTraversal compile(vsgdata.device);
     compile.context.commandPool = vsg::CommandPool::create(vsgdata.device, vsgdata.device->getPhysicalDevice()->getGraphicsFamily());
@@ -581,12 +629,12 @@ int main(int /*argc*/, char** /*argv*/)
     //
     // create our vsg shared image view
 
-    VkImageCreateInfo sharedColorImageCreateInfo = vsg::createImageCreateInfo(VkExtent2D{ width, height }, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT /*VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT*/, tilingMode);
-    vsg::ImageData sharedColorImageData = vsg::createImageView(compile.context, sharedColorImageCreateInfo, VK_IMAGE_ASPECT_COLOR_BIT, true, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL); // VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    VkImageCreateInfo sharedColorImageCreateInfo = vsg::createImageCreateInfo(VkExtent2D{ width, height }, VK_FORMAT_R8G8B8A8_UNORM, colorUsageFlags, tilingMode);
+    vsg::ImageData sharedColorImageData = vsg::createImageView(compile.context, sharedColorImageCreateInfo, VK_IMAGE_ASPECT_COLOR_BIT, true, colorLayout);
     vsg::SharedImage* sharedColorImage = dynamic_cast<vsg::SharedImage*>(sharedColorImageData._imageView->getImage());
 
-    VkImageCreateInfo sharedDepthImageCreateInfo = vsg::createImageCreateInfo(VkExtent2D{ width, height }, VK_FORMAT_D24_UNORM_S8_UINT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, tilingMode);
-    vsg::ImageData sharedDepthImageData = vsg::createImageView(compile.context, sharedDepthImageCreateInfo, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, true, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    VkImageCreateInfo sharedDepthImageCreateInfo = vsg::createImageCreateInfo(VkExtent2D{ width, height }, VK_FORMAT_D24_UNORM_S8_UINT, depthUsageFlags, tilingMode);
+    vsg::ImageData sharedDepthImageData = vsg::createImageView(compile.context, sharedDepthImageCreateInfo, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, true, depthLayout);
     vsg::SharedImage* sharedDepthImage = dynamic_cast<vsg::SharedImage*>(sharedDepthImageData._imageView->getImage());
 
     //
@@ -601,14 +649,23 @@ int main(int /*argc*/, char** /*argv*/)
     //
     // create our vsg and osg shared semaphores
 
-    vsg::ref_ptr<vsg::SharedSemaphore> readySemaphore = vsg::createSharedSemaphore(vsgdata.device);
-    vsg::ref_ptr<vsg::SharedSemaphore> completeSemaphore = vsg::createSharedSemaphore(vsgdata.device);
+    vsg::ref_ptr<vsg::SharedSemaphore> predrawWaitSemaphore = vsg::createSharedSemaphore(vsgdata.device);
+    vsg::ref_ptr<vsg::SharedSemaphore> predrawCompleteSemaphore = vsg::createSharedSemaphore(vsgdata.device);
 
-    osg::ref_ptr<osg::GLSemaphore> glreadySemaphore = new osg::GLSemaphore(readySemaphore->_handle);
-    glreadySemaphore->compileGLObjects(*osgdata.gc->getState());
+    vsg::ref_ptr<vsg::SharedSemaphore> postdrawWaitSemaphore = vsg::createSharedSemaphore(vsgdata.device);
+    vsg::ref_ptr<vsg::SharedSemaphore> postdrawCompleteSemaphore = vsg::createSharedSemaphore(vsgdata.device);
 
-    osg::ref_ptr<osg::GLSemaphore> glcompleteSemaphore = new osg::GLSemaphore(completeSemaphore->_handle);
-    glcompleteSemaphore->compileGLObjects(*osgdata.gc->getState());
+    osg::ref_ptr<osg::GLSemaphore> glPredrawWaitSemaphore = new osg::GLSemaphore(predrawWaitSemaphore->_handle);
+    glPredrawWaitSemaphore->compileGLObjects(*osgdata.gc->getState());
+
+    osg::ref_ptr<osg::GLSemaphore> glPredrawCompleteSemaphore = new osg::GLSemaphore(predrawCompleteSemaphore->_handle);
+    glPredrawCompleteSemaphore->compileGLObjects(*osgdata.gc->getState());
+
+    osg::ref_ptr<osg::GLSemaphore> glPostdrawWaitSemaphore = new osg::GLSemaphore(postdrawWaitSemaphore->_handle);
+    glPostdrawWaitSemaphore->compileGLObjects(*osgdata.gc->getState());
+
+    osg::ref_ptr<osg::GLSemaphore> glPostdrawCompleteSemaphore = new osg::GLSemaphore(postdrawCompleteSemaphore->_handle);
+    glPostdrawCompleteSemaphore->compileGLObjects(*osgdata.gc->getState());
 
     glFlush();
     // we're done doing direct stuff with the gl context so release
@@ -618,7 +675,7 @@ int main(int /*argc*/, char** /*argv*/)
     // build our scene
 
     auto vsgscenetexture = vsg::DescriptorImage::create(vsg::Sampler::create(), vsg::read_cast<vsg::Data>(vsg::findFile("textures/lz.vsgb", searchPaths)), 0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    createVsgRttScene(vsgdata, sharedColorImageData._imageView, sharedDepthImageData._imageView, vsgscenetexture);
+    createVsgRttScene(vsgdata, sharedColorImageData._imageView, sharedDepthImageData._imageView, vsgscenetexture, vsgpreview);
     //createVsgDisplaySharedTextureScene(vsgdata, vsg::DescriptorImage::create(vsg::Sampler::create(), sharedColorImage.imageView, 0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
 
     // compile the Vulkan objects
@@ -626,15 +683,16 @@ int main(int /*argc*/, char** /*argv*/)
 
     OsgScene osgscene = createOsgScene(osgdata, nullptr);
 
-    osg::ref_ptr<osg::SyncToSharedTextureDrawCallback> syncToSharedCallback = new osg::SyncToSharedTextureDrawCallback({ { osgscene.colorTexture, sharedColorTexture }, { osgscene.depthTexture, sharedDepthTexture } }, { GL_LAYOUT_COLOR_ATTACHMENT_EXT,  GL_LAYOUT_DEPTH_STENCIL_ATTACHMENT_EXT }, { GL_LAYOUT_COLOR_ATTACHMENT_EXT, GL_LAYOUT_DEPTH_STENCIL_ATTACHMENT_EXT }, glreadySemaphore, glcompleteSemaphore);
-    osgdata.viewer->getCamera()->setFinalDrawCallback(syncToSharedCallback);
+    osg::ref_ptr<osg::SyncTextureDrawCallback> syncToSharedCallback = new osg::SyncTextureDrawCallback({ { osgscene.colorTexture, sharedColorTexture }, { osgscene.depthTexture, sharedDepthTexture } }, true, { GL_LAYOUT_COLOR_ATTACHMENT_EXT,  GL_LAYOUT_DEPTH_STENCIL_ATTACHMENT_EXT }, { GL_LAYOUT_COLOR_ATTACHMENT_EXT, GL_LAYOUT_DEPTH_STENCIL_ATTACHMENT_EXT }, glPredrawWaitSemaphore, glPredrawCompleteSemaphore);
+    osgscene.predrawCamera->setPostDrawCallback(syncToSharedCallback);
+
+    osg::ref_ptr<osg::SyncTextureDrawCallback> syncFromSharedCallback = new osg::SyncTextureDrawCallback({ { osgscene.colorTexture, sharedColorTexture }, { osgscene.depthTexture, sharedDepthTexture } }, false, { GL_LAYOUT_COLOR_ATTACHMENT_EXT,  GL_LAYOUT_DEPTH_STENCIL_ATTACHMENT_EXT }, { GL_LAYOUT_COLOR_ATTACHMENT_EXT, GL_LAYOUT_DEPTH_STENCIL_ATTACHMENT_EXT }, glPostdrawWaitSemaphore, glPredrawWaitSemaphore);// glPostdrawCompleteSemaphore);
+    osgscene.postdrawCamera->setPreDrawCallback(syncFromSharedCallback);
     
     // main frame loop
     while (true)
     {
         osgdata.viewer->frame();
-
-        //syncImages(vsgdata.device, compile.context.commandPool, sharedColorImage, colorImage, { *vsgdata.completeSemaphore }, { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT }, { *vsgdata.readySemaphore });
 
         vsgdata.viewer->advanceToNextFrame();
 
@@ -643,8 +701,7 @@ int main(int /*argc*/, char** /*argv*/)
 
         vsgdata.viewer->populateNextFrame();
 
-        vsgdata.viewer->submitNextFrame({ *completeSemaphore }, { VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT }, { *readySemaphore });
-       //vsgdata.viewer->submitNextFrame();
+        vsgdata.viewer->submitNextFrame({ *predrawCompleteSemaphore }, { VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT }, { *postdrawWaitSemaphore });// { *predrawWaitSemaphore });
     }
     
     return 0;

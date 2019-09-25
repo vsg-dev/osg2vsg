@@ -73,7 +73,7 @@ void SharedTexture::apply(State& state) const
         // compute the internal texture format, this set the _internalFormat to an appropriate value.
         computeInternalFormat();
 
-        GLenum texStorageSizedInternalFormat = selectSizedInternalFormat(NULL);
+        GLenum texStorageSizedInternalFormat = (GLenum)_internalFormat; //selectSizedInternalFormat(NULL);
 
         // this could potentially return a recycled texture object which we don't want!!!
         textureObject = generateAndAssignTextureObject(contextID, GL_TEXTURE_2D, 1,
