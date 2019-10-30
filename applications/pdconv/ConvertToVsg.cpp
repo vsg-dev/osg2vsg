@@ -511,25 +511,6 @@ void ConvertToVsg::apply(osg::PagedLOD& plod)
         vsg_lod->setChild(1, vsg::PagedLOD::Child{children[1].minimumScreenHeightRatio, children[1].node});
     }
 
-    uint32_t maxNumOfTilesBelow = 0;
-    for(int i=level; i<maxLevel; ++i)
-    {
-        maxNumOfTilesBelow += std::pow(4, i-level);
-    }
-
-    uint32_t tileMultiplier = std::min(maxNumOfTilesBelow, numTilesBelow) + 1;
-
-    vsg::CollectDescriptorStats collectStats;
-    vsg_lod->accept(collectStats);
-
-    vsg_lod->setMaxSlot(collectStats.maxSlot);
-    vsg_lod->setNumDescriptorSets(collectStats.computeNumDescriptorSets() * tileMultiplier);
-    vsg_lod->setDescriptorPoolSizes(collectStats.computeDescriptorPoolSizes());
-    for(auto& poolSize : vsg_lod->getDescriptorPoolSizes())
-    {
-        poolSize.descriptorCount = poolSize.descriptorCount * tileMultiplier;
-    }
-
     root = vsg_lod;
 }
 

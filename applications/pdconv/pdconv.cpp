@@ -154,6 +154,32 @@ int main(int argc, char** argv)
                         osgDB::makeDirectory(finalOutputPath);
                     }
 
+                    if (level==0)
+                    {
+                        uint32_t maxNumOfTilesBelow = 0;
+                        for(int i=level; i<maxLevel; ++i)
+                        {
+                            maxNumOfTilesBelow += std::pow(4, i-level);
+                        }
+
+                        uint32_t tileMultiplier = std::min(maxNumOfTilesBelow, numTilesBelow) + 1;
+
+                        vsg::CollectDescriptorStats collectStats;
+                        vsg_scene->accept(collectStats);
+
+                        auto resourceHints = vsg::ResourceHints::create();
+
+                        resourceHints->setMaxSlot(collectStats.maxSlot);
+                        resourceHints->setNumDescriptorSets(collectStats.computeNumDescriptorSets() * tileMultiplier);
+                        resourceHints->setDescriptorPoolSizes(collectStats.computeDescriptorPoolSizes());
+                        for(auto& poolSize : resourceHints->getDescriptorPoolSizes())
+                        {
+                            poolSize.descriptorCount = poolSize.descriptorCount * tileMultiplier;
+                        }
+
+                        vsg_scene->setObject("ResourceHints", resourceHints);
+                    }
+
                     vsg::write(vsg_scene, combinedOutputFilename);
                 }
 
