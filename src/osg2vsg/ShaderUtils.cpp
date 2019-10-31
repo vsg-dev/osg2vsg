@@ -282,7 +282,7 @@ std::string osg2vsg::createDefaultFragmentSource(const uint32_t& shaderModeMask,
 }
 
 ShaderCompiler::ShaderCompiler(vsg::Allocator* allocator):
-    vsg::Object(allocator)
+    Inherit(allocator)
 {
     glslang::InitializeProcess();
 }
@@ -393,7 +393,7 @@ bool ShaderCompiler::compile(vsg::ShaderStages& shaders)
             INFO_OUTPUT << std::endl << getFriendlyNameForShader(vsg_shader) << ":" << std::endl << std::endl;
             INFO_OUTPUT << debugFormatShaderSource(vsg_shader->getShaderModule()->source()) << std::endl;
         }
-        
+
         INFO_OUTPUT << "Warning: Program failed to link." << std::endl;
         INFO_OUTPUT << "glslang info log: " << std::endl << program->getInfoLog();
         DEBUG_OUTPUT << "glslang debug info log: " << std::endl << program->getInfoDebugLog();
