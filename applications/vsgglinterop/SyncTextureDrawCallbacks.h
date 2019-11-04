@@ -16,7 +16,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <osg/RenderInfo>
 #include <osg/Texture2D>
 
-#include "SharedTexture.h"
 #include "SharedSemaphore.h"
 #include "GLMemoryExtensions.h"
 
@@ -69,36 +68,18 @@ namespace osg
     class SyncTextureDrawCallback : public osg::Camera::DrawCallback
     {
     public:
-        using SyncTextureMappings = std::map<Texture2D*, SharedTexture*>;
+        using SyncTextureMappings = std::map<Texture*, Texture*>;
 
-        SyncTextureDrawCallback(SyncTextureMappings mappings, std::vector<GLenum> srcLayouts, std::vector<GLenum> dstLayouts, ref_ptr<GLSemaphore> waitSemaphore, ref_ptr<GLSemaphore> completeSemaphore) :
+        SyncTextureDrawCallback(SyncTextureMappings mappings, bool syncTo, std::vector<GLenum> srcLayouts, std::vector<GLenum> dstLayouts, ref_ptr<GLSemaphore> waitSemaphore, ref_ptr<GLSemaphore> completeSemaphore) :
             osg::Camera::DrawCallback(),
             _mappings(mappings),
+            _syncTo(syncTo),
             _srcLayouts(srcLayouts),
             _dstLayouts(dstLayouts),
             _waitSemaphore(waitSemaphore),
             _completeSemaphore(completeSemaphore)
         {
         }
-
-    protected:
-        virtual ~SyncTextureDrawCallback() {}
-
-        SyncTextureMappings _mappings;
-        std::vector<GLenum> _srcLayouts;
-        std::vector<GLenum> _dstLayouts;
-
-        ref_ptr<GLSemaphore> _waitSemaphore;
-        ref_ptr<GLSemaphore> _completeSemaphore;
-    };
-
-    class SyncToSharedTextureDrawCallback : public SyncTextureDrawCallback
-    {
-    public:
-
-        SyncToSharedTextureDrawCallback(SyncTextureMappings mappings, std::vector<GLenum> srcLayouts, std::vector<GLenum> dstLayouts, ref_ptr<GLSemaphore> waitSemaphore, ref_ptr<GLSemaphore> completeSemaphore) :
-            SyncTextureDrawCallback(mappings, srcLayouts, dstLayouts, waitSemaphore, completeSemaphore)
-        {}
 
         virtual void operator () (osg::RenderInfo& renderInfo) const
         {
@@ -117,44 +98,26 @@ namespace osg
             // copy the textures into the shared textures
             for (auto const& texpair : _mappings)
             {
-                extensions->glCopyImageSubData(texpair.first->getTextureObject(renderInfo.getContextID())->id(), GL_TEXTURE_2D, 0, 0, 0, 0, texpair.second->getTextureObject(renderInfo.getContextID())->id(), GL_TEXTURE_2D, 0, 0, 0, 0, texpair.first->getTextureWidth(), texpair.first->getTextureHeight(), 1);
+                GLenum srcId = _syncTo ? texpair.first->getTextureObject(renderInfo.getContextID())->id() : texpair.second->getTextureObject(renderInfo.getContextID())->id();
+                GLenum dstId = _syncTo ? texpair.second->getTextureObject(renderInfo.getContextID())->id() : texpair.first->getTextureObject(renderInfo.getContextID())->id();
+                extensions->glCopyImageSubData(srcId, GL_TEXTURE_2D, 0, 0, 0, 0, dstId, GL_TEXTURE_2D, 0, 0, 0, 0, texpair.first->getTextureWidth(), texpair.first->getTextureHeight(), 1);
             }
 
             // signal complete semaphone
             _completeSemaphore->signal(*renderInfo.getState(), semaphoreBuffers, semaphoreTextures, _dstLayouts);
         }
+
+    protected:
+        virtual ~SyncTextureDrawCallback() {}
+
+        SyncTextureMappings _mappings;
+        bool _syncTo;
+
+        std::vector<GLenum> _srcLayouts;
+        std::vector<GLenum> _dstLayouts;
+
+        ref_ptr<GLSemaphore> _waitSemaphore;
+        ref_ptr<GLSemaphore> _completeSemaphore;
     };
-
-
-    class SyncFromSharedTextureDrawCallback : public SyncTextureDrawCallback
-    {
-    public:
-        virtual void operator () (osg::RenderInfo& renderInfo) const
-        {
-            GLMemoryExtensions* extensions = GLMemoryExtensions::Get(renderInfo.getContextID(), true);
-
-            std::vector<GLuint> semaphoreBuffers;
-            std::vector<GLuint> semaphoreTextures;
-            /*for (auto const& texpair : _mappings)
-            {
-                semaphoreTextures.push_back(texpair.second.getTextureObject(renderInfo.getContextID())->id());
-            }*/
-
-            // wait on the semaphone
-            _waitSemaphore->wait(*renderInfo.getState(), semaphoreBuffers, semaphoreTextures, _srcLayouts);
-
-
-            // copy the textures into the shared textures
-            for (auto const& texpair : _mappings)
-            {
-                extensions->glCopyImageSubData(texpair.second->getTextureObject(renderInfo.getContextID())->id(), GL_TEXTURE_2D, 0, 0, 0, 0, texpair.first->getTextureObject(renderInfo.getContextID())->id(), GL_TEXTURE_2D, 0, 0, 0, 0, texpair.first->getTextureWidth(), texpair.first->getTextureHeight(), 1);
-            }
-
-
-            // signal complete semaphone
-            _completeSemaphore->signal(*renderInfo.getState(), semaphoreBuffers, semaphoreTextures, _dstLayouts);
-        }
-    };
-
 }
 

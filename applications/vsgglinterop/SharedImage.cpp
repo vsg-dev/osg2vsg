@@ -2,7 +2,7 @@
 
 using namespace vsg;
 
-VkImageCreateInfo vsg::createImageCreateInfo(VkExtent2D extents, VkFormat format, VkImageUsageFlagBits usage, VkImageTiling tiling)
+VkImageCreateInfo vsg::createImageCreateInfo(VkExtent2D extents, VkFormat format, VkImageUsageFlags usage, VkImageTiling tiling)
 {
     VkImageCreateInfo imageCreateInfo = {};
     imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -70,6 +70,7 @@ ref_ptr<SharedImage> vsg::createSharedMemoryImage(Context& context, const VkImag
     imageFormatInfo.type = VK_IMAGE_TYPE_2D;
     imageFormatInfo.tiling = imageCreateInfo.tiling;
     imageFormatInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    imageFormatInfo.flags = 0;
 
     VkPhysicalDeviceExternalImageFormatInfo externalImageFormatInfo;
     externalImageFormatInfo.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO;
