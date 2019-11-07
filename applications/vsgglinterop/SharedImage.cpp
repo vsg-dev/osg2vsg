@@ -42,7 +42,7 @@ ImageData vsg::createImageView(Context& context, const VkImageCreateInfo& imageC
         vkGetImageMemoryRequirements(*device, *image, &memRequirements);
 
         // allocate memory with out export memory info extension
-        auto[deviceMemory, offset] = context.deviceMemoryBufferPools.reserveMemory(memRequirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        auto[deviceMemory, offset] = context.deviceMemoryBufferPools->reserveMemory(memRequirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         if (!deviceMemory)
         {
@@ -128,7 +128,7 @@ ref_ptr<SharedImage> vsg::createSharedMemoryImage(Context& context, const VkImag
     vkGetImageMemoryRequirements(*device, *image, &memRequirements);
 
     // allocate memory with out export memory info extension
-    auto[deviceMemory, offset] = context.deviceMemoryBufferPools.reserveMemory(memRequirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &exportAllocInfo);
+    auto[deviceMemory, offset] = context.deviceMemoryBufferPools->reserveMemory(memRequirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &exportAllocInfo);
 
     if (!deviceMemory)
     {
