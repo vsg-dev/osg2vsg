@@ -150,25 +150,25 @@ namespace osg2vsg
 
         void apply(vsg::Geometry& geometry) override
         {
-            for(auto& data : geometry._arrays)
+            for(auto& data : geometry.arrays)
             {
                 objects->addChild(data);
             }
-            if (geometry._indices)
+            if (geometry.indices)
             {
-                objects->addChild(geometry._indices);
+                objects->addChild(geometry.indices);
             }
         }
 
         void apply(vsg::VertexIndexDraw& vid) override
         {
-            for(auto& data : vid._arrays)
+            for(auto& data : vid.arrays)
             {
                 objects->addChild(data);
             }
-            if (vid._indices)
+            if (vid.indices)
             {
-                objects->addChild(vid._indices);
+                objects->addChild(vid.indices);
             }
         }
 

@@ -404,9 +404,8 @@ namespace osg2vsg
         {
             vsg::ref_ptr<vsg::VertexIndexDraw> vid(new vsg::VertexIndexDraw());
 
-            vid->_arrays = attributeArrays;
-            vid->_indices = vsgindices;
-            vid->_indexType = VK_INDEX_TYPE_UINT16;
+            vid->arrays = attributeArrays;
+            vid->indices = vsgindices;
             vid->indexCount = vsgindices->size();
             vid->instanceCount = instanceCount;
             vid->firstIndex = 0;
@@ -420,17 +419,17 @@ namespace osg2vsg
         // fallback to create the vsg geometry
         auto geometry = vsg::Geometry::create();
 
-        geometry->_arrays = attributeArrays;
+        geometry->arrays = attributeArrays;
 
         // copy into ushortArray
         if(indcies.size() > 0)
         {
-            geometry->_indices = vsgindices;
+            geometry->indices = vsgindices;
 
             drawCommands.push_back(vsg::DrawIndexed::create(vsgindices->valueCount(), instanceCount, 0, 0, 0));
         }
 
-        geometry->_commands = drawCommands;
+        geometry->commands = drawCommands;
 
         return geometry;
     }
