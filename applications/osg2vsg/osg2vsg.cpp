@@ -150,25 +150,25 @@ namespace osg2vsg
 
         void apply(vsg::Geometry& geometry) override
         {
-            for(auto& data : geometry._arrays)
+            for(auto& data : geometry.arrays)
             {
                 objects->addChild(data);
             }
-            if (geometry._indices)
+            if (geometry.indices)
             {
-                objects->addChild(geometry._indices);
+                objects->addChild(geometry.indices);
             }
         }
 
         void apply(vsg::VertexIndexDraw& vid) override
         {
-            for(auto& data : vid._arrays)
+            for(auto& data : vid.arrays)
             {
                 objects->addChild(data);
             }
-            if (vid._indices)
+            if (vid.indices)
             {
-                objects->addChild(vid._indices);
+                objects->addChild(vid.indices);
             }
         }
 
@@ -434,8 +434,8 @@ int main(int argc, char** argv)
     vsg::ref_ptr<vsg::Camera> camera(new vsg::Camera(perspective, lookAt, vsg::ViewportState::create(window->extent2D())));
 
 
-    // add a GraphicsStage tp the Window to do dispatch of the command graph to the commnad buffer(s)
-    window->addStage(vsg::GraphicsStage::create(vsg_scene, camera));
+    auto commandGraph = vsg::createCommandGraphForView(window, camera, vsg_scene);
+    viewer->assignRecordAndSubmitTaskAndPresentation({commandGraph});
 
     auto before_compile = std::chrono::steady_clock::now();
 
@@ -477,9 +477,11 @@ int main(int argc, char** argv)
         // pass any events into EventHandlers assigned to the Viewer
         viewer->handleEvents();
 
-        if (populateCommandGraphHandler->populateCommandGraph) viewer->populateNextFrame();
+        viewer->update();
 
-        viewer->submitNextFrame();
+        viewer->recordAndSubmit();
+
+        viewer->present();
     }
 
     // clean up done automatically thanks to ref_ptr<>
