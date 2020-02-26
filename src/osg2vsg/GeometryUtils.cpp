@@ -252,9 +252,9 @@ namespace osg2vsg
         return samplerInfo;
     }
 
-    vsg::ref_ptr<vsg::MaterialValue> convertToMaterialValue(const osg::Material* material)
+    vsg::ref_ptr<vsg::materialValue> convertToMaterialValue(const osg::Material* material)
     {
-        vsg::ref_ptr<vsg::MaterialValue> matvalue(new vsg::MaterialValue);
+        auto matvalue = vsg::materialValue::create();
 
         osg::Vec4 ambient = material->getAmbient(osg::Material::Face::FRONT);
         if (ambient.x() == 1.0f && ambient.y() == 1.0f && ambient.z() == 1.0f) ambient.set(0.1f, 0.1f, 0.1f, 1.0f); // ambient sanity check (shouldn't be needed but models seem to have bad material values)

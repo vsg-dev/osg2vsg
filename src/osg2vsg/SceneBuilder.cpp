@@ -285,7 +285,7 @@ vsg::ref_ptr<vsg::DescriptorSet> SceneBuilderBase::createVsgStateSet(const vsg::
     const osg::Material* osg_material = dynamic_cast<const osg::Material*>(stateset->getAttribute(osg::StateAttribute::Type::MATERIAL));
     if ((shaderModeMask & ShaderModeMask::MATERIAL) && (osg_material != nullptr) /*&& stateset->getMode(GL_COLOR_MATERIAL) == osg::StateAttribute::Values::ON*/)
     {
-        vsg::ref_ptr<vsg::MaterialValue> matdata = convertToMaterialValue(osg_material);
+        auto matdata = convertToMaterialValue(osg_material);
         auto vsg_materialUniform = vsg::DescriptorBuffer::create(matdata, MATERIAL_BINDING); // just use high value for now, should maybe put uniforms into a different descriptor set to simplify binding indexes
         descriptors.push_back(vsg_materialUniform);
     }
