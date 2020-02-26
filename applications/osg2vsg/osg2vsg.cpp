@@ -211,7 +211,7 @@ int main(int argc, char** argv)
     std::cout<<std::endl;
 
     auto buildOptions = osg2vsg::BuildOptions::create();
-    auto windowTraits = vsg::Window::Traits::create();
+    auto windowTraits = vsg::WindowTraits::create();
     windowTraits->windowTitle = "osg2vsg";
 
     // set up defaults and read command line arguments to override them
