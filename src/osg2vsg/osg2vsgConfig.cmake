@@ -6,5 +6,6 @@ find_dependency(OpenThreads)
 find_dependency(osg)
 find_dependency(osgUtil)
 find_dependency(osgDB)
+find_dependency(glslang)
 
 include("${CMAKE_CURRENT_LIST_DIR}/osg2vsgTargets.cmake")
