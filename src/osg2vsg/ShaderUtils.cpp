@@ -49,7 +49,7 @@ uint32_t osg2vsg::calculateShaderModeMask(const osg::StateSet* stateSet)
 
 // create defines string based of shader mask
 
-std::vector<std::string> createPSCDefineStrings(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
+static std::vector<std::string> createPSCDefineStrings(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
 {
     bool hasnormal = geometryAttrbutes & NORMAL;
     bool hastanget = geometryAttrbutes & TANGENT;
@@ -84,7 +84,7 @@ std::vector<std::string> createPSCDefineStrings(const uint32_t& shaderModeMask, 
 
 // insert defines string after the version in source
 
-std::string processGLSLShaderSource(const std::string& source, const std::vector<std::string>& defines)
+static std::string processGLSLShaderSource(const std::string& source, const std::vector<std::string>& defines)
 {
     // trim leading spaces/tabs
     auto trimLeading = [](std::string& str)
@@ -207,7 +207,7 @@ std::string processGLSLShaderSource(const std::string& source, const std::vector
     return headerstream.str() + sourcestream.str();
 }
 
-std::string debugFormatShaderSource(const std::string& source)
+static std::string debugFormatShaderSource(const std::string& source)
 {
     std::istringstream iss(source);
     std::ostringstream oss;
