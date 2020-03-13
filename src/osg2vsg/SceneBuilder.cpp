@@ -256,8 +256,6 @@ vsg::ref_ptr<vsg::DescriptorSet> SceneBuilderBase::createVsgStateSet(const vsg::
 {
     if (!stateset) return vsg::ref_ptr<vsg::DescriptorSet>();
 
-    uint32_t texcount = 0;
-
     vsg::Descriptors descriptors;
 
     auto addTexture = [&] (unsigned int i)
@@ -271,7 +269,6 @@ vsg::ref_ptr<vsg::DescriptorSet> SceneBuilderBase::createVsgStateSet(const vsg::
             {
                 // shaders are looking for textures in original units
                 vsgtex->_dstBinding = i;
-                texcount++; //
                 descriptors.push_back(vsgtex);
             }
             else
