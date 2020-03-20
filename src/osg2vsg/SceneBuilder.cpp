@@ -252,7 +252,7 @@ vsg::ref_ptr<vsg::DescriptorImage> SceneBuilderBase::convertToVsgTexture(const o
     return texture;
 }
 
-vsg::ref_ptr<vsg::DescriptorSet> SceneBuilderBase::createVsgStateSet(const vsg::DescriptorSetLayouts& descriptorSetLayouts, const osg::StateSet* stateset, uint32_t shaderModeMask)
+vsg::ref_ptr<vsg::DescriptorSet> SceneBuilderBase::createVsgStateSet(vsg::ref_ptr<vsg::DescriptorSetLayout> descriptorSetLayout, const osg::StateSet* stateset, uint32_t shaderModeMask)
 {
     if (!stateset) return vsg::ref_ptr<vsg::DescriptorSet>();
 
@@ -296,7 +296,7 @@ vsg::ref_ptr<vsg::DescriptorSet> SceneBuilderBase::createVsgStateSet(const vsg::
 
     if (descriptors.size() == 0) return vsg::ref_ptr<vsg::DescriptorSet>();
 
-    auto descriptorSet = vsg::DescriptorSet::create(descriptorSetLayouts, descriptors);
+    auto descriptorSet = vsg::DescriptorSet::create(descriptorSetLayout, descriptors);
 
     return descriptorSet;
 }
@@ -889,7 +889,7 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createVSG(vsg::Paths& searchPaths)
             vsg::ref_ptr<vsg::Node> transformGeometryGraph = createTransformGeometryGraphVSG(transformeGeometryMap, searchPaths, geometrymask);
             if (!transformGeometryGraph) continue;
 
-            vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = createVsgStateSet(descriptorSetLayouts, stateset, shaderModeMask);
+            vsg::ref_ptr<vsg::DescriptorSet> descriptorSet = createVsgStateSet(descriptorSetLayouts.front(), stateset, shaderModeMask);
             if (descriptorSet)
             {
                 auto stategroup = vsg::StateGroup::create();

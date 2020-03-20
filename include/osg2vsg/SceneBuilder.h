@@ -98,7 +98,7 @@ namespace osg2vsg
         // core VSG style usage
         vsg::ref_ptr<vsg::DescriptorImage> convertToVsgTexture(const osg::Texture* osgtexture);
 
-        vsg::ref_ptr<vsg::DescriptorSet> createVsgStateSet(const vsg::DescriptorSetLayouts& descriptorSetLayouts, const osg::StateSet* stateset, uint32_t shaderModeMask);
+        vsg::ref_ptr<vsg::DescriptorSet> createVsgStateSet(vsg::ref_ptr<vsg::DescriptorSetLayout> descriptorSetLayout, const osg::StateSet* stateset, uint32_t shaderModeMask);
     };
 
     class SceneBuilder : public osg::NodeVisitor, public SceneBuilderBase
