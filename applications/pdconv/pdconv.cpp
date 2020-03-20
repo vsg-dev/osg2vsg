@@ -41,7 +41,7 @@ int main(int argc, char** argv)
 
     if (inputFilename.empty() || outputFilename.empty())
     {
-        std::cout<<"Please support an input and output filenames via -o inputfilename.ext -o outputfile.ext"<<std::endl;
+        std::cout<<"Please support an input and output filenames via -i inputfilename.ext -o outputfile.ext"<<std::endl;
         return 1;
     }
 
