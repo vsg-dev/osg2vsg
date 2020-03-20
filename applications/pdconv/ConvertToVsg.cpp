@@ -38,7 +38,7 @@ vsg::ref_ptr<vsg::BindDescriptorSet> ConvertToVsg::getOrCreateBindDescriptorSet(
     auto pipelineLayout = pipeline->getPipelineLayout();
     if (!pipelineLayout) return {};
 
-    auto descriptorSet = createVsgStateSet(pipelineLayout->getDescriptorSetLayouts(), stateset, shaderModeMask);
+    auto descriptorSet = createVsgStateSet(pipelineLayout->getDescriptorSetLayouts().front(), stateset, shaderModeMask);
     if (!descriptorSet) return {};
 
     // std::cout<<"   We have descriptorSet "<<descriptorSet<<std::endl;
