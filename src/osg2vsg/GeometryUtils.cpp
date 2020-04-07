@@ -267,8 +267,8 @@ namespace osg2vsg
         osg::Vec4 specular = material->getSpecular(osg::Material::Face::FRONT);
         matvalue->value().specularColor = vsg::vec4(specular.x(), specular.y(), specular.z(), specular.w());
 
-        float shine = material->getShininess(osg::Material::Face::FRONT);
-        matvalue->value().shine = shine;
+        float shininess = material->getShininess(osg::Material::Face::FRONT);
+        matvalue->value().shininess = shininess;
 
         return matvalue;
     }

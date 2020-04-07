@@ -47,7 +47,7 @@ void main()
     {
         vec3 halfDir = normalize(ld + vd);
         color.rgb += base.a * specularColor *
-            pow(max(dot(halfDir, nd), 0.0), 16.0/*osg_Material.shine*/);
+            pow(max(dot(halfDir, nd), 0.0), 16.0/*osg_Material.shininess*/);
     }
 #else
     vec4 color = base;

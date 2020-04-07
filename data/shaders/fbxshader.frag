@@ -23,7 +23,7 @@ layout(binding = 10) uniform MaterialData
     vec4 ambientColor;
     vec4 diffuseColor;
     vec4 specularColor;
-    float shine;
+    float shininess;
 } material;
 #endif
 
@@ -56,12 +56,12 @@ void main()
     vec3 ambientColor = material.ambientColor.rgb;
     vec3 diffuseColor = material.diffuseColor.rgb;
     vec3 specularColor = material.specularColor.rgb;
-    float shine = material.shine;
+    float shininess = material.shininess;
 #else
     vec3 ambientColor = vec3(0.1,0.1,0.1);
     vec3 diffuseColor = vec3(1.0,1.0,1.0);
     vec3 specularColor = vec3(0.3,0.3,0.3);
-    float shine = 16.0;
+    float shininess = 16.0;
 #endif
 #ifdef VSG_AMBIENT_MAP
     ambientColor *= texture(ambientMap, texCoord0.st).r;
@@ -88,7 +88,7 @@ void main()
     {
         vec3 halfDir = normalize(ld + vd);
         color.rgb += base.a * specularColor *
-            pow(max(dot(halfDir, nd), 0.0), shine);
+            pow(max(dot(halfDir, nd), 0.0), shininess);
     }
 #else
     vec4 color = base;
