@@ -34,10 +34,12 @@ target_include_directories(osg2vsg PUBLIC
     ${OSG_INCLUDE_DIR}
 )
 
-target_link_libraries(osg2vsg PUBLIC
-    vsg::vsg
-    ${GLSLANG}
-    ${OPENTHREADS_LIBRARIES} ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES}
+target_link_libraries(osg2vsg
+    PUBLIC
+        vsg::vsg
+    PRIVATE
+        ${GLSLANG}
+        ${OPENTHREADS_LIBRARIES} ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES}
 )
 
 

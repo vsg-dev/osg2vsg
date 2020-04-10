@@ -14,6 +14,7 @@ set(OUTPUT_LIBDIR ${PROJECT_BINARY_DIR}/lib)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${OUTPUT_LIBDIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_BINDIR})
+SET(CMAKE_MODULE_PATH "${OSG2VSG_SOURCE_DIR}/CMakeModules;${CMAKE_MODULE_PATH}")
 
 SET(CMAKE_DEBUG_POSTFIX "d" CACHE STRING "add a postfix, usually d on windows")
 SET(CMAKE_RELEASE_POSTFIX "" CACHE STRING "add a postfix, usually empty on windows")
@@ -40,6 +41,7 @@ endif(WIN32)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_BINDIR})
 
+
 # Change the default build type to Release
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
@@ -62,22 +64,21 @@ endforeach ()
 
 
 # Find OpenSceneGraph packages for reference
-find_package(OpenThreads)
-find_package(osg)
-find_package(osgDB)
-find_package(osgTerrain)
-find_package(osgUtil)
-find_package(OpenGL)
+find_package(OpenThreads REQUIRED)
+find_package(osg REQUIRED)
+find_package(osgDB REQUIRED)
+find_package(osgTerrain REQUIRED)
+find_package(osgUtil REQUIRED)
+find_package(OpenGL REQUIRED)
 
 if (VULKAN_SDK)
     set(ENV{VULKAN_SDK} ${VULKAN_SDK})
 endif()
 
-find_package(Vulkan)
-find_package(vsg)
+find_package(Vulkan REQUIRED)
+find_package(glslang REQUIRED)
+find_package(vsg REQUIRED)
 
-SET(CMAKE_MODULE_PATH "${OSG2VSG_SOURCE_DIR}/CMakeModules;${CMAKE_MODULE_PATH}")
-find_package(glslang)
 
 add_custom_target(clobber
     COMMAND git clean -d -f -x
