@@ -69,6 +69,10 @@ find_package(osgTerrain)
 find_package(osgUtil)
 find_package(OpenGL)
 
+if (VULKAN_SDK)
+    set(ENV{VULKAN_SDK} ${VULKAN_SDK})
+endif()
+
 find_package(Vulkan)
 find_package(vsg)
 
