@@ -203,7 +203,7 @@ int main(int argc, char** argv)
             {
                 static std::mutex s_io_mutex;
                 std::lock_guard<std::mutex> guard(s_io_mutex);
-                std::cout<<" "<<latch->count().load();
+                std::cout<<" "<<latch->count();
                 std::cout.flush();
             }
         }
