@@ -33,3 +33,8 @@ target_link_libraries(osg2vsg_viewer
     Vulkan::Vulkan
     ${OSGDB_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSG_LIBRARIES} ${OPENTHREADS_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${OPENGL_LIBRARY} ${DL_LIBRARY}
 )
+
+install(TARGETS osg2vsg_viewer
+        RUNTIME DESTINATION bin
+)
+
