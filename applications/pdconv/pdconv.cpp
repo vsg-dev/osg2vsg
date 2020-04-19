@@ -45,8 +45,8 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    auto active = vsg::Active::create();
-    auto operationThreads = vsg::OperationThreads::create(numThreads, active);
+    auto status = vsg::ActivityStatus::create();
+    auto operationThreads = vsg::OperationThreads::create(numThreads, status);
     auto operationQueue = operationThreads->queue;
     auto latch = vsg::Latch::create(1); // 1 for the ReadOperation we're about to add
 
@@ -231,7 +231,7 @@ int main(int argc, char** argv)
     latch->wait();
 
     // signal that we are finished and the thread should close
-    active->active = false;
+    status->set(false);
 
     return 1;
 }
