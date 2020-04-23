@@ -53,8 +53,8 @@ int main(int /*argc*/, char** /*argv*/)
 
     // set up LOD
     auto lod = vsg::LOD::create();
-    lod->addChild(vsg::LOD::LODChild{0.5, vsg::Node::create()});
-    lod->addChild(vsg::LOD::LODChild{0.0, vsg::Node::create()});
+    lod->addChild(vsg::LOD::Child{0.5, vsg::Node::create()});
+    lod->addChild(vsg::LOD::Child{0.0, vsg::Node::create()});
     group->addChild(lod);
 
     PrintVisitor visitor;

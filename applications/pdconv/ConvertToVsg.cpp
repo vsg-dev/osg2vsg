@@ -446,7 +446,7 @@ void ConvertToVsg::apply(osg::LOD& lod)
     // add to vsg::LOD in reverse order - highest level of detail first
     for(auto itr = ratioChildMap.rbegin(); itr != ratioChildMap.rend(); ++itr)
     {
-        vsg_lod->addChild(vsg::LOD::LODChild{itr->first, itr->second});
+        vsg_lod->addChild(vsg::LOD::Child{itr->first, itr->second});
     }
 
     root = vsg_lod;
