@@ -25,7 +25,7 @@ int main(int argc, char** argv)
     vsg::Path outputFilename;
     if (arguments.read("-o", outputFilename)) buildOptions->extension = vsg::fileExtension(outputFilename);
 
-    auto levels = arguments.value(20, "-l");
+    auto levels = arguments.value(30, "-l");
     uint32_t numThreads = arguments.value(16, "-t");
     uint32_t numTilesBelow = arguments.value(0, "-n");
 
