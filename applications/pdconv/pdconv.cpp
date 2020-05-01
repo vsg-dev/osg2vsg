@@ -109,6 +109,15 @@ int main(int argc, char** argv)
                 }
 
                 root->addChild(scene);
+
+                // if an EllipsoidModel is assigned to the scene move to the new root.
+                auto em = scene->getObject("EllipsoidModel");
+                if (em)
+                {
+                    root->setObject("EllipsoidModel", em);
+                    scene->removeObject("EllipsoidModel");
+                }
+
                 return root;
             }
             else
@@ -125,7 +134,7 @@ int main(int argc, char** argv)
             std::string finalInputPath = osgDB::getFilePath(combinedInputFilename);
             std::string finalOutputPath = vsg::filePath(combinedOutputFilename);
 
-            osg::ref_ptr<osg::Node> osg_scene = osgDB::readNodeFile(combinedInputFilename);
+            osg::ref_ptr<osg::Node> osg_scene = osgDB::readRefNodeFile(combinedInputFilename);
 
             if (osg_scene)
             {

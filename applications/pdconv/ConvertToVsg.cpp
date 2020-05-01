@@ -308,7 +308,14 @@ void ConvertToVsg::apply(osg::CoordinateSystemNode& cs)
 {
     apply((osg::Group&)cs);
 
-    if (root) root->setValue("class", "CoordinateSystemNode");
+    if (root)
+    {
+        auto em = cs.getEllipsoidModel();
+        if (em)
+        {
+            root->setObject("EllipsoidModel", vsg::EllipsoidModel::create(em->getRadiusEquator(), em->getRadiusPolar()));
+        }
+    }
 }
 
 void ConvertToVsg::apply(osg::Billboard& billboard)

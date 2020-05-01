@@ -19,7 +19,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <vsg/vk/PhysicalDevice.h>
 #include <vsg/vk/Device.h>
 #include <vsg/vk/CommandPool.h>
-#include <vsg/vk/Descriptor.h>
 
 #include <osg2vsg/Export.h>
 
