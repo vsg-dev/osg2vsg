@@ -1,14 +1,4 @@
-#include <vsg/core/ref_ptr.h>
-#include <vsg/core/observer_ptr.h>
-#include <vsg/core/Object.h>
-#include <vsg/core/Auxiliary.h>
-#include <vsg/core/Value.h>
-
-#include <vsg/nodes/Group.h>
-#include <vsg/nodes/QuadGroup.h>
-#include <vsg/nodes/StateGroup.h>
-
-#include <vsg/io/stream.h>
+#include <vsg/all.h>
 
 #include <osg/ref_ptr>
 #include <osg/Referenced>

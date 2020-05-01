@@ -2,9 +2,6 @@
 #include <osg2vsg/ImageUtils.h>
 #include <osg2vsg/ShaderUtils.h>
 
-#include <vsg/nodes/StateGroup.h>
-#include <vsg/nodes/VertexIndexDraw.h>
-
 #include <osgUtil/MeshOptimizers>
 #include <osgUtil/TangentSpaceGenerator>
 
