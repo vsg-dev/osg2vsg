@@ -224,7 +224,7 @@ vsg::ref_ptr<vsg::Data> convertCompressedImageToVsg(const osg::Image* image)
         }
     }
 
-    if (image->getOrigin()==osg::Image::BOTTOM_LEFT) layout.origin = 1;
+    layout.origin = (image->getOrigin()==osg::Image::BOTTOM_LEFT) ? vsg::BOTTOM_LEFT : vsg::TOP_LEFT;
 
     vsg_data->setFormat(format);
     vsg_data->setLayout(layout);
@@ -264,7 +264,7 @@ vsg::ref_ptr<vsg::Data> convertToVsg(const osg::Image* image)
         vsg_data = new vsg::ubvec4Array3D(new_image->s(), new_image->t(), new_image->r(), reinterpret_cast<vsg::ubvec4*>(new_image->data()));
     }
 
-    if (image->getOrigin()==osg::Image::BOTTOM_LEFT) layout.origin = 2;
+    layout.origin = (image->getOrigin()==osg::Image::BOTTOM_LEFT) ? vsg::BOTTOM_LEFT : vsg::TOP_LEFT;
 
     vsg_data->setFormat(VK_FORMAT_R8G8B8A8_UNORM);
     vsg_data->setLayout(layout);
