@@ -45,36 +45,132 @@ VkFormat convertGLImageFormatToVulkan(GLenum dataType, GLenum pixelFormat)
     }
 }
 
-struct WriteRow : public osg::CastAndScaleToFloatOperation
+osg::ref_ptr<osg::Image> formatImage(const osg::Image* image, GLenum targetPixelFormat = GL_RGBA)
 {
-    WriteRow(unsigned char* ptr) : _ptr(ptr) {}
-    unsigned char* _ptr;
-
-    inline void luminance(float l) { rgba(l, l, l, 1.0f); }
-    inline void alpha(float a) { rgba(1.0f, 1.0f, 1.0f, a); }
-    inline void luminance_alpha(float l,float a) { rgba(l, l, l, a); }
-    inline void rgb(float r,float g,float b) { rgba(r, g, b, 1.0f); }
-    inline void rgba(float r,float g,float b,float a)
+    if (targetPixelFormat==image->getPixelFormat())
     {
-        (*_ptr++) = static_cast<unsigned char>(r*255.0);
-        (*_ptr++) = static_cast<unsigned char>(g*255.0);
-        (*_ptr++) = static_cast<unsigned char>(b*255.0);
-        (*_ptr++) = static_cast<unsigned char>(a*255.0);
+        return const_cast<osg::Image*>(image);
     }
-};
 
-osg::ref_ptr<osg::Image> formatImageToRGBA(const osg::Image* image)
-{
     osg::ref_ptr<osg::Image> new_image( new osg::Image);
-    new_image->allocateImage(image->s(), image->t(), image->r(), GL_RGBA, GL_UNSIGNED_BYTE);
 
-    // need to copy pixels from image to new_image;
-    for(int r=0;r<image->r();++r)
+    new_image->allocateImage(image->s(), image->t(), image->r(), targetPixelFormat, image->getDataType());
+
+    int numBytesPerComponent = 1;
+    unsigned char component_default[8] = {255, 0, 0, 0, 0, 0, 0, 0};
+    switch(image->getDataType())
     {
-        for(int t=0;t<image->t();++t)
+        case(GL_BYTE) :
+            numBytesPerComponent = 1;
+            *reinterpret_cast<char*>(component_default) = 127;
+            break;
+        case(GL_UNSIGNED_BYTE) :
+            numBytesPerComponent = 1;
+            *reinterpret_cast<unsigned char*>(component_default) = 255;
+            break;
+        case(GL_SHORT) :
+            numBytesPerComponent = 2;
+            *reinterpret_cast<short*>(component_default) = 32767;
+            break;
+        case(GL_UNSIGNED_SHORT) :
+            numBytesPerComponent = 2;
+            *reinterpret_cast<short*>(component_default) = 65535;
+            break;
+        case(GL_INT) :
+            numBytesPerComponent = 4;
+            *reinterpret_cast<int*>(component_default) = 2147483647;
+            break;
+        case(GL_UNSIGNED_INT) :
+            numBytesPerComponent = 4;
+            *reinterpret_cast<unsigned int*>(component_default) = 4294967295;
+            break;
+        case(GL_FLOAT) :
+            numBytesPerComponent = 4;
+            *reinterpret_cast<float*>(component_default) = 1.0f;
+            break;
+        case(GL_DOUBLE) : numBytesPerComponent = 8; break;
+            numBytesPerComponent = 8;
+            *reinterpret_cast<double*>(component_default) = 1.0;
+            break;
+        default:
         {
-            WriteRow operation(new_image->data(0, t, r));
-            osg::readRow(image->s(), image->getPixelFormat(), image->getDataType(), image->data(0,t,r), operation);
+            std::cout<<"Warning: formateImage() DataType "<<image->getDataType()<<" not supprted."<<std::endl;
+            return {};
+        }
+    }
+
+    int numComponents = 4;
+    switch(targetPixelFormat)
+    {
+        case(GL_RED) : numComponents = 1; break;
+        case(GL_ALPHA) : numComponents = 1; break;
+        case(GL_LUMINANCE) : numComponents = 1; break;
+        case(GL_LUMINANCE_ALPHA) : numComponents = 2; break;
+        case(GL_RGB) : numComponents = 3; break;
+        case(GL_BGR) : numComponents = 3; break;
+        case(GL_RGBA) : numComponents = 4; break;
+        case(GL_BGRA) : numComponents = 4; break;
+        default:
+        {
+            std::cout<<"Warning: formateImage() targetPixelFormat "<<targetPixelFormat<<" not supprted."<<std::endl;
+            return {};
+        }
+    }
+
+    std::vector<int> componentOffset = {0, 1*numBytesPerComponent, 2*numBytesPerComponent, 3*numBytesPerComponent};
+    switch(image->getPixelFormat())
+    {
+        case(GL_RED) :
+            componentOffset = {0, -1, -1, -1};
+            break;
+        case(GL_ALPHA) :
+            componentOffset = {-1, -1, -1, 0};
+            break;
+        case(GL_LUMINANCE) :
+            componentOffset = {0, 0, 0, -1};
+            break;
+        case(GL_LUMINANCE_ALPHA) :
+            componentOffset = {0, 0, 0, numBytesPerComponent};
+            break;
+        case(GL_RGB) :
+            componentOffset = {0, numBytesPerComponent, numBytesPerComponent*2, -1};
+            break;
+        case(GL_BGR) :
+            componentOffset = {numBytesPerComponent*2, numBytesPerComponent, 0, -1};
+            break;
+        case(GL_RGBA) :
+            componentOffset = {0, numBytesPerComponent, numBytesPerComponent*2, numBytesPerComponent*3};
+            break;
+        case(GL_BGRA) :
+            componentOffset = {numBytesPerComponent*2, numBytesPerComponent, 0, numBytesPerComponent*3};
+            break;
+        default:
+        {
+            std::cout<<"Warning: formateImage() source PixelFormat "<<image->getPixelFormat()<<" not supprted."<<std::endl;
+            return {};
+        }
+    }
+
+    for(int r=0; r<image->r(); ++r)
+    {
+        for(int t=0; t<image->t(); ++t)
+        {
+            for(int s=0; s<image->s(); ++s)
+            {
+                const unsigned char* src = image->data(s, t, r);
+                unsigned char* dst = new_image->data(s, t, r);
+
+
+                for(int c=0; c<numComponents; ++c)
+                {
+                    int offset = componentOffset[c];
+                    const unsigned char* component_src = (offset>=0) ? (src+offset) : component_default;
+                    for(int b=0; b<numBytesPerComponent; ++b)
+                    {
+                        *(dst++) = *(component_src+b);
+                    }
+                }
+            }
         }
     }
 
@@ -232,6 +328,24 @@ vsg::ref_ptr<vsg::Data> convertCompressedImageToVsg(const osg::Image* image)
     return vsg_data;
 }
 
+template<typename T>
+vsg::ref_ptr<vsg::Data> create(osg::ref_ptr<osg::Image> image, VkFormat format)
+{
+    vsg::ref_ptr<vsg::Data> vsg_data;
+    if (image->r()==1)
+    {
+        vsg_data = vsg::Array2D<T>::create(image->s(), image->t(), reinterpret_cast<T*>(image->data()));
+    }
+    else
+    {
+        vsg_data = vsg::Array3D<T>::create(image->s(), image->t(), image->r(), reinterpret_cast<T*>(image->data()));
+    }
+
+    vsg_data->setFormat(format);
+
+    return vsg_data;
+}
+
 vsg::ref_ptr<vsg::Data> convertToVsg(const osg::Image* image)
 {
     if (!image)
@@ -239,13 +353,60 @@ vsg::ref_ptr<vsg::Data> convertToVsg(const osg::Image* image)
         return createWhiteTexture();
     }
 
-
     if (image->isCompressed())
     {
         return convertCompressedImageToVsg(image);
     }
 
-    osg::ref_ptr<osg::Image> new_image = formatImageToRGBA(image);
+    int numComponents = 4;
+    osg::ref_ptr<osg::Image> new_image;
+
+    switch(image->getPixelFormat())
+    {
+        case(GL_RED):
+        case(GL_LUMINANCE):
+        case(GL_ALPHA):
+            numComponents = 1;
+            new_image = const_cast<osg::Image*>(image);
+            break;
+        case(GL_LUMINANCE_ALPHA):
+            numComponents = 2;
+            new_image = const_cast<osg::Image*>(image);
+            break;
+#if 1
+        case(GL_RGB):
+        case(GL_BGR):
+            // current NVidia driver doesn't supprt RGB so expand to RGBA
+            numComponents = 4;
+            new_image = formatImage(image, GL_RGBA);
+            break;
+#else
+        case(GL_RGB):
+            numComponents = 3;
+            new_image = const_cast<osg::Image*>(image);
+        case(GL_BGR):
+            numComponents = 3;
+            new_image = formatImage(image, GL_RGB);
+            break;
+#endif
+        case(GL_RGBA):
+            numComponents = 4;
+            new_image = const_cast<osg::Image*>(image);
+            break;
+        case(GL_BGRA):
+            numComponents = 4;
+            new_image = formatImage(image, GL_RGBA);
+            break;
+        default:
+            std::cout<<"Warning: convertToVsg(osg::Image*) does not support image->getPixelFormat() == "<<std::hex<<image->getPixelFormat()<<std::endl;
+            return {};
+    }
+
+    if (!new_image)
+    {
+        std::cout<<"Warning: convertToVsg(osg::Image*) unable to create vsg::Data."<<std::endl;
+        return {};
+    }
 
     // we want to pass ownership of the new_image data onto th vsg_image so reset the allocation mode on the image to prevent deletetion.
     new_image->setAllocationMode(osg::Image::NO_DELETE);
@@ -255,18 +416,41 @@ vsg::ref_ptr<vsg::Data> convertToVsg(const osg::Image* image)
     vsg::Data::Layout layout;
     layout.maxNumMipmaps = image->getNumMipmapLevels();
 
-    if (new_image->r()==1)
+
+    switch(numComponents)
     {
-        vsg_data = new vsg::ubvec4Array2D(new_image->s(), new_image->t(), reinterpret_cast<vsg::ubvec4*>(new_image->data()));
-    }
-    else
-    {
-        vsg_data = new vsg::ubvec4Array3D(new_image->s(), new_image->t(), new_image->r(), reinterpret_cast<vsg::ubvec4*>(new_image->data()));
+        case(1):
+            if (image->getDataType()==GL_UNSIGNED_BYTE) vsg_data = create<uint8_t>(new_image, VK_FORMAT_R8_UNORM);
+            else if (image->getDataType()==GL_UNSIGNED_SHORT) vsg_data = create<uint16_t>(new_image, VK_FORMAT_R16_UNORM);
+            else if (image->getDataType()==GL_UNSIGNED_INT) vsg_data = create<uint32_t>(new_image, VK_FORMAT_R32_UINT);
+            else if (image->getDataType()==GL_FLOAT) vsg_data = create<float>(new_image, VK_FORMAT_R32_SFLOAT);
+            else if (image->getDataType()==GL_DOUBLE) vsg_data = create<double>(new_image, VK_FORMAT_R64_SFLOAT);
+            break;
+        case(2):
+            if (image->getDataType()==GL_UNSIGNED_BYTE) vsg_data = create<vsg::ubvec2>(new_image, VK_FORMAT_R8G8_UNORM);
+            else if (image->getDataType()==GL_UNSIGNED_SHORT) vsg_data = create<vsg::usvec2>(new_image, VK_FORMAT_R16G16_UNORM);
+            else if (image->getDataType()==GL_UNSIGNED_INT) vsg_data = create<vsg::uivec2>(new_image, VK_FORMAT_R32G32_UINT);
+            else if (image->getDataType()==GL_FLOAT) vsg_data = create<vsg::vec2>(new_image, VK_FORMAT_R32G32_SFLOAT);
+            else if (image->getDataType()==GL_DOUBLE) vsg_data = create<vsg::dvec2>(new_image, VK_FORMAT_R64G64_SFLOAT);
+            break;
+        case(3):
+            if (image->getDataType()==GL_UNSIGNED_BYTE) vsg_data = create<vsg::ubvec3>(new_image, VK_FORMAT_R8G8B8_UNORM);
+            else if (image->getDataType()==GL_UNSIGNED_SHORT) vsg_data = create<vsg::usvec3>(new_image, VK_FORMAT_R16G16B16_UNORM);
+            else if (image->getDataType()==GL_UNSIGNED_INT) vsg_data = create<vsg::uivec3>(new_image, VK_FORMAT_R32G32B32_UINT);
+            else if (image->getDataType()==GL_FLOAT) vsg_data = create<vsg::vec3>(new_image, VK_FORMAT_R32G32B32_SFLOAT);
+            else if (image->getDataType()==GL_DOUBLE) vsg_data = create<vsg::dvec3>(new_image, VK_FORMAT_R64G64B64_SFLOAT);
+            break;
+        case(4):
+            if (image->getDataType()==GL_UNSIGNED_BYTE) vsg_data = create<vsg::ubvec4>(new_image, VK_FORMAT_R8G8B8A8_UNORM);
+            else if (image->getDataType()==GL_UNSIGNED_SHORT) vsg_data = create<vsg::usvec4>(new_image, VK_FORMAT_R16G16B16A16_UNORM);
+            else if (image->getDataType()==GL_UNSIGNED_INT) vsg_data = create<vsg::uivec4>(new_image, VK_FORMAT_R32G32B32A32_UINT);
+            else if (image->getDataType()==GL_FLOAT) vsg_data = create<vsg::vec4>(new_image, VK_FORMAT_R32G32B32A32_SFLOAT);
+            else if (image->getDataType()==GL_DOUBLE) vsg_data = create<vsg::dvec4>(new_image, VK_FORMAT_R64G64B64A64_SFLOAT);
+            break;
     }
 
     layout.origin = (image->getOrigin()==osg::Image::BOTTOM_LEFT) ? vsg::BOTTOM_LEFT : vsg::TOP_LEFT;
 
-    vsg_data->setFormat(VK_FORMAT_R8G8B8A8_UNORM);
     vsg_data->setLayout(layout);
 
     return vsg_data;
