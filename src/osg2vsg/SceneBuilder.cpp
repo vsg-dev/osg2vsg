@@ -3,10 +3,13 @@
 #include <osg2vsg/ImageUtils.h>
 #include <osg2vsg/GeometryUtils.h>
 #include <osg2vsg/ShaderUtils.h>
+#include <osg2vsg/Optimize.h>
 
 #include <vsg/nodes/MatrixTransform.h>
 #include <vsg/nodes/CullGroup.h>
 #include <vsg/nodes/CullNode.h>
+
+#include <osgUtil/MeshOptimizers>
 
 #include <osg/io_utils>
 
@@ -936,3 +939,38 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createVSG(vsg::Paths& searchPaths)
     return group;
 }
 
+vsg::ref_ptr<vsg::Node> SceneBuilder::optimizeAndConvertToVsg(osg::ref_ptr<osg::Node> osg_scene, vsg::Paths& searchPaths)
+{
+    std::cout<<"New SceneBuilder::optimizeAndConvertToVsg("<<osg_scene<<std::endl;
+
+    bool optimize = true;
+    if (optimize)
+    {
+        osgUtil::IndexMeshVisitor imv;
+        #if OSG_MIN_VERSION_REQUIRED(3,6,4)
+        imv.setGenerateNewIndicesOnAllGeometries(true);
+        #endif
+        osg_scene->accept(imv);
+        imv.makeMesh();
+
+        osgUtil::VertexCacheVisitor vcv;
+        osg_scene->accept(vcv);
+        vcv.optimizeVertices();
+
+        osgUtil::VertexAccessOrderVisitor vaov;
+        osg_scene->accept(vaov);
+        vaov.optimizeOrder();
+
+        osgUtil::Optimizer optimizer;
+        optimizer.optimize(osg_scene, osgUtil::Optimizer::DEFAULT_OPTIMIZATIONS);
+
+        OptimizeOsgBillboards optimizeBillboards;
+        osg_scene->accept(optimizeBillboards);
+        optimizeBillboards.optimize();
+    }
+
+    osg_scene->accept(*this);
+
+    // build VSG scene
+    return createVSG(searchPaths);
+}

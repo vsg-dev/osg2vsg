@@ -153,5 +153,8 @@ namespace osg2vsg
         void popMatrix();
 
         void print();
+
+        vsg::ref_ptr<vsg::Node> optimizeAndConvertToVsg(osg::ref_ptr<osg::Node> scene, vsg::Paths& searchPaths);
+
     };
 }
