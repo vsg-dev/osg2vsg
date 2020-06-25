@@ -941,8 +941,6 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createVSG(vsg::Paths& searchPaths)
 
 vsg::ref_ptr<vsg::Node> SceneBuilder::optimizeAndConvertToVsg(osg::ref_ptr<osg::Node> osg_scene, vsg::Paths& searchPaths)
 {
-    std::cout<<"New SceneBuilder::optimizeAndConvertToVsg("<<osg_scene<<std::endl;
-
     bool optimize = true;
     if (optimize)
     {
