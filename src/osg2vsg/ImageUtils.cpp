@@ -181,7 +181,7 @@ osg::ref_ptr<osg::Image> formatImage(const osg::Image* image, GLenum targetPixel
 vsg::ref_ptr<vsg::Data> createWhiteTexture()
 {
     vsg::ref_ptr<vsg::vec4Array2D> vsg_data(new vsg::vec4Array2D(1,1));
-    vsg_data->setFormat(VK_FORMAT_R32G32B32A32_SFLOAT);
+    vsg_data->setLayout(vsg::Data::Layout{VK_FORMAT_R32G32B32A32_SFLOAT});
     for(auto& color : *vsg_data)
     {
         color = vsg::vec4(1.0f, 1.0f, 1.0f, 1.0f);
