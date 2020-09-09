@@ -178,10 +178,10 @@ int main(int argc, char** argv)
 
                         auto resourceHints = vsg::ResourceHints::create();
 
-                        resourceHints->setMaxSlot(collectStats.maxSlot);
-                        resourceHints->setNumDescriptorSets(collectStats.computeNumDescriptorSets() * tileMultiplier);
-                        resourceHints->setDescriptorPoolSizes(collectStats.computeDescriptorPoolSizes());
-                        for(auto& poolSize : resourceHints->getDescriptorPoolSizes())
+                        resourceHints->maxSlot = collectStats.maxSlot;
+                        resourceHints->numDescriptorSets = collectStats.computeNumDescriptorSets() * tileMultiplier;
+                        resourceHints->descriptorPoolSizes = collectStats.computeDescriptorPoolSizes();
+                        for(auto& poolSize : resourceHints->descriptorPoolSizes)
                         {
                             poolSize.descriptorCount = poolSize.descriptorCount * tileMultiplier;
                         }
