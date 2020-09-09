@@ -23,6 +23,11 @@ set(SOURCES
 
 add_library(osg2vsg ${HEADERS} ${SOURCES})
 
+# check whehther glslang/build_info.h exists
+if (EXISTS ${glslang_INCLUDE_DIR}/glslang/build_info.h)
+    set(EXTRA_DEFINES ${EXTRA_DEFINES} GLSLANG_HAS_BUILD_INFO_H)
+endif()
+
 set_property(TARGET osg2vsg PROPERTY VERSION ${OSG2VSG_VERSION_MAJOR}.${OSG2VSG_VERSION_MINOR}.${OSG2VSG_VERSION_PATCH})
 set_property(TARGET osg2vsg PROPERTY SOVERSION ${OSG2VSG_SOVERSION})
 set_property(TARGET osg2vsg PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -38,7 +43,7 @@ target_link_libraries(osg2vsg
     PUBLIC
         vsg::vsg
     PRIVATE
-        ${GLSLANG}
+        ${glslang_LIBRARIES}
         ${OPENTHREADS_LIBRARIES} ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES}
 )
 
@@ -49,6 +54,8 @@ install(TARGETS osg2vsg EXPORT osg2vsgTargets
         RUNTIME DESTINATION bin
         INCLUDES DESTINATION include
 )
+
+target_compile_definitions(osg2vsg PRIVATE ${EXTRA_DEFINES})
 
 if (BUILD_SHARED_LIBS)
     target_compile_definitions(osg2vsg INTERFACE OSG2VSG_SHARED_LIBRARY)

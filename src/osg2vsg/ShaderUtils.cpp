@@ -3,7 +3,7 @@
 #include <osg2vsg/GeometryUtils.h>
 
 #include <glslang/Public/ShaderLang.h>
-#include <SPIRV/GlslangToSpv.h>
+#include <glslang/SPIRV/GlslangToSpv.h>
 
 #include "glsllang/ResourceLimits.h"
 
