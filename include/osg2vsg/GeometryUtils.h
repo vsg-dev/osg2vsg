@@ -62,7 +62,7 @@ namespace osg2vsg
 
     extern OSG2VSG_DECLSPEC std::pair<VkFilter, VkSamplerMipmapMode> convertToFilterAndMipmapMode(osg::Texture::FilterMode filtermode);
 
-    extern OSG2VSG_DECLSPEC VkSamplerCreateInfo convertToSamplerCreateInfo(const osg::Texture* texture);
+    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Sampler> convertToSampler(const osg::Texture* texture);
 
     extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::materialValue> convertToMaterialValue(const osg::Material* material);
 
