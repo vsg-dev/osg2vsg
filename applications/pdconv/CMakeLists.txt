@@ -30,8 +30,6 @@ set_target_properties(pdconv PROPERTIES OUTPUT_NAME pdconv)
 target_link_libraries(pdconv
     osg2vsg
     vsg::vsg
-    ${GLSLANG}
-    Vulkan::Vulkan
     ${OSGTERRAIN_LIBRARIES} ${OSGDB_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSG_LIBRARIES} ${OPENTHREADS_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${OPENGL_LIBRARY} ${DL_LIBRARY}
 )
 

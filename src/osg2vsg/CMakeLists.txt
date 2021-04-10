@@ -18,7 +18,6 @@ set(SOURCES
     ShaderUtils.cpp
     SceneBuilder.cpp
     SceneAnalysis.cpp
-    glsllang/ResourceLimits.cpp
 )
 
 add_library(osg2vsg ${HEADERS} ${SOURCES})
@@ -43,7 +42,6 @@ target_link_libraries(osg2vsg
     PUBLIC
         vsg::vsg
     PRIVATE
-        ${glslang_LIBRARIES}
         ${OPENTHREADS_LIBRARIES} ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES}
 )
 

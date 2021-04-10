@@ -29,8 +29,6 @@ set_target_properties(osg2vsg_viewer PROPERTIES OUTPUT_NAME osg2vsg)
 target_link_libraries(osg2vsg_viewer
     osg2vsg
     vsg::vsg
-    ${GLSLANG}
-    Vulkan::Vulkan
     ${OSGDB_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSG_LIBRARIES} ${OPENTHREADS_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${OPENGL_LIBRARY} ${DL_LIBRARY}
 )
 

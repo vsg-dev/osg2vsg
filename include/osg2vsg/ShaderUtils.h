@@ -52,14 +52,4 @@ namespace osg2vsg
     // create default shader source
     extern OSG2VSG_DECLSPEC std::string createDefaultVertexSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
     extern OSG2VSG_DECLSPEC std::string createDefaultFragmentSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
-
-
-    class OSG2VSG_DECLSPEC ShaderCompiler : public vsg::Inherit<vsg::Object, ShaderCompiler>
-    {
-    public:
-        ShaderCompiler(vsg::Allocator* allocator=nullptr);
-        virtual ~ShaderCompiler();
-
-        bool compile(vsg::ShaderStages& shaders);
-    };
 }

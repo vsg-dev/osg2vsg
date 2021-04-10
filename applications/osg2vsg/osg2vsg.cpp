@@ -260,7 +260,7 @@ int main(int argc, char** argv)
     VsgNodes vsgNodes;
 
     // read any vsg files
-    vsg::ReaderWriter_vsg io;
+    vsg::VSG io;
 
     for (int i=1; i<argc; ++i)
     {

@@ -42,7 +42,7 @@ class ReaderWriterVSG : public osgDB::ReaderWriter
             std::string filename = osgDB::findDataFile( file, options );
             if (filename.empty()) return ReadResult::FILE_NOT_FOUND;
 
-            vsg::ReaderWriter_vsg io;
+            vsg::VSG io;
             vsg::ref_ptr<vsg::Object> object = io.read(filename);
 
             OSG_NOTICE<<"VSG data loaded "<<object->className()<<", need to implement a converter."<<std::endl;
@@ -72,7 +72,7 @@ class ReaderWriterVSG : public osgDB::ReaderWriter
             std::string ext = osgDB::getFileExtension(filename);
             if (!acceptsExtension(ext)) return WriteResult::FILE_NOT_HANDLED;
 
-            vsg::ReaderWriter_vsg io;
+            vsg::VSG io;
             if (io.write(object, filename))
             {
                 return WriteResult::FILE_SAVED;
