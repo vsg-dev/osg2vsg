@@ -63,13 +63,17 @@ foreach (flag ${VSG_WARNING_FLAGS})
 endforeach ()
 
 
+set(OpenGL_GL_PREFERENCE "GLVND")
+find_package(OpenGL REQUIRED)
+
 # Find OpenSceneGraph packages for reference
+# set prefrence for using modern OpenGL library.
 find_package(OpenThreads REQUIRED)
 find_package(osg REQUIRED)
 find_package(osgDB REQUIRED)
 find_package(osgTerrain REQUIRED)
 find_package(osgUtil REQUIRED)
-find_package(OpenGL REQUIRED)
+
 
 if (VULKAN_SDK)
     set(ENV{VULKAN_SDK} ${VULKAN_SDK})
