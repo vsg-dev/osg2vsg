@@ -6,6 +6,7 @@ project(OSG2VSG
     LANGUAGES CXX
 )
 set(OSG2VSG_SOVERSION 0)
+SET(OSG2VSG_RELEASE_CANDIDATE 0)
 
 set(OUTPUT_BINDIR ${PROJECT_BINARY_DIR}/bin)
 set(OUTPUT_LIBDIR ${PROJECT_BINARY_DIR}/lib)
@@ -90,6 +91,48 @@ add_custom_target(clobber
 add_custom_target(uninstall
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/build/uninstall.cmake
 )
+
+option(MAINTAINER "Enable maintainer build methods, such as making git branches and tags." OFF)
+if (MAINTAINER)
+
+    #
+    # Provide target for tagging a release
+    #
+    SET(BASE_NAME osg2vsg)
+    SET(OSG2VSG_BRANCH ${BASE_NAME}-${OSG2VSG_VERSION_MAJOR}.${OSG2VSG_VERSION_MINOR})
+
+    SET(GITCOMMAND git)
+
+    IF   (OSG2VSG_RELEASE_CANDIDATE EQUAL 0)
+        SET(RELEASE_NAME ${BASE_NAME}-${OSG2VSG_VERSION})
+    ELSE()
+        SET(RELEASE_NAME ${BASE_NAME}-${OSG2VSG_VERSION}-rc${OSG2VSG_RELEASE_CANDIDATE})
+    ENDIF()
+
+    SET(RELEASE_MESSAGE "Release ${RELEASE_NAME}")
+    SET(BRANCH_MESSAGE "Branch ${OSG2VSG_BRANCH}")
+
+    add_custom_target(tag-test
+        COMMAND echo ${GITCOMMAND} tag -a ${RELEASE_NAME} -m ${RELEASE_MESSAGE}
+        COMMAND echo ${GITCOMMAND} push origin ${RELEASE_NAME}
+    )
+
+    add_custom_target(tag-run
+        COMMAND ${GITCOMMAND} tag -a ${RELEASE_NAME} -m ${RELEASE_MESSAGE}
+        COMMAND ${GITCOMMAND} push origin ${RELEASE_NAME}
+    )
+
+    add_custom_target(branch-test
+        COMMAND echo ${GITCOMMAND} branch ${OSG2VSG_BRANCH}
+        COMMAND echo ${GITCOMMAND} push origin ${OSG2VSG_BRANCH}
+    )
+
+    add_custom_target(branch-run
+        COMMAND ${GITCOMMAND} branch ${OSG2VSG_BRANCH}
+        COMMAND ${GITCOMMAND} push origin ${OSG2VSG_BRANCH}
+    )
+
+endif()
 
 # src directory contains all the example applications etc.
 add_subdirectory(src/osg2vsg)
