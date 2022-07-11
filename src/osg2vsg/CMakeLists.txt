@@ -3,21 +3,11 @@ SET(HEADER_PATH ${CMAKE_SOURCE_DIR}/include/osg2vsg)
 
 set(HEADERS
     ${HEADER_PATH}/Export.h
-    ${HEADER_PATH}/ImageUtils.h
-    ${HEADER_PATH}/GeometryUtils.h
-    ${HEADER_PATH}/Optimize.h
-    ${HEADER_PATH}/ShaderUtils.h
-    ${HEADER_PATH}/SceneBuilder.h
-    ${HEADER_PATH}/SceneAnalysis.h
+    ${HEADER_PATH}/OSG.h
 )
 
 set(SOURCES
-    ImageUtils.cpp
-    GeometryUtils.cpp
-    Optimize.cpp
-    ShaderUtils.cpp
-    SceneBuilder.cpp
-    SceneAnalysis.cpp
+    OSG.cpp
 )
 
 add_library(osg2vsg ${HEADERS} ${SOURCES})

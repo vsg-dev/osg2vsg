@@ -7,18 +7,26 @@
 #include <osgDB/FileUtils>
 #include <osgDB/Registry>
 
-#include <osgUtil/Optimizer>
-#include <osgUtil/MeshOptimizers>
+#include <vsg/io/Logger.h>
+#include <vsg/io/read.h>
+#include <vsg/io/write.h>
+#include <vsg/core/Data.h>
+#include <vsg/nodes/Node.h>
 
-#include <vsg/io/ReaderWriter.h>
-#include <vsg/io/FileSystem.h>
+namespace osg2vsg
+{
+    vsg::ref_ptr<vsg::Data> convertToVsg(const osg::Image* osg_image)
+    {
+        vsg::info("convertToVsg(", osg_image, ")");
+        return {};
+    }
 
-#include <vsg/nodes/Group.h>
-
-#include <osg2vsg/ImageUtils.h>
-#include <osg2vsg/ShaderUtils.h>
-#include <osg2vsg/GeometryUtils.h>
-#include <osg2vsg/SceneBuilder.h>
+    vsg::ref_ptr<vsg::Node> convertToVsg(const osg::Node* osg_node)
+    {
+        vsg::info("convertToVsg(", osg_node, ")");
+        return {};
+    }
+}
 
 
 class ReaderWriterVSG : public osgDB::ReaderWriter
@@ -28,6 +36,7 @@ class ReaderWriterVSG : public osgDB::ReaderWriter
         ReaderWriterVSG()
         {
             supportsExtension("vsga","vsg ascii format");
+            supportsExtension("vsgt","vsg ascii format");
             supportsExtension("vsgb","vsg binary format");
         }
 
@@ -42,10 +51,9 @@ class ReaderWriterVSG : public osgDB::ReaderWriter
             std::string filename = osgDB::findDataFile( file, options );
             if (filename.empty()) return ReadResult::FILE_NOT_FOUND;
 
-            vsg::VSG io;
-            vsg::ref_ptr<vsg::Object> object = io.read(filename);
+            auto object = vsg::read(filename);
 
-            OSG_NOTICE<<"VSG data loaded "<<object->className()<<", need to implement a converter."<<std::endl;
+            OSG_NOTICE<<"VSG data loaded "<<object<<", need to implement a converter."<<std::endl;
 
             return ReadResult::FILE_NOT_HANDLED;
         }
@@ -67,79 +75,28 @@ class ReaderWriterVSG : public osgDB::ReaderWriter
         }
 
 
-        virtual WriteResult write(const vsg::Object* object, const std::string& filename, const osgDB::ReaderWriter::Options*) const
-        {
-            std::string ext = osgDB::getFileExtension(filename);
-            if (!acceptsExtension(ext)) return WriteResult::FILE_NOT_HANDLED;
-
-            vsg::VSG io;
-            if (io.write(object, filename))
-            {
-                return WriteResult::FILE_SAVED;
-            }
-
-            return WriteResult::FILE_NOT_HANDLED;
-        }
-
         virtual WriteResult writeImage(const osg::Image& image, const std::string& filename, const osgDB::ReaderWriter::Options* options) const
         {
             std::string ext = osgDB::getFileExtension(filename);
             if (!acceptsExtension(ext)) return WriteResult::FILE_NOT_HANDLED;
 
-            //vsg::ref_ptr<vsg::Data> data(new vsg::vec4Array2D(image.s(), image.t()));
-            auto data = osg2vsg::convertToVsg(&image);
+            auto vsg_data = osg2vsg::convertToVsg(&image);
+            vsg::ref_ptr<vsg::Options> vsg_options;
 
-            if (data) return write(data, filename, options);
+            if (vsg_data) return vsg::write(vsg_data, filename, vsg_options) ? WriteResult::FILE_SAVED : WriteResult::FILE_NOT_HANDLED;
             else return WriteResult::FILE_NOT_HANDLED;
         }
 
         virtual WriteResult writeNode(const osg::Node& node, const std::string& filename, const osgDB::ReaderWriter::Options* options) const
         {
-            osg::Node& osg_scene = const_cast<osg::Node&>(node);
-
             std::string ext = osgDB::getFileExtension(filename);
             if (!acceptsExtension(ext)) return WriteResult::FILE_NOT_HANDLED;
 
-            bool optimize = true;
-            bool writeToFileProgramAndDataSetSets = false;
-            vsg::Paths searchPaths = vsg::getEnvPaths("VSG_FILE_PATH");
+            auto vsg_node = osg2vsg::convertToVsg(&node);
+            vsg::ref_ptr<vsg::Options> vsg_options;
 
-            if (optimize)
-            {
-                osgUtil::IndexMeshVisitor imv;
-                #if OSG_MIN_VERSION_REQUIRED(3,6,4)
-                imv.setGenerateNewIndicesOnAllGeometries(true);
-                #endif
-                osg_scene.accept(imv);
-                imv.makeMesh();
-
-                osgUtil::VertexCacheVisitor vcv;
-                osg_scene.accept(vcv);
-                vcv.optimizeVertices();
-
-                osgUtil::VertexAccessOrderVisitor vaov;
-                osg_scene.accept(vaov);
-                vaov.optimizeOrder();
-
-                osgUtil::Optimizer optimizer;
-                optimizer.optimize(&osg_scene, osgUtil::Optimizer::DEFAULT_OPTIMIZATIONS);
-            }
-
-
-            // Collect stats about the loaded scene
-            osg2vsg::SceneBuilder sceneAnalysis;
-            sceneAnalysis.writeToFileProgramAndDataSetSets = writeToFileProgramAndDataSetSets;
-            osg_scene.accept(sceneAnalysis);
-
-            // build VSG scene
-            vsg::ref_ptr<vsg::Node> converted_vsg_scene = sceneAnalysis.createVSG(searchPaths);
-
-            if (converted_vsg_scene)
-            {
-                return write(converted_vsg_scene, filename, options);
-            }
-            return WriteResult::FILE_NOT_HANDLED;
-
+            if (vsg_node) return vsg::write(vsg_node, filename, vsg_options) ? WriteResult::FILE_SAVED : WriteResult::FILE_NOT_HANDLED;
+            else return WriteResult::FILE_NOT_HANDLED;
         }
 
 };

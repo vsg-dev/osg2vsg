@@ -29,19 +29,19 @@ struct PrintVisitor : public vsg::Visitor
 
     void apply(vsg::Group& group) override
     {
-        std::cout<<"apply(vsg::Group& "<<&group<<") getNumChildren()="<<group.getNumChildren()<<std::endl;
+        std::cout<<"apply(vsg::Group& "<<&group<<") children.size() = "<<group.children.size()<<std::endl;
         group.traverse(*this);
     }
 
     void apply(vsg::QuadGroup& group) override
     {
-        std::cout<<"apply(vsg::QuadGroup& "<<&group<<") getNumChildren()="<<group.getNumChildren()<<std::endl;
+        std::cout<<"apply(vsg::QuadGroup& "<<&group<<") children.size() ="<<group.children.size()<<std::endl;
         group.traverse(*this);
     }
 
     void apply(vsg::LOD& lod) override
     {
-        std::cout<<"apply(vsg::LOD& "<<&lod<<") getNumChildren()="<<lod.getNumChildren()<<std::endl;
+        std::cout<<"apply(vsg::LOD& "<<&lod<<") children.size() = "<<lod.children.size()<<std::endl;
         lod.traverse(*this);
     }
 };

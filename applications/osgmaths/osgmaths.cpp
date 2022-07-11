@@ -134,8 +134,8 @@ int main(int argc, char** argv)
 
         auto after_osg = vsg::clock::now();
 
-        std::cout<<"Time for OSG opertions "<<std::chrono::duration<double, std::chrono::milliseconds::period>(mid_osg - before_osg).count()<<"ms delta = "<<osg_delta<<std::endl;;
-        std::cout<<"Time for OSG transposed opertions "<<std::chrono::duration<double, std::chrono::milliseconds::period>(after_osg - mid_osg).count()<<"ms delta = "<<osg_transposed_delta<<std::endl;;
+        std::cout<<"Time for OSG operations "<<std::chrono::duration<double, std::chrono::milliseconds::period>(mid_osg - before_osg).count()<<"ms delta = "<<osg_delta<<std::endl;;
+        std::cout<<"Time for OSG transposed operations "<<std::chrono::duration<double, std::chrono::milliseconds::period>(after_osg - mid_osg).count()<<"ms delta = "<<osg_transposed_delta<<std::endl;;
     }
 
     if (vsg_test)
@@ -193,8 +193,8 @@ int main(int argc, char** argv)
         auto after_vsg = vsg::clock::now();
 
 
-        std::cout<<"Time for VSG opertions "<<std::chrono::duration<double, std::chrono::milliseconds::period>(mid_vsg - before_vsg).count()<<"ms delta = "<<vsg_delta<<std::endl;;
-        std::cout<<"Time for VSG transposed opertions "<<std::chrono::duration<double, std::chrono::milliseconds::period>(after_vsg - mid_vsg).count()<<"ms delta = "<<vsg_transposed_delta<<std::endl;;
+        std::cout<<"Time for VSG operations "<<std::chrono::duration<double, std::chrono::milliseconds::period>(mid_vsg - before_vsg).count()<<"ms delta = "<<vsg_delta<<std::endl;;
+        std::cout<<"Time for VSG transposed operations "<<std::chrono::duration<double, std::chrono::milliseconds::period>(after_vsg - mid_vsg).count()<<"ms delta = "<<vsg_transposed_delta<<std::endl;;
     }
 
     return 0;
