@@ -75,7 +75,7 @@ class ReaderWriterVSG : public osgDB::ReaderWriter
         }
 
 
-        virtual WriteResult writeImage(const osg::Image& image, const std::string& filename, const osgDB::ReaderWriter::Options* options) const
+        virtual WriteResult writeImage(const osg::Image& image, const std::string& filename, const osgDB::ReaderWriter::Options* /*options*/) const
         {
             std::string ext = osgDB::getFileExtension(filename);
             if (!acceptsExtension(ext)) return WriteResult::FILE_NOT_HANDLED;
@@ -87,7 +87,7 @@ class ReaderWriterVSG : public osgDB::ReaderWriter
             else return WriteResult::FILE_NOT_HANDLED;
         }
 
-        virtual WriteResult writeNode(const osg::Node& node, const std::string& filename, const osgDB::ReaderWriter::Options* options) const
+        virtual WriteResult writeNode(const osg::Node& node, const std::string& filename, const osgDB::ReaderWriter::Options* /*options*/) const
         {
             std::string ext = osgDB::getFileExtension(filename);
             if (!acceptsExtension(ext)) return WriteResult::FILE_NOT_HANDLED;
