@@ -28,6 +28,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace osg2vsg
 {
+    // forward declare
+    class PipelineCache;
+
     /// optional OSG ReaderWriter
     class OSG2VSG_DECLSPEC OSG : public vsg::Inherit<vsg::ReaderWriter, OSG>
     {
@@ -46,6 +49,9 @@ namespace osg2vsg
         bool readOptions(vsg::Options& options, vsg::CommandLine& arguments) const override;
 
     protected:
+
+        vsg::ref_ptr<PipelineCache> pipelineCache;
+
         ~OSG();
     };
 

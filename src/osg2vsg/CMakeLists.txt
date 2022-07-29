@@ -7,7 +7,15 @@ set(HEADERS
 )
 
 set(SOURCES
+    BuildOptions.cpp
+    ConvertToVsg.cpp
+    GeometryUtils.cpp
+    ImageUtils.cpp
+    Optimize.cpp
     OSG.cpp
+    SceneAnalysis.cpp
+    SceneBuilder.cpp
+    ShaderUtils.cpp
 )
 
 add_library(osg2vsg ${HEADERS} ${SOURCES})
@@ -32,7 +40,7 @@ target_link_libraries(osg2vsg
     PUBLIC
         vsg::vsg
     PRIVATE
-        ${OPENTHREADS_LIBRARIES} ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES}
+        ${OPENTHREADS_LIBRARIES} ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES} ${OSGTERRAIN_LIBRARIES}
 )
 
 
