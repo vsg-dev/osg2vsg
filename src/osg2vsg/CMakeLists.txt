@@ -7,6 +7,7 @@ set(HEADERS
 )
 
 set(SOURCES
+    convert.cpp
     BuildOptions.cpp
     ConvertToVsg.cpp
     GeometryUtils.cpp
