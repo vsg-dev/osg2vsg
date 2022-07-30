@@ -16,18 +16,15 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <osgDB/ReadFile>
 #include <osgDB/WriteFile>
 
-#include <vsg/vk/PhysicalDevice.h>
-#include <vsg/vk/Device.h>
 #include <vsg/vk/CommandPool.h>
-
-#include <osg2vsg/Export.h>
+#include <vsg/vk/Device.h>
+#include <vsg/vk/PhysicalDevice.h>
 
 namespace osg2vsg
 {
-    extern OSG2VSG_DECLSPEC VkFormat convertGLImageFormatToVulkan(GLenum dataType, GLenum pixelFormat);
+    VkFormat convertGLImageFormatToVulkan(GLenum dataType, GLenum pixelFormat);
 
-    extern OSG2VSG_DECLSPEC osg::ref_ptr<osg::Image> formatImageToRGBA(const osg::Image* image);
+    osg::ref_ptr<osg::Image> formatImageToRGBA(const osg::Image* image);
 
-    extern OSG2VSG_DECLSPEC vsg::ref_ptr<vsg::Data> convertToVsg(const osg::Image* image);
-}
-
+    vsg::ref_ptr<vsg::Data> convertToVsg(const osg::Image* image, bool mapRGBtoRGBAHint);
+} // namespace osg2vsg

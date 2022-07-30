@@ -74,6 +74,8 @@ find_package(osg REQUIRED)
 find_package(osgDB REQUIRED)
 find_package(osgTerrain REQUIRED)
 find_package(osgUtil REQUIRED)
+find_package(osgGA REQUIRED)
+find_package(osgViewer REQUIRED)
 
 
 if (VULKAN_SDK)

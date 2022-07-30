@@ -1,19 +1,30 @@
-#include <osg2vsg/Optimize.h>
+/* <editor-fold desc="MIT License">
 
-#include <osg2vsg/ImageUtils.h>
-#include <osg2vsg/GeometryUtils.h>
-#include <osg2vsg/ShaderUtils.h>
+Copyright(c) 2019 Thomas Hogarth and Robert Osfield
 
-#include <vsg/nodes/MatrixTransform.h>
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+</editor-fold> */
+
+#include "Optimize.h"
+
+#include "GeometryUtils.h"
+#include "ImageUtils.h"
+#include "ShaderUtils.h"
+
 #include <vsg/nodes/CullGroup.h>
 #include <vsg/nodes/CullNode.h>
+#include <vsg/nodes/MatrixTransform.h>
 
 #include <osg/io_utils>
 
 using namespace osg2vsg;
 
-
-OptimizeOsgBillboards::OptimizeOsgBillboards():
+OptimizeOsgBillboards::OptimizeOsgBillboards() :
     osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN)
 {
 }
@@ -72,21 +83,20 @@ void OptimizeOsgBillboards::optimize()
     using TransformBillboardMap = std::map<osg::Transform*, Billboards>;
     using BillboardTransformMap = std::map<osg::Billboard*, Transforms>;
 
-
     TransformBillboardMap transformBillboardMap;
     BillboardTransformMap billboardTransformMap;
 
-    for(auto[transform,nodes] : transformSubgraph)
+    for (auto [transform, nodes] : transformSubgraph)
     {
         size_t numBillboards = 0;
-        for(auto& node : nodes)
+        for (auto& node : nodes)
         {
             osg::Billboard* billboard = dynamic_cast<osg::Billboard*>(node);
             if (billboard) ++numBillboards;
         }
-        if (numBillboards>0 && numBillboards==nodes.size())
+        if (numBillboards > 0 && numBillboards == nodes.size())
         {
-            for(auto& node : nodes)
+            for (auto& node : nodes)
             {
                 osg::Billboard* billboard = dynamic_cast<osg::Billboard*>(node);
                 transformBillboardMap[transform].insert(billboard);
@@ -98,12 +108,13 @@ void OptimizeOsgBillboards::optimize()
     using ReplacementMap = std::map<osg::ref_ptr<osg::Node>, osg::ref_ptr<osg::Node>>;
     ReplacementMap replacementMap;
 
-    for(auto[billboard, transforms] : billboardTransformMap)
+    for (auto [billboard, transforms] : billboardTransformMap)
     {
         bool transformsUniqueMapToBillboard = true;
-        for(auto& transform : transforms)
+
+        for (auto& transform : transforms)
         {
-            if (transformBillboardMap[transform].size()>1)
+            if (transformBillboardMap[transform].size() > 1)
             {
                 transformsUniqueMapToBillboard = false;
             }
@@ -114,16 +125,28 @@ void OptimizeOsgBillboards::optimize()
 
             new_billboard->setStateSet(billboard->getStateSet());
 
-            for(auto& transform : transforms)
+            for (auto& transform : transforms)
             {
-                osg::Matrix matrix;
-                transform->computeLocalToWorldMatrix(matrix, nullptr);
-
-                unsigned int numPositions = std::min(static_cast<unsigned int>(billboard->getPositionList().size()), billboard->getNumDrawables());
-                for(unsigned int i=0; i<numPositions; ++i)
+                if (transform)
                 {
-                    auto position = billboard->getPosition(i);
-                    new_billboard->addDrawable(billboard->getDrawable(i), position * matrix);
+                    osg::Matrix matrix;
+                    transform->computeLocalToWorldMatrix(matrix, nullptr);
+
+                    unsigned int numPositions = std::min(static_cast<unsigned int>(billboard->getPositionList().size()), billboard->getNumDrawables());
+                    for (unsigned int i = 0; i < numPositions; ++i)
+                    {
+                        auto position = billboard->getPosition(i);
+                        new_billboard->addDrawable(billboard->getDrawable(i), position * matrix);
+                    }
+                }
+                else
+                {
+                    unsigned int numPositions = std::min(static_cast<unsigned int>(billboard->getPositionList().size()), billboard->getNumDrawables());
+                    for (unsigned int i = 0; i < numPositions; ++i)
+                    {
+                        auto position = billboard->getPosition(i);
+                        new_billboard->addDrawable(billboard->getDrawable(i), position);
+                    }
                 }
 
                 replacementMap[transform] = nullptr;
@@ -132,22 +155,24 @@ void OptimizeOsgBillboards::optimize()
         }
     }
 
-    for(auto[nodeToReplace, replacementNode] : replacementMap)
+    for (auto [nodeToReplace, replacementNode] : replacementMap)
     {
-        if (replacementNode)
+        if (nodeToReplace)
         {
-            for(auto parent : nodeToReplace->getParents())
+            if (replacementNode)
             {
-                parent->replaceChild(nodeToReplace.get(), replacementNode.get());
+                for (auto parent : nodeToReplace->getParents())
+                {
+                    parent->replaceChild(nodeToReplace.get(), replacementNode.get());
+                }
             }
-        }
-        else
-        {
-            for(auto parent : nodeToReplace->getParents())
+            else
             {
-                parent->removeChild(nodeToReplace.get());
+                for (auto parent : nodeToReplace->getParents())
+                {
+                    parent->removeChild(nodeToReplace.get());
+                }
             }
         }
     }
-
 }

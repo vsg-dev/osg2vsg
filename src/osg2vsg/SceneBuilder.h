@@ -1,62 +1,24 @@
 #pragma once
 
-#include <vsg/all.h>
-
-#include <iostream>
 #include <chrono>
+#include <iostream>
 
+#include <osg/Billboard>
+#include <osg/MatrixTransform>
 #include <osgDB/ReadFile>
 #include <osgDB/WriteFile>
 #include <osgUtil/Optimizer>
-#include <osg/Billboard>
-#include <osg/MatrixTransform>
 
-#include <osg2vsg/ShaderUtils.h>
-#include <osg2vsg/GeometryUtils.h>
+#include "BuildOptions.h"
 
 namespace osg2vsg
 {
-    struct PipelineCache : public vsg::Inherit<vsg::Object, PipelineCache>
-    {
-        vsg::ref_ptr<vsg::ShaderCompiler> shaderCompiler = vsg::ShaderCompiler::create();
-
-        using Key = std::tuple<uint32_t, uint32_t, std::string, std::string>;
-        using PipelineMap = std::map<Key, vsg::ref_ptr<vsg::BindGraphicsPipeline>>;
-
-        std::mutex mutex;
-        PipelineMap pipelineMap;
-
-        vsg::ref_ptr<vsg::BindGraphicsPipeline> getOrCreateBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryMask, const std::string& vertShaderPath = "", const std::string& fragShaderPath = "");
-    };
-
-    struct BuildOptions : public vsg::Inherit<vsg::Object, BuildOptions>
-    {
-        bool insertCullGroups = true;
-        bool insertCullNodes = true;
-        bool useBindDescriptorSet = true;
-        bool billboardTransform = false;
-
-        GeometryTarget geometryTarget = VSG_VERTEXINDEXDRAW;
-
-        uint32_t supportedGeometryAttributes = GeometryAttributes::ALL_ATTS;
-        uint32_t supportedShaderModeMask = ShaderModeMask::ALL_SHADER_MODE_MASK;
-        uint32_t overrideGeomAttributes = 0;
-        uint32_t overrideShaderModeMask = ShaderModeMask::NONE;
-
-        std::string vertexShaderPath = "";
-        std::string fragmentShaderPath = "";
-
-        vsg::Path extension = "vsgb";
-
-        vsg::ref_ptr<PipelineCache> pipelineCache = PipelineCache::create();
-    };
-
     class SceneBuilderBase
     {
     public:
         SceneBuilderBase() {}
 
-        SceneBuilderBase(vsg::ref_ptr<const BuildOptions> options):
+        SceneBuilderBase(vsg::ref_ptr<const BuildOptions> options) :
             buildOptions(options) {}
 
         using StateStack = std::vector<osg::ref_ptr<osg::StateSet>>;
@@ -65,16 +27,15 @@ namespace osg2vsg
         using StateMap = std::map<StateStack, StatePair>;
         using GeometriesMap = std::map<const osg::Geometry*, vsg::ref_ptr<vsg::Command>>;
 
-
         using TexturesMap = std::map<const osg::Texture*, vsg::ref_ptr<vsg::DescriptorImage>>;
 
         struct UniqueStateSet
         {
-            bool operator() ( const osg::ref_ptr<osg::StateSet>& lhs, const osg::ref_ptr<osg::StateSet>& rhs) const
+            bool operator()(const osg::ref_ptr<osg::StateSet>& lhs, const osg::ref_ptr<osg::StateSet>& rhs) const
             {
                 if (!lhs) return true;
                 if (!rhs) return false;
-                return lhs->compare(*rhs)<0;
+                return lhs->compare(*rhs) < 0;
             }
         };
 
@@ -104,10 +65,10 @@ namespace osg2vsg
     class SceneBuilder : public osg::NodeVisitor, public SceneBuilderBase
     {
     public:
-        SceneBuilder():
+        SceneBuilder() :
             osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN) {}
 
-        SceneBuilder(vsg::ref_ptr<const BuildOptions> options):
+        SceneBuilder(vsg::ref_ptr<const BuildOptions> options) :
             osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN),
             SceneBuilderBase(options) {}
 
@@ -155,6 +116,5 @@ namespace osg2vsg
         void print();
 
         vsg::ref_ptr<vsg::Node> optimizeAndConvertToVsg(osg::ref_ptr<osg::Node> scene, vsg::Paths& searchPaths);
-
     };
-}
+} // namespace osg2vsg

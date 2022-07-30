@@ -11,11 +11,6 @@
 #include <vector>
 #include <chrono>
 
-vsg::Group* createGroup()
-{
-    vsg::ref_ptr<vsg::Group> group(new vsg::Group);
-    return group.release();
-}
 
 class MyVisitor : public vsg::Visitor
 {
@@ -64,8 +59,6 @@ int main(int /*argc*/, char** /*argv*/)
     {
         std::cout<<"---- Start of block"<<std::endl;
 
-        //vsg::ref_ptr<vsg::Group> group(vsg::Group::create());
-        //vsg::ref_ptr<vsg::Group> group(new vsg::Group);
         auto group = vsg::Group::create();
 
         std::cout<<"Adding child to group"<<std::endl;

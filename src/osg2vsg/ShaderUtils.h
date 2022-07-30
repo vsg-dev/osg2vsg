@@ -1,12 +1,9 @@
 #pragma once
 
-#include <osg2vsg/Export.h>
-
 #include <vsg/all.h>
 
 #include <osg/Array>
 #include <osg/StateSet>
-
 
 namespace osg2vsg
 {
@@ -40,16 +37,16 @@ namespace osg2vsg
         MATERIAL_BINDING = 10 // same value as used in the shader
     };
 
-    extern OSG2VSG_DECLSPEC uint32_t calculateShaderModeMask(const osg::StateSet* stateSet);
+    uint32_t calculateShaderModeMask(const osg::StateSet* stateSet);
 
     // read a glsl file and inject defines based on shadermodemask and geometryatts
-    extern OSG2VSG_DECLSPEC std::string readGLSLShader(const std::string& filename, const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
+    std::string readGLSLShader(const std::string& filename, const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
 
     // create shader source using statemask to determine type of shader to build and geometryattributes to determine attribute binding locations (specific to fbx files)
-    extern OSG2VSG_DECLSPEC std::string createFbxVertexSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
-    extern OSG2VSG_DECLSPEC std::string createFbxFragmentSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
+    std::string createFbxVertexSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
+    std::string createFbxFragmentSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
 
     // create default shader source
-    extern OSG2VSG_DECLSPEC std::string createDefaultVertexSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
-    extern OSG2VSG_DECLSPEC std::string createDefaultFragmentSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
-}
+    std::string createDefaultVertexSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
+    std::string createDefaultFragmentSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
+} // namespace osg2vsg

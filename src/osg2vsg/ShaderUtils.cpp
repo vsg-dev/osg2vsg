@@ -1,24 +1,22 @@
-#include <osg2vsg/ShaderUtils.h>
+/* <editor-fold desc="MIT License">
 
-#include <osg2vsg/GeometryUtils.h>
+Copyright(c) 2019 Thomas Hogarth and Robert Osfield
 
-#include <glslang/Public/ShaderLang.h>
-#include <glslang/SPIRV/GlslangToSpv.h>
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
-#include "glsllang/ResourceLimits.h"
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+</editor-fold> */
+
+#include "ShaderUtils.h"
+#include "GeometryUtils.h"
 
 #include <algorithm>
 #include <iomanip>
 
 using namespace osg2vsg;
-
-#if 1
-#define DEBUG_OUTPUT std::cout
-#else
-#define DEBUG_OUTPUT if (false) std::cout
-#endif
-#define INFO_OUTPUT std::cout
-
 
 uint32_t osg2vsg::calculateShaderModeMask(const osg::StateSet* stateSet)
 {
@@ -26,13 +24,12 @@ uint32_t osg2vsg::calculateShaderModeMask(const osg::StateSet* stateSet)
     if (stateSet)
     {
         if (stateSet->getMode(GL_BLEND) & osg::StateAttribute::ON) stateMask |= BLEND;
-        if (stateSet->getMode(GL_LIGHTING) & osg::StateAttribute::ON)  stateMask |= LIGHTING;
+        if (stateSet->getMode(GL_LIGHTING) & osg::StateAttribute::ON) stateMask |= LIGHTING;
 
         auto asMaterial = dynamic_cast<const osg::Material*>(stateSet->getAttribute(osg::StateAttribute::Type::MATERIAL));
         if (asMaterial && stateSet->getMode(GL_COLOR_MATERIAL) == osg::StateAttribute::Values::ON) stateMask |= MATERIAL;
 
-        auto hasTextureWithImageInChannel = [stateSet](unsigned int channel)
-        {
+        auto hasTextureWithImageInChannel = [stateSet](unsigned int channel) {
             auto asTex = dynamic_cast<const osg::Texture*>(stateSet->getTextureAttribute(channel, osg::StateAttribute::TEXTURE));
             if (asTex && asTex->getImage(0)) return true;
             return false;
@@ -66,8 +63,8 @@ static std::vector<std::string> createPSCDefineStrings(const uint32_t& shaderMod
 
     // shading modes/maps
     if (hasnormal && (shaderModeMask & LIGHTING)) defines.push_back("VSG_LIGHTING");
-    
-    if(shaderModeMask & MATERIAL) defines.push_back("VSG_MATERIAL");
+
+    if (shaderModeMask & MATERIAL) defines.push_back("VSG_MATERIAL");
 
     if (hastex0 && (shaderModeMask & DIFFUSE_MAP)) defines.push_back("VSG_DIFFUSE_MAP");
     if (hastex0 && (shaderModeMask & OPACITY_MAP)) defines.push_back("VSG_OPACITY_MAP");
@@ -87,8 +84,7 @@ static std::vector<std::string> createPSCDefineStrings(const uint32_t& shaderMod
 static std::string processGLSLShaderSource(const std::string& source, const std::vector<std::string>& defines)
 {
     // trim leading spaces/tabs
-    auto trimLeading = [](std::string& str)
-    {
+    auto trimLeading = [](std::string& str) {
         size_t startpos = str.find_first_not_of(" \t");
         if (std::string::npos != startpos)
         {
@@ -97,49 +93,44 @@ static std::string processGLSLShaderSource(const std::string& source, const std:
     };
 
     // trim trailing spaces/tabs/newlines
-    auto trimTrailing = [](std::string& str)
-    {
+    auto trimTrailing = [](std::string& str) {
         size_t endpos = str.find_last_not_of(" \t\n");
         if (endpos != std::string::npos)
         {
-            str = str.substr(0, endpos+1);
+            str = str.substr(0, endpos + 1);
         }
     };
 
-    // sanitise line by triming leading and trailing characters
-    auto sanitise = [&trimLeading, &trimTrailing](std::string& str)
-    {
+    // sanitise line by trimming leading and trailing characters
+    auto sanitise = [&trimLeading, &trimTrailing](std::string& str) {
         trimLeading(str);
         trimTrailing(str);
     };
 
     // return true if str starts with match string
-    auto startsWith = [](const std::string& str, const std::string& match)
-    {
+    auto startsWith = [](const std::string& str, const std::string& match) {
         return str.compare(0, match.length(), match) == 0;
     };
 
     // returns the string between the start and end character
-    auto stringBetween = [](const std::string& str, const char& startChar, const char& endChar)
-    {
+    auto stringBetween = [](const std::string& str, const char& startChar, const char& endChar) {
         auto start = str.find_first_of(startChar);
         if (start == std::string::npos) return std::string();
 
         auto end = str.find_first_of(endChar, start);
         if (end == std::string::npos) return std::string();
 
-        if((end - start) - 1 == 0) return std::string();
+        if ((end - start) - 1 == 0) return std::string();
 
-        return str.substr(start+1, (end - start) - 1);
+        return str.substr(start + 1, (end - start) - 1);
     };
 
-    auto split = [](const std::string& str, const char& seperator)
-    {
+    auto split = [](const std::string& str, const char& separator) {
         std::vector<std::string> elements;
 
         std::string::size_type prev_pos = 0, pos = 0;
 
-        while ((pos = str.find(seperator, pos)) != std::string::npos)
+        while ((pos = str.find(separator, pos)) != std::string::npos)
         {
             auto substring = str.substr(prev_pos, pos - prev_pos);
             elements.push_back(substring);
@@ -151,8 +142,7 @@ static std::string processGLSLShaderSource(const std::string& source, const std:
         return elements;
     };
 
-    auto addLine = [](std::ostringstream& ss, const std::string& line)
-    {
+    auto addLine = [](std::ostringstream& ss, const std::string& line) {
         ss << line << "\n";
     };
 
@@ -171,7 +161,7 @@ static std::string processGLSLShaderSource(const std::string& source, const std:
         sanitise(sanitisedline);
 
         // is it the version
-        if(startsWith(sanitisedline, versionmatch))
+        if (startsWith(sanitisedline, versionmatch))
         {
             addLine(headerstream, line);
         }
@@ -207,28 +197,13 @@ static std::string processGLSLShaderSource(const std::string& source, const std:
     return headerstream.str() + sourcestream.str();
 }
 
-static std::string debugFormatShaderSource(const std::string& source)
-{
-    std::istringstream iss(source);
-    std::ostringstream oss;
-
-    uint32_t linecount = 1;
-
-    for (std::string line; std::getline(iss, line);)
-    {
-        oss << std::setw(4) << std::setfill(' ') << linecount << ": " << line << "\n";
-        linecount++;
-    }
-    return oss.str();
-}
-
 // read a glsl file and inject defines based on shadermodemask and geometryatts
 std::string osg2vsg::readGLSLShader(const std::string& filename, const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
 {
     std::string sourceBuffer;
     if (!vsg::readFile(sourceBuffer, filename))
     {
-        DEBUG_OUTPUT << "readGLSLShader: Failed to read file '" << filename << std::endl;
+        vsg::debug("readGLSLShader: Failed to read file '", filename);
         return std::string();
     }
 
