@@ -18,6 +18,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <osgUtil/MeshOptimizers>
 #include <osgUtil/Optimizer>
 
+#include <osg2vsg/convert.h>
+
 #include "ConvertToVsg.h"
 
 using namespace osg2vsg;
