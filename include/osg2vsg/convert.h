@@ -59,9 +59,8 @@ namespace osg2vsg
         return new_array;
     }
 
-    OSG2VSG_DECLSPEC extern vsg::ref_ptr<vsg::Data> convert(const osg::Array& array, vsg::ref_ptr<vsg::Options> options = {});
-
-    OSG2VSG_DECLSPEC extern vsg::ref_ptr<vsg::Data> convert(const osg::Image& image, vsg::ref_ptr<vsg::Options> options = {});
-    OSG2VSG_DECLSPEC extern vsg::ref_ptr<vsg::Node> convert(const osg::Node& node, vsg::ref_ptr<vsg::Options> options = {});
+    OSG2VSG_DECLSPEC extern vsg::ref_ptr<vsg::Data> convert(const osg::Array& array, vsg::ref_ptr<const vsg::Options> options = {});
+    OSG2VSG_DECLSPEC extern vsg::ref_ptr<vsg::Data> convert(const osg::Image& image, vsg::ref_ptr<const vsg::Options> options = {});
+    OSG2VSG_DECLSPEC extern vsg::ref_ptr<vsg::Node> convert(const osg::Node& node, vsg::ref_ptr<const vsg::Options> options = {});
 
 } // namespace vsgXchange

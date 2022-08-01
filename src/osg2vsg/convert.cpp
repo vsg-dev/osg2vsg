@@ -18,13 +18,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 using namespace osg2vsg;
 
-vsg::ref_ptr<vsg::Data> osg2vsg::convert(const osg::Image& image, vsg::ref_ptr<vsg::Options> options)
+vsg::ref_ptr<vsg::Data> osg2vsg::convert(const osg::Image& image, vsg::ref_ptr<const vsg::Options> options)
 {
     bool mapRGBtoRGBAHint = !options || options->mapRGBtoRGBAHint;
     return convertToVsg(&image, mapRGBtoRGBAHint);
 }
 
-vsg::ref_ptr<vsg::Data> osg2vsg::convert(const osg::Array& src_array, vsg::ref_ptr<vsg::Options> /*options*/)
+vsg::ref_ptr<vsg::Data> osg2vsg::convert(const osg::Array& src_array, vsg::ref_ptr<const vsg::Options> /*options*/)
 {
     switch (src_array.getType())
     {
@@ -84,7 +84,7 @@ vsg::ref_ptr<vsg::Data> osg2vsg::convert(const osg::Array& src_array, vsg::ref_p
     }
 }
 
-vsg::ref_ptr<vsg::Node> osg2vsg::convert(const osg::Node& node, vsg::ref_ptr<vsg::Options> options)
+vsg::ref_ptr<vsg::Node> osg2vsg::convert(const osg::Node& node, vsg::ref_ptr<const vsg::Options> options)
 {
     bool mapRGBtoRGBAHint = !options || options->mapRGBtoRGBAHint;
     vsg::Paths searchPaths = options ? options->paths : vsg::getEnvPaths("VSG_FILE_PATH");

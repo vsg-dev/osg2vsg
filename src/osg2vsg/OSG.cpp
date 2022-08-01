@@ -11,6 +11,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 </editor-fold> */
 
 #include <osg2vsg/OSG.h>
+#include <osg2vsg/convert.h>
 
 #include <osg/AnimationPath>
 #include <osg/TransferFunction>
@@ -26,14 +27,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include "Optimize.h"
 #include "SceneBuilder.h"
 
-#include <iostream>
-
 using namespace osg2vsg;
 
 OSG::OSG()
 {
-    vsg::info("OSG::OSG() latest osg2vsg version.");
-
     pipelineCache = osg2vsg::PipelineCache::create();
 }
 
@@ -150,65 +147,7 @@ vsg::ref_ptr<vsg::Object> OSG::read(const vsg::Path& filename, vsg::ref_ptr<cons
     osg::ref_ptr<osg::Object> object = rr.takeObject();
     if (osg::Node* osg_scene = object->asNode(); osg_scene != nullptr)
     {
-        vsg::Paths searchPaths = options ? options->paths : vsg::getEnvPaths("VSG_FILE_PATH");
-
-        vsg::ref_ptr<osg2vsg::BuildOptions> buildOptions;
-
-        std::string build_options_filename;
-        if (options->getValue(OSG::read_build_options, build_options_filename))
-        {
-            buildOptions = vsg::read_cast<osg2vsg::BuildOptions>(build_options_filename, options);
-        }
-
-        if (!buildOptions)
-        {
-            buildOptions = osg2vsg::BuildOptions::create();
-            buildOptions->mapRGBtoRGBAHint = mapRGBtoRGBAHint;
-        }
-
-        if (options->getValue(OSG::write_build_options, build_options_filename))
-        {
-            vsg::write(buildOptions, build_options_filename, options);
-        }
-
-        buildOptions->options = options;
-        buildOptions->pipelineCache = pipelineCache;
-
-        if (vsg::value<bool>(false, OSG::original_converter, options))
-        {
-            osg2vsg::SceneBuilder sceneBuilder(buildOptions);
-            auto vsg_scene = sceneBuilder.optimizeAndConvertToVsg(osg_scene, searchPaths);
-            return vsg_scene;
-        }
-        else
-        {
-            vsg::ref_ptr<vsg::StateGroup> inheritedStateGroup;
-
-            osg2vsg::ConvertToVsg sceneBuilder(buildOptions, inheritedStateGroup);
-
-            sceneBuilder.optimize(osg_scene);
-            auto vsg_scene = sceneBuilder.convert(osg_scene);
-
-            if (sceneBuilder.numOfPagedLOD > 0)
-            {
-                uint32_t maxLevel = 20;
-                uint32_t estimatedNumOfTilesBelow = 0;
-                uint32_t maxNumTilesBelow = 1024;
-
-                uint32_t level = 0;
-                for (uint32_t i = level; i < maxLevel; ++i)
-                {
-                    estimatedNumOfTilesBelow += std::pow(4, i - level);
-                }
-
-                uint32_t tileMultiplier = std::min(estimatedNumOfTilesBelow, maxNumTilesBelow) + 1;
-
-                vsg::CollectResourceRequirements collectResourceRequirements;
-                vsg_scene->accept(collectResourceRequirements);
-                vsg_scene->setObject("ResourceHints", collectResourceRequirements.createResourceHints(tileMultiplier));
-            }
-            return vsg_scene;
-        }
+        return osg2vsg::convert(*osg_scene, options);
     }
     else if (osg::Image* osg_image = dynamic_cast<osg::Image*>(object.get()); osg_image != nullptr)
     {
@@ -225,7 +164,7 @@ vsg::ref_ptr<vsg::Object> OSG::read(const vsg::Path& filename, vsg::ref_ptr<cons
     }
     else
     {
-        std::cout << "OSG::ImplementationreadFile(" << filename << ") cannot convert object type " << object->className() << "." << std::endl;
+        vsg::warn("OSG::ImplementationreadFile(", filename, ") cannot convert object type ", object->className(), ")");
     }
 
     return {};
