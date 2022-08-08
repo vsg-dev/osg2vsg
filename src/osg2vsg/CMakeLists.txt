@@ -1,5 +1,5 @@
 
-SET(HEADER_PATH ${CMAKE_SOURCE_DIR}/include/osg2vsg)
+SET(HEADER_PATH ${OSG2VSG_SOURCE_DIR}/include/osg2vsg)
 
 set(HEADERS
     ${HEADER_PATH}/Export.h
@@ -21,18 +21,14 @@ set(SOURCES
 
 add_library(osg2vsg ${HEADERS} ${SOURCES})
 
-# check whehther glslang/build_info.h exists
-if (EXISTS ${glslang_INCLUDE_DIR}/glslang/build_info.h)
-    set(EXTRA_DEFINES ${EXTRA_DEFINES} GLSLANG_HAS_BUILD_INFO_H)
-endif()
-
 set_property(TARGET osg2vsg PROPERTY VERSION ${OSG2VSG_VERSION_MAJOR}.${OSG2VSG_VERSION_MINOR}.${OSG2VSG_VERSION_PATCH})
 set_property(TARGET osg2vsg PROPERTY SOVERSION ${OSG2VSG_SOVERSION})
 set_property(TARGET osg2vsg PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET osg2vsg PROPERTY CXX_STANDARD 17)
 
 target_include_directories(osg2vsg PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${OSG2VSG_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${OSG2VSG_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>
     ${OSG_INCLUDE_DIR}
 )
@@ -59,7 +55,10 @@ if (BUILD_SHARED_LIBS)
 endif()
 
 
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/osg2vsg DESTINATION include)
+install(DIRECTORY ${OSG2VSG_SOURCE_DIR}/include/osg2vsg DESTINATION include)
+if (NOT(${OSG2VSG_BINARY_DIR} STREQUAL ${OSG2VSG_SOURCE_DIR}))
+    install(DIRECTORY ${OSG2VSG_BINARY_DIR}/include/vsgXchange DESTINATION include)
+endif()
 
 # [==[
 install(EXPORT osg2vsgTargets
@@ -69,12 +68,12 @@ install(EXPORT osg2vsgTargets
 )
 
 include(CMakePackageConfigHelpers)
-write_basic_package_version_file("${CMAKE_BINARY_DIR}/src/osg2vsg/osg2vsgConfigVersion.cmake"
+write_basic_package_version_file("${OSG2VSG_BINARY_DIR}/src/osg2vsg/osg2vsgConfigVersion.cmake"
     VERSION ${OSG2VSG_MAJOR_VERSION}.${OSG2VSG_MINOR_VERSION}.${OSG2VSG_PATCH_VERSION}
     COMPATIBILITY SameMajorVersion
 )
 
-install(FILES "osg2vsgConfig.cmake" "${CMAKE_BINARY_DIR}/src/osg2vsg/osg2vsgConfigVersion.cmake"
+install(FILES "osg2vsgConfig.cmake" "${OSG2VSG_BINARY_DIR}/src/osg2vsg/osg2vsgConfigVersion.cmake"
     DESTINATION lib/cmake/osg2vsg
 )
 

@@ -8,6 +8,10 @@ project(OSG2VSG
 set(OSG2VSG_SOVERSION 0)
 SET(OSG2VSG_RELEASE_CANDIDATE 0)
 
+
+set(OSG2VSG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}" CACHE INTERNAL "Root source directory of vsgXchange.")
+set(OSG2VSG_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}" CACHE INTERNAL "Root binary directory of vsgXchange.")
+
 set(OUTPUT_BINDIR ${PROJECT_BINARY_DIR}/bin)
 set(OUTPUT_LIBDIR ${PROJECT_BINARY_DIR}/lib)
 
@@ -82,58 +86,62 @@ if (VULKAN_SDK)
     set(ENV{VULKAN_SDK} ${VULKAN_SDK})
 endif()
 
-find_package(vsg REQUIRED)
+find_package(vsg)
 
 
-add_custom_target(clobber
-    COMMAND git clean -d -f -x
-)
+# only provide custom targets if not building as a submodule/FetchContent
+if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
 
-# automatically buil_all_h build target to generate the include/vsg/all.h from the headers in the include/vsg/* directories
-add_custom_target(uninstall
-    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/build/uninstall.cmake
-)
-
-option(MAINTAINER "Enable maintainer build methods, such as making git branches and tags." OFF)
-if (MAINTAINER)
-
-    #
-    # Provide target for tagging a release
-    #
-    SET(BASE_NAME osg2vsg)
-    SET(OSG2VSG_BRANCH ${BASE_NAME}-${OSG2VSG_VERSION_MAJOR}.${OSG2VSG_VERSION_MINOR})
-
-    SET(GITCOMMAND git)
-
-    IF   (OSG2VSG_RELEASE_CANDIDATE EQUAL 0)
-        SET(RELEASE_NAME ${BASE_NAME}-${OSG2VSG_VERSION})
-    ELSE()
-        SET(RELEASE_NAME ${BASE_NAME}-${OSG2VSG_VERSION}-rc${OSG2VSG_RELEASE_CANDIDATE})
-    ENDIF()
-
-    SET(RELEASE_MESSAGE "Release ${RELEASE_NAME}")
-    SET(BRANCH_MESSAGE "Branch ${OSG2VSG_BRANCH}")
-
-    add_custom_target(tag-test
-        COMMAND echo ${GITCOMMAND} tag -a ${RELEASE_NAME} -m ${RELEASE_MESSAGE}
-        COMMAND echo ${GITCOMMAND} push origin ${RELEASE_NAME}
+    add_custom_target(clobber
+        COMMAND git clean -d -f -x
     )
 
-    add_custom_target(tag-run
-        COMMAND ${GITCOMMAND} tag -a ${RELEASE_NAME} -m ${RELEASE_MESSAGE}
-        COMMAND ${GITCOMMAND} push origin ${RELEASE_NAME}
+    # automatically buil_all_h build target to generate the include/vsg/all.h from the headers in the include/vsg/* directories
+    add_custom_target(uninstall
+        COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/build/uninstall.cmake
     )
 
-    add_custom_target(branch-test
-        COMMAND echo ${GITCOMMAND} branch ${OSG2VSG_BRANCH}
-        COMMAND echo ${GITCOMMAND} push origin ${OSG2VSG_BRANCH}
-    )
+    option(MAINTAINER "Enable maintainer build methods, such as making git branches and tags." OFF)
+    if (MAINTAINER)
 
-    add_custom_target(branch-run
-        COMMAND ${GITCOMMAND} branch ${OSG2VSG_BRANCH}
-        COMMAND ${GITCOMMAND} push origin ${OSG2VSG_BRANCH}
-    )
+        #
+        # Provide target for tagging a release
+        #
+        SET(BASE_NAME osg2vsg)
+        SET(OSG2VSG_BRANCH ${BASE_NAME}-${OSG2VSG_VERSION_MAJOR}.${OSG2VSG_VERSION_MINOR})
 
+        SET(GITCOMMAND git)
+
+        IF   (OSG2VSG_RELEASE_CANDIDATE EQUAL 0)
+            SET(RELEASE_NAME ${BASE_NAME}-${OSG2VSG_VERSION})
+        ELSE()
+            SET(RELEASE_NAME ${BASE_NAME}-${OSG2VSG_VERSION}-rc${OSG2VSG_RELEASE_CANDIDATE})
+        ENDIF()
+
+        SET(RELEASE_MESSAGE "Release ${RELEASE_NAME}")
+        SET(BRANCH_MESSAGE "Branch ${OSG2VSG_BRANCH}")
+
+        add_custom_target(tag-test
+            COMMAND echo ${GITCOMMAND} tag -a ${RELEASE_NAME} -m ${RELEASE_MESSAGE}
+            COMMAND echo ${GITCOMMAND} push origin ${RELEASE_NAME}
+        )
+
+        add_custom_target(tag-run
+            COMMAND ${GITCOMMAND} tag -a ${RELEASE_NAME} -m ${RELEASE_MESSAGE}
+            COMMAND ${GITCOMMAND} push origin ${RELEASE_NAME}
+        )
+
+        add_custom_target(branch-test
+            COMMAND echo ${GITCOMMAND} branch ${OSG2VSG_BRANCH}
+            COMMAND echo ${GITCOMMAND} push origin ${OSG2VSG_BRANCH}
+        )
+
+        add_custom_target(branch-run
+            COMMAND ${GITCOMMAND} branch ${OSG2VSG_BRANCH}
+            COMMAND ${GITCOMMAND} push origin ${OSG2VSG_BRANCH}
+        )
+
+    endif()
 endif()
 
 # src directory contains all the example applications etc.
