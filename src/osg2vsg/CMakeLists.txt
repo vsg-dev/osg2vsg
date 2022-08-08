@@ -21,6 +21,11 @@ set(SOURCES
 
 add_library(osg2vsg ${HEADERS} ${SOURCES})
 
+# add definitions to enable building osg2vsg as part of submodule
+add_library(osg2vsg::osg2vsg ALIAS osg2vsg)
+set(osg2vsg_FOUND TRUE CACHE INTERNAL "osg2vsg found.")
+set(CMAKE_DISABLE_FIND_PACKAGE_osg2vsg TRUE CACHE INTERNAL "Disable find_package(osg2vsg) as it's not necessary.")
+
 set_property(TARGET osg2vsg PROPERTY VERSION ${OSG2VSG_VERSION_MAJOR}.${OSG2VSG_VERSION_MINOR}.${OSG2VSG_VERSION_PATCH})
 set_property(TARGET osg2vsg PROPERTY SOVERSION ${OSG2VSG_SOVERSION})
 set_property(TARGET osg2vsg PROPERTY POSITION_INDEPENDENT_CODE ON)
