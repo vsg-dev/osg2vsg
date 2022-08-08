@@ -62,7 +62,7 @@ endif()
 
 install(DIRECTORY ${OSG2VSG_SOURCE_DIR}/include/osg2vsg DESTINATION include)
 if (NOT(${OSG2VSG_BINARY_DIR} STREQUAL ${OSG2VSG_SOURCE_DIR}))
-    install(DIRECTORY ${OSG2VSG_BINARY_DIR}/include/osg2vsg DESTINATION include)
+    # install(DIRECTORY ${OSG2VSG_BINARY_DIR}/include/osg2vsg DESTINATION include)
 endif()
 
 # [==[
