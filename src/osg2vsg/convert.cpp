@@ -109,7 +109,7 @@ vsg::ref_ptr<vsg::Node> osg2vsg::convert(const osg::Node& node, vsg::ref_ptr<con
         vsg::write(buildOptions, build_options_filename, options);
     }
 
-    buildOptions->options = options;
+    //buildOptions->options = options;
     buildOptions->pipelineCache = pipelineCache;
 
     auto osg_scene = const_cast<osg::Node*>(&node);

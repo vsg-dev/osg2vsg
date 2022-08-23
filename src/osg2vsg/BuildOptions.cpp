@@ -11,6 +11,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 </editor-fold> */
 
 #include "BuildOptions.h"
+#include "ShaderUtils.h"
+
+#include "shaders/fbxshader_vert.cpp"
+#include "shaders/fbxshader_frag.cpp"
 
 using namespace osg2vsg;
 
@@ -60,7 +64,7 @@ void BuildOptions::write(vsg::Output& output) const
     output.write("extension", extension);
 }
 
-vsg::ref_ptr<vsg::BindGraphicsPipeline> PipelineCache::getOrCreateBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryAttributesMask, const std::string& vertShaderPath, const std::string& fragShaderPath)
+vsg::ref_ptr<vsg::BindGraphicsPipeline> PipelineCache::getOrCreateBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryAttributesMask, const vsg::Path& vertShaderPath, const vsg::Path& fragShaderPath, vsg::ref_ptr<const vsg::Options> options)
 {
     Key key(shaderModeMask, geometryAttributesMask, vertShaderPath, fragShaderPath);
 
@@ -70,9 +74,20 @@ vsg::ref_ptr<vsg::BindGraphicsPipeline> PipelineCache::getOrCreateBindGraphicsPi
         if (auto itr = pipelineMap.find(key); itr != pipelineMap.end()) return itr->second;
     }
 
-    vsg::ShaderStages shaders{
-        vsg::ShaderStage::create(VK_SHADER_STAGE_VERTEX_BIT, "main", vertShaderPath.empty() ? createFbxVertexSource(shaderModeMask, geometryAttributesMask) : readGLSLShader(vertShaderPath, shaderModeMask, geometryAttributesMask)),
-        vsg::ShaderStage::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", fragShaderPath.empty() ? createFbxFragmentSource(shaderModeMask, geometryAttributesMask) : readGLSLShader(fragShaderPath, shaderModeMask, geometryAttributesMask))};
+    auto scs = vsg::ShaderCompileSettings::create();
+    scs->defines = createPSCDefineStrings(shaderModeMask, geometryAttributesMask);
+
+    vsg::ref_ptr<vsg::ShaderStage> vertexShader;
+    if (vertShaderPath) vertexShader = vsg::read_cast<vsg::ShaderStage>(vertShaderPath, options);
+    if (!vertexShader) vertexShader = fbxshader_vert(); // fallback to shaders/fbxshader_vert.cpp
+    vertexShader->module->hints = scs;
+
+    vsg::ref_ptr<vsg::ShaderStage> fragmentShader;
+    if (fragShaderPath) fragmentShader = vsg::read_cast<vsg::ShaderStage>(fragShaderPath, options);
+    if (!fragmentShader) fragmentShader = fbxshader_frag(); // fallback to shaders/fbxshader_frag.cpp
+    fragmentShader->module->hints = scs;
+
+    vsg::ShaderStages shaders{vertexShader, fragmentShader};
 
     // std::cout<<"createBindGraphicsPipeline("<<shaderModeMask<<", "<<geometryAttributesMask<<")"<<std::endl;
 

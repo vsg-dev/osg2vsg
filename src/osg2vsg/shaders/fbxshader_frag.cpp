@@ -1,103 +1,126 @@
-char fbxshader_frag[] = "#version 450\n"
-                        "#pragma import_defines ( VSG_NORMAL, VSG_COLOR, VSG_TEXCOORD0, VSG_LIGHTING, VSG_MATERIAL, VSG_DIFFUSE_MAP, VSG_OPACITY_MAP, VSG_AMBIENT_MAP, VSG_NORMAL_MAP, VSG_SPECULAR_MAP )\n"
-                        "#extension GL_ARB_separate_shader_objects : enable\n"
-                        "#ifdef VSG_DIFFUSE_MAP\n"
-                        "layout(binding = 0) uniform sampler2D diffuseMap;\n"
-                        "#endif\n"
-                        "#ifdef VSG_OPACITY_MAP\n"
-                        "layout(binding = 1) uniform sampler2D opacityMap;\n"
-                        "#endif\n"
-                        "#ifdef VSG_AMBIENT_MAP\n"
-                        "layout(binding = 4) uniform sampler2D ambientMap;\n"
-                        "#endif\n"
-                        "#ifdef VSG_NORMAL_MAP\n"
-                        "layout(binding = 5) uniform sampler2D normalMap;\n"
-                        "#endif\n"
-                        "#ifdef VSG_SPECULAR_MAP\n"
-                        "layout(binding = 6) uniform sampler2D specularMap;\n"
-                        "#endif\n"
-                        "\n"
-                        "#ifdef VSG_MATERIAL\n"
-                        "layout(binding = 10) uniform MaterialData\n"
-                        "{\n"
-                        "    vec4 ambientColor;\n"
-                        "    vec4 diffuseColor;\n"
-                        "    vec4 specularColor;\n"
-                        "    float shininess;\n"
-                        "} material;\n"
-                        "#endif\n"
-                        "\n"
-                        "#ifdef VSG_NORMAL\n"
-                        "layout(location = 1) in vec3 normalDir;\n"
-                        "#endif\n"
-                        "#ifdef VSG_COLOR\n"
-                        "layout(location = 3) in vec4 vertColor;\n"
-                        "#endif\n"
-                        "#ifdef VSG_TEXCOORD0\n"
-                        "layout(location = 4) in vec2 texCoord0;\n"
-                        "#endif\n"
-                        "#ifdef VSG_LIGHTING\n"
-                        "layout(location = 5) in vec3 viewDir;\n"
-                        "layout(location = 6) in vec3 lightDir;\n"
-                        "#endif\n"
-                        "layout(location = 0) out vec4 outColor;\n"
-                        "\n"
-                        "void main()\n"
-                        "{\n"
-                        "#ifdef VSG_DIFFUSE_MAP\n"
-                        "    vec4 base = texture(diffuseMap, texCoord0.st);\n"
-                        "#else\n"
-                        "    vec4 base = vec4(1.0,1.0,1.0,1.0);\n"
-                        "#endif\n"
-                        "#ifdef VSG_COLOR\n"
-                        "    base = base * vertColor;\n"
-                        "#endif\n"
-                        "#ifdef VSG_MATERIAL\n"
-                        "    vec3 ambientColor = material.ambientColor.rgb;\n"
-                        "    vec3 diffuseColor = material.diffuseColor.rgb;\n"
-                        "    vec3 specularColor = material.specularColor.rgb;\n"
-                        "    float shininess = material.shininess;\n"
-                        "#else\n"
-                        "    vec3 ambientColor = vec3(0.1,0.1,0.1);\n"
-                        "    vec3 diffuseColor = vec3(1.0,1.0,1.0);\n"
-                        "    vec3 specularColor = vec3(0.3,0.3,0.3);\n"
-                        "    float shininess = 16.0;\n"
-                        "#endif\n"
-                        "#ifdef VSG_AMBIENT_MAP\n"
-                        "    ambientColor *= texture(ambientMap, texCoord0.st).r;\n"
-                        "#endif\n"
-                        "#ifdef VSG_SPECULAR_MAP\n"
-                        "    specularColor = texture(specularMap, texCoord0.st).rrr;\n"
-                        "#endif\n"
-                        "#ifdef VSG_LIGHTING\n"
-                        "#ifdef VSG_NORMAL_MAP\n"
-                        "    vec3 nDir = texture(normalMap, texCoord0.st).xyz*2.0 - 1.0;\n"
-                        "    nDir.g = -nDir.g;\n"
-                        "#else\n"
-                        "    vec3 nDir = normalDir;\n"
-                        "#endif\n"
-                        "    vec3 nd = normalize(nDir);\n"
-                        "    vec3 ld = normalize(lightDir);\n"
-                        "    vec3 vd = normalize(viewDir);\n"
-                        "    vec4 color = vec4(0.01, 0.01, 0.01, 1.0);\n"
-                        "    color.rgb += ambientColor;\n"
-                        "    float diff = max(dot(ld, nd), 0.0);\n"
-                        "    color.rgb += diffuseColor * diff;\n"
-                        "    color *= base;\n"
-                        "    if (diff > 0.0)\n"
-                        "    {\n"
-                        "        vec3 halfDir = normalize(ld + vd);\n"
-                        "        color.rgb += base.a * specularColor *\n"
-                        "            pow(max(dot(halfDir, nd), 0.0), shininess);\n"
-                        "    }\n"
-                        "#else\n"
-                        "    vec4 color = base;\n"
-                        "    color.rgb *= diffuseColor;\n"
-                        "#endif\n"
-                        "    outColor = color;\n"
-                        "#ifdef VSG_OPACITY_MAP\n"
-                        "    outColor.a *= texture(opacityMap, texCoord0.st).r;\n"
-                        "#endif\n"
-                        "    if (outColor.a==0.0) discard;\n"
-                        "}\n"
-                        "\n";
+#include <vsg/io/VSG.h>
+static auto fbxshader_frag = []() {std::istringstream str(
+R"(#vsga 0.5.4
+Root id=1 vsg::ShaderStage
+{
+  userObjects 0
+  stage 16
+  entryPointName "main"
+  module id=2 vsg::ShaderModule
+  {
+    userObjects 0
+    hints id=0
+    source "#version 450
+#pragma import_defines ( VSG_NORMAL, VSG_COLOR, VSG_TEXCOORD0, VSG_LIGHTING, VSG_MATERIAL, VSG_DIFFUSE_MAP, VSG_OPACITY_MAP, VSG_AMBIENT_MAP, VSG_NORMAL_MAP, VSG_SPECULAR_MAP )
+#extension GL_ARB_separate_shader_objects : enable
+#ifdef VSG_DIFFUSE_MAP
+layout(binding = 0) uniform sampler2D diffuseMap;
+#endif
+#ifdef VSG_OPACITY_MAP
+layout(binding = 1) uniform sampler2D opacityMap;
+#endif
+#ifdef VSG_AMBIENT_MAP
+layout(binding = 4) uniform sampler2D ambientMap;
+#endif
+#ifdef VSG_NORMAL_MAP
+layout(binding = 5) uniform sampler2D normalMap;
+#endif
+#ifdef VSG_SPECULAR_MAP
+layout(binding = 6) uniform sampler2D specularMap;
+#endif
+
+#ifdef VSG_MATERIAL
+layout(binding = 10) uniform MaterialData
+{
+    vec4 ambientColor;
+    vec4 diffuseColor;
+    vec4 specularColor;
+    float shininess;
+} material;
+#endif
+
+#ifdef VSG_NORMAL
+layout(location = 1) in vec3 normalDir;
+#endif
+#ifdef VSG_COLOR
+layout(location = 3) in vec4 vertColor;
+#endif
+#ifdef VSG_TEXCOORD0
+layout(location = 4) in vec2 texCoord0;
+#endif
+#ifdef VSG_LIGHTING
+layout(location = 5) in vec3 viewDir;
+layout(location = 6) in vec3 lightDir;
+#endif
+layout(location = 0) out vec4 outColor;
+
+void main()
+{
+#ifdef VSG_DIFFUSE_MAP
+    vec4 base = texture(diffuseMap, texCoord0.st);
+#else
+    vec4 base = vec4(1.0,1.0,1.0,1.0);
+#endif
+#ifdef VSG_COLOR
+    base = base * vertColor;
+#endif
+#ifdef VSG_MATERIAL
+    vec3 ambientColor = material.ambientColor.rgb;
+    vec3 diffuseColor = material.diffuseColor.rgb;
+    vec3 specularColor = material.specularColor.rgb;
+    float shininess = material.shininess;
+#else
+    vec3 ambientColor = vec3(0.1,0.1,0.1);
+    vec3 diffuseColor = vec3(1.0,1.0,1.0);
+    vec3 specularColor = vec3(0.3,0.3,0.3);
+    float shininess = 16.0;
+#endif
+#ifdef VSG_AMBIENT_MAP
+    ambientColor *= texture(ambientMap, texCoord0.st).r;
+#endif
+#ifdef VSG_SPECULAR_MAP
+    specularColor = texture(specularMap, texCoord0.st).rrr;
+#endif
+#ifdef VSG_LIGHTING
+#ifdef VSG_NORMAL_MAP
+    vec3 nDir = texture(normalMap, texCoord0.st).xyz*2.0 - 1.0;
+    nDir.g = -nDir.g;
+#else
+    vec3 nDir = normalDir;
+#endif
+    vec3 nd = normalize(nDir);
+    vec3 ld = normalize(lightDir);
+    vec3 vd = normalize(viewDir);
+    vec4 color = vec4(0.01, 0.01, 0.01, 1.0);
+    color.rgb += ambientColor;
+    float diff = max(dot(ld, nd), 0.0);
+    color.rgb += diffuseColor * diff;
+    color *= base;
+    if (diff > 0.0)
+    {
+        vec3 halfDir = normalize(ld + vd);
+        color.rgb += base.a * specularColor *
+            pow(max(dot(halfDir, nd), 0.0), shininess);
+    }
+#else
+    vec4 color = base;
+    color.rgb *= diffuseColor;
+#endif
+    outColor = color;
+#ifdef VSG_OPACITY_MAP
+    outColor.a *= texture(opacityMap, texCoord0.st).r;
+#endif
+
+    // crude version of AlphaFunc
+    if (outColor.a==0.0) discard;
+}
+"
+    code 0
+    
+  }
+  NumSpecializationConstants 0
+}
+)");
+vsg::VSG io;
+return io.read_cast<vsg::ShaderStage>(str);
+};

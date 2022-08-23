@@ -39,14 +39,6 @@ namespace osg2vsg
 
     uint32_t calculateShaderModeMask(const osg::StateSet* stateSet);
 
-    // read a glsl file and inject defines based on shadermodemask and geometryatts
-    std::string readGLSLShader(const std::string& filename, const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
+    std::vector<std::string> createPSCDefineStrings(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
 
-    // create shader source using statemask to determine type of shader to build and geometryattributes to determine attribute binding locations (specific to fbx files)
-    std::string createFbxVertexSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
-    std::string createFbxFragmentSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
-
-    // create default shader source
-    std::string createDefaultVertexSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
-    std::string createDefaultFragmentSource(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
 } // namespace osg2vsg
