@@ -9,13 +9,13 @@ namespace osg2vsg
 {
     struct PipelineCache : public vsg::Inherit<vsg::Object, PipelineCache>
     {
-        using Key = std::tuple<uint32_t, uint32_t, std::string, std::string>;
+        using Key = std::tuple<uint32_t, uint32_t, vsg::Path, vsg::Path>;
         using PipelineMap = std::map<Key, vsg::ref_ptr<vsg::BindGraphicsPipeline>>;
 
         std::mutex mutex;
         PipelineMap pipelineMap;
 
-        vsg::ref_ptr<vsg::BindGraphicsPipeline> getOrCreateBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryMask, const std::string& vertShaderPath = "", const std::string& fragShaderPath = "");
+        vsg::ref_ptr<vsg::BindGraphicsPipeline> getOrCreateBindGraphicsPipeline(uint32_t shaderModeMask, uint32_t geometryMask, const vsg::Path& vertShaderPath, const vsg::Path& fragShaderPath, vsg::ref_ptr<const vsg::Options> options);
     };
 
     struct BuildOptions : public vsg::Inherit<vsg::Object, BuildOptions>

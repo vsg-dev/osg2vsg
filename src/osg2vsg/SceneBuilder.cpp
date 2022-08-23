@@ -744,7 +744,7 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createVSG(vsg::Paths& searchPaths)
 
         auto graphicsPipelineGroup = vsg::StateGroup::create();
 
-        auto bindGraphicsPipeline = buildOptions->pipelineCache->getOrCreateBindGraphicsPipeline(shaderModeMask, geometrymask, buildOptions->vertexShaderPath, buildOptions->fragmentShaderPath);
+        auto bindGraphicsPipeline = buildOptions->pipelineCache->getOrCreateBindGraphicsPipeline(shaderModeMask, geometrymask, buildOptions->vertexShaderPath, buildOptions->fragmentShaderPath, buildOptions->options);
         if (!bindGraphicsPipeline) continue;
 
         graphicsPipelineGroup->add(bindGraphicsPipeline);
