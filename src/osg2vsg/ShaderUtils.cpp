@@ -46,35 +46,35 @@ uint32_t osg2vsg::calculateShaderModeMask(const osg::StateSet* stateSet)
 
 // create defines string based of shader mask
 
-std::vector<std::string> osg2vsg::createPSCDefineStrings(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
+std::set<std::string> osg2vsg::createPSCDefineStrings(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
 {
     bool hasnormal = geometryAttrbutes & NORMAL;
     bool hastanget = geometryAttrbutes & TANGENT;
     bool hascolor = geometryAttrbutes & COLOR;
     bool hastex0 = geometryAttrbutes & TEXCOORD0;
 
-    std::vector<std::string> defines;
+    std::set<std::string> defines;
 
     // vertx inputs
-    if (hasnormal) defines.push_back("VSG_NORMAL");
-    if (hascolor) defines.push_back("VSG_COLOR");
-    if (hastex0) defines.push_back("VSG_TEXCOORD0");
-    if (hastanget) defines.push_back("VSG_TANGENT");
+    if (hasnormal) defines.insert("VSG_NORMAL");
+    if (hascolor) defines.insert("VSG_COLOR");
+    if (hastex0) defines.insert("VSG_TEXCOORD0");
+    if (hastanget) defines.insert("VSG_TANGENT");
 
     // shading modes/maps
-    if (hasnormal && (shaderModeMask & LIGHTING)) defines.push_back("VSG_LIGHTING");
+    if (hasnormal && (shaderModeMask & LIGHTING)) defines.insert("VSG_LIGHTING");
 
-    if (shaderModeMask & MATERIAL) defines.push_back("VSG_MATERIAL");
+    if (shaderModeMask & MATERIAL) defines.insert("VSG_MATERIAL");
 
-    if (hastex0 && (shaderModeMask & DIFFUSE_MAP)) defines.push_back("VSG_DIFFUSE_MAP");
-    if (hastex0 && (shaderModeMask & OPACITY_MAP)) defines.push_back("VSG_OPACITY_MAP");
-    if (hastex0 && (shaderModeMask & AMBIENT_MAP)) defines.push_back("VSG_AMBIENT_MAP");
-    if (hastex0 && (shaderModeMask & NORMAL_MAP)) defines.push_back("VSG_NORMAL_MAP");
-    if (hastex0 && (shaderModeMask & SPECULAR_MAP)) defines.push_back("VSG_SPECULAR_MAP");
+    if (hastex0 && (shaderModeMask & DIFFUSE_MAP)) defines.insert("VSG_DIFFUSE_MAP");
+    if (hastex0 && (shaderModeMask & OPACITY_MAP)) defines.insert("VSG_OPACITY_MAP");
+    if (hastex0 && (shaderModeMask & AMBIENT_MAP)) defines.insert("VSG_AMBIENT_MAP");
+    if (hastex0 && (shaderModeMask & NORMAL_MAP)) defines.insert("VSG_NORMAL_MAP");
+    if (hastex0 && (shaderModeMask & SPECULAR_MAP)) defines.insert("VSG_SPECULAR_MAP");
 
-    if (shaderModeMask & BILLBOARD) defines.push_back("VSG_BILLBOARD");
+    if (shaderModeMask & BILLBOARD) defines.insert("VSG_BILLBOARD");
 
-    if (shaderModeMask & SHADER_TRANSLATE) defines.push_back("VSG_TRANSLATE");
+    if (shaderModeMask & SHADER_TRANSLATE) defines.insert("VSG_TRANSLATE");
 
     return defines;
 }
