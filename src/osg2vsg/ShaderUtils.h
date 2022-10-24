@@ -39,6 +39,6 @@ namespace osg2vsg
 
     uint32_t calculateShaderModeMask(const osg::StateSet* stateSet);
 
-    std::vector<std::string> createPSCDefineStrings(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
+    std::set<std::string> createPSCDefineStrings(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes);
 
 } // namespace osg2vsg
