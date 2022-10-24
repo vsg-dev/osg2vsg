@@ -229,7 +229,7 @@ int main(int argc, char** argv)
     }
 
     // load OpenSceneGraph scene graph
-    auto osg_scene = osgDB::readRefNodeFile(filename);
+    auto osg_scene = osgDB::readRefNodeFile(filename.string());
     if (!osg_scene)
     {
         std::cout<<"osgDB::readRefNodeFile() could not read : "<<filename<<std::endl;
@@ -321,7 +321,7 @@ int main(int argc, char** argv)
         osg_viewer.addEventHandler(new osgViewer::StatsHandler);
 
         if (pathFilename.empty())  osg_viewer.setCameraManipulator(new osgGA::TrackballManipulator());
-        else osg_viewer.setCameraManipulator(new osgGA::AnimationPathManipulator(pathFilename));
+        else osg_viewer.setCameraManipulator(new osgGA::AnimationPathManipulator(pathFilename.string()));
 
         osg_viewer.realize();
 
