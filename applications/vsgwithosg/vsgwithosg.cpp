@@ -190,7 +190,6 @@ int main(int argc, char** argv)
 
     // add vsgXchange's support for reading and writing 3rd party file formats
     options->add(vsg::VSG::create());
-    options->add(vsg::tile::create());
     options->add(vsg::spirv::create());
     options->add(osg2vsg::OSG::create());
 
