@@ -175,7 +175,7 @@ namespace osg2vsg
 
     vsg::ref_ptr<vsg::Data> createWhiteTexture()
     {
-        auto vsg_data = vsg::vec4Array2D::create(1, 1, vsg::Data::Layout{VK_FORMAT_R32G32B32A32_SFLOAT});
+        auto vsg_data = vsg::vec4Array2D::create(1, 1, vsg::Data::Properties{VK_FORMAT_R32G32B32A32_SFLOAT});
         for (auto& color : *vsg_data)
         {
             color = vsg::vec4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -186,7 +186,7 @@ namespace osg2vsg
     vsg::ref_ptr<vsg::Data> convertCompressedImageToVsg(const osg::Image* image)
     {
         uint32_t blockSize = 0;
-        vsg::Data::Layout layout;
+        vsg::Data::Properties layout;
         switch (image->getPixelFormat())
         {
         case (GL_COMPRESSED_ALPHA_ARB):
@@ -325,11 +325,11 @@ namespace osg2vsg
         vsg::ref_ptr<vsg::Data> vsg_data;
         if (image->r() == 1)
         {
-            vsg_data = vsg::Array2D<T>::create(image->s(), image->t(), reinterpret_cast<T*>(image->data()), vsg::Data::Layout{format});
+            vsg_data = vsg::Array2D<T>::create(image->s(), image->t(), reinterpret_cast<T*>(image->data()), vsg::Data::Properties{format});
         }
         else
         {
-            vsg_data = vsg::Array3D<T>::create(image->s(), image->t(), image->r(), reinterpret_cast<T*>(image->data()), vsg::Data::Layout{format});
+            vsg_data = vsg::Array3D<T>::create(image->s(), image->t(), image->r(), reinterpret_cast<T*>(image->data()), vsg::Data::Properties{format});
         }
 
         return vsg_data;
@@ -468,7 +468,7 @@ namespace osg2vsg
             break;
         }
 
-        vsg::Data::Layout& layout = vsg_data->getLayout();
+        vsg::Data::Properties& layout = vsg_data->properties;
         layout.maxNumMipmaps = image->getNumMipmapLevels();
         layout.origin = (image->getOrigin() == osg::Image::BOTTOM_LEFT) ? vsg::BOTTOM_LEFT : vsg::TOP_LEFT;
 
