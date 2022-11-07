@@ -15,7 +15,7 @@ GLMemoryExtensions* GLMemoryExtensions::Get(unsigned int contextID, bool createI
     return s_memoryExtensions[contextID].get();
 }
 
-GLMemoryExtensions::GLMemoryExtensions(unsigned int in_contextID)
+GLMemoryExtensions::GLMemoryExtensions(unsigned int /*in_contextID*/)
 {
     // general
     osg::setGLExtensionFuncPtr(glGetInternalformativ, "glGetInternalformativ");
