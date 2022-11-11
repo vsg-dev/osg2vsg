@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.7)
 
 project(OSG2VSG
-    VERSION 0.0.0
+    VERSION 0.1.0
     DESCRIPTION "OpenSceneGraph/VulkanSceneGraph integration library"
     LANGUAGES CXX
 )
