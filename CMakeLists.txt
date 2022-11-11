@@ -86,7 +86,7 @@ if (VULKAN_SDK)
     set(ENV{VULKAN_SDK} ${VULKAN_SDK})
 endif()
 
-find_package(vsg)
+find_package(vsg 1.0.0)
 
 
 # only provide custom targets if not building as a submodule/FetchContent
