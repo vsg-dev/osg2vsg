@@ -69,7 +69,7 @@ endif()
 install(EXPORT osg2vsgTargets
     FILE osg2vsgTargets.cmake
     NAMESPACE osg2vsg::
-    DESTINATION lib/cmake/osg2vsg
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/osg2vsg
 )
 
 include(CMakePackageConfigHelpers)
@@ -79,7 +79,7 @@ write_basic_package_version_file("${OSG2VSG_BINARY_DIR}/src/osg2vsg/osg2vsgConfi
 )
 
 install(FILES "osg2vsgConfig.cmake" "${OSG2VSG_BINARY_DIR}/src/osg2vsg/osg2vsgConfigVersion.cmake"
-    DESTINATION lib/cmake/osg2vsg
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/osg2vsg
 )
 
 # ]==]

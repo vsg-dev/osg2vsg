@@ -6,7 +6,7 @@ add_library(osgdb_vsg MODULE ${SOURCES})
 
 set(OSG_PLUGINS osgPlugins)
 
-set_target_properties(osgdb_vsg PROPERTIES PREFIX "${OSG_PLUGINS_DIRECTORY}")
+set_target_properties(osgdb_vsg PROPERTIES PREFIX "")
 
 set_property(TARGET osgdb_vsg PROPERTY CXX_STANDARD 17)
 
@@ -23,8 +23,8 @@ target_link_libraries(osgdb_vsg PUBLIC
 )
 
 install(TARGETS osgdb_vsg EXPORT osg2vsgTargets
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/${OSG_PLUGINS_DIRECTORY}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${OSG_PLUGINS_DIRECTORY}
         RUNTIME DESTINATION bin
         INCLUDES DESTINATION include
 )

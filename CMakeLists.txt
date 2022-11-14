@@ -15,8 +15,6 @@ set(OSG2VSG_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}" CACHE INTERNAL "Root binary
 set(OUTPUT_BINDIR ${PROJECT_BINARY_DIR}/bin)
 set(OUTPUT_LIBDIR ${PROJECT_BINARY_DIR}/lib)
 
-#set(OSG_PLUGINS_DIRECTORY osgPlugins-$OSG_MAJOR_VERSION}.$OSG_MINOR_VERSION}.${OSG_PATCH_VERSION})
-
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${OUTPUT_LIBDIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_BINDIR})
 
@@ -76,14 +74,10 @@ find_package(OpenGL REQUIRED)
 
 # Find OpenSceneGraph packages for reference
 # set prefrence for using modern OpenGL library.
-find_package(OpenThreads REQUIRED)
-find_package(osg REQUIRED)
-find_package(osgDB REQUIRED)
-find_package(osgTerrain REQUIRED)
-find_package(osgUtil REQUIRED)
-find_package(osgGA REQUIRED)
-find_package(osgViewer REQUIRED)
+find_package(OpenSceneGraph REQUIRED
+  COMPONENTS osgDB osgTerrain osgUtil osgGA osgViewer)
 
+set(OSG_PLUGINS_DIRECTORY osgPlugins-${OPENSCENEGRAPH_VERSION})
 
 if (VULKAN_SDK)
     set(ENV{VULKAN_SDK} ${VULKAN_SDK})
