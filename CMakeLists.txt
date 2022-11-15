@@ -89,17 +89,26 @@ endif()
 find_package(vsg 1.0.0)
 
 
+vsg_add_target_clang_format(
+    FILES
+        ${PROJECT_SOURCE_DIR}/include/*/*.h
+        ${PROJECT_SOURCE_DIR}/src/*/*.cpp
+)
+vsg_add_target_clobber()
+vsg_add_target_cppcheck(
+    FILES
+        ${PROJECT_SOURCE_DIR}/include/*/*.h
+        ${PROJECT_SOURCE_DIR}/src/*/*.cpp
+        -I ${PROJECT_SOURCE_DIR}/include/
+)
+vsg_add_target_docs(
+    FILES
+        ${PROJECT_SOURCE_DIR}/include/
+)
+vsg_add_target_uninstall()
+
 # only provide custom targets if not building as a submodule/FetchContent
 if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
-
-    add_custom_target(clobber
-        COMMAND git clean -d -f -x
-    )
-
-    # automatically buil_all_h build target to generate the include/vsg/all.h from the headers in the include/vsg/* directories
-    add_custom_target(uninstall
-        COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/build/uninstall.cmake
-    )
 
     option(MAINTAINER "Enable maintainer build methods, such as making git branches and tags." OFF)
     if (MAINTAINER)
