@@ -22,9 +22,4 @@ target_link_libraries(osgdb_vsg PUBLIC
     ${OPENTHREADS_LIBRARIES} ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES}
 )
 
-install(TARGETS osgdb_vsg EXPORT osg2vsgTargets
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        RUNTIME DESTINATION bin
-        INCLUDES DESTINATION include
-)
+install(TARGETS osgdb_vsg ${INSTALL_TARGETS_DEFAULT_FLAGS})

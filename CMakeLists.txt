@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.7)
 
-project(OSG2VSG
+project(osg2vsg
     VERSION 0.1.0
     DESCRIPTION "OpenSceneGraph/VulkanSceneGraph integration library"
     LANGUAGES CXX
@@ -88,6 +88,8 @@ endif()
 
 find_package(vsg 1.0.0)
 
+vsg_setup_dir_vars()
+vsg_setup_build_vars()
 
 # only provide custom targets if not building as a submodule/FetchContent
 if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
