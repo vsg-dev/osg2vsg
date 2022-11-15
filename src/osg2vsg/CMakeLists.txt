@@ -60,21 +60,6 @@ if (NOT(${OSG2VSG_BINARY_DIR} STREQUAL ${OSG2VSG_SOURCE_DIR}))
     # install(DIRECTORY ${OSG2VSG_BINARY_DIR}/include/osg2vsg DESTINATION include)
 endif()
 
-# [==[
-install(EXPORT osg2vsgTargets
-    FILE osg2vsgTargets.cmake
-    NAMESPACE osg2vsg::
-    DESTINATION lib/cmake/osg2vsg
+vsg_add_cmake_support_files(
+    CONFIG_TEMPLATE osg2vsgConfig.cmake
 )
-
-include(CMakePackageConfigHelpers)
-write_basic_package_version_file("${OSG2VSG_BINARY_DIR}/src/osg2vsg/osg2vsgConfigVersion.cmake"
-    VERSION ${OSG2VSG_MAJOR_VERSION}.${OSG2VSG_MINOR_VERSION}.${OSG2VSG_PATCH_VERSION}
-    COMPATIBILITY SameMajorVersion
-)
-
-install(FILES "osg2vsgConfig.cmake" "${OSG2VSG_BINARY_DIR}/src/osg2vsg/osg2vsgConfigVersion.cmake"
-    DESTINATION lib/cmake/osg2vsg
-)
-
-# ]==]
