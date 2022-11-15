@@ -46,12 +46,7 @@ target_link_libraries(osg2vsg
 )
 
 
-install(TARGETS osg2vsg EXPORT osg2vsgTargets
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        RUNTIME DESTINATION bin
-        INCLUDES DESTINATION include
-)
+install(TARGETS osg2vsg ${INSTALL_TARGETS_DEFAULT_FLAGS})
 
 target_compile_definitions(osg2vsg PRIVATE ${EXTRA_DEFINES})
 
