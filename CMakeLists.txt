@@ -13,14 +13,10 @@ find_package(OpenGL REQUIRED)
 
 # Find OpenSceneGraph packages for reference
 # set prefrence for using modern OpenGL library.
-find_package(OpenThreads REQUIRED)
-find_package(osg REQUIRED)
-find_package(osgDB REQUIRED)
-find_package(osgTerrain REQUIRED)
-find_package(osgUtil REQUIRED)
-find_package(osgGA REQUIRED)
-find_package(osgViewer REQUIRED)
-
+find_package(OpenSceneGraph REQUIRED
+    COMPONENTS
+        osgDB osgTerrain osgUtil osgGA osgViewer
+)
 
 if (VULKAN_SDK)
     set(ENV{VULKAN_SDK} ${VULKAN_SDK})
