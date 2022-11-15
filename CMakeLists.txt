@@ -9,9 +9,6 @@ set(OSG2VSG_SOVERSION 0)
 SET(OSG2VSG_RELEASE_CANDIDATE 0)
 
 
-set(OSG2VSG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}" CACHE INTERNAL "Root source directory of vsgXchange.")
-set(OSG2VSG_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}" CACHE INTERNAL "Root binary directory of vsgXchange.")
-
 set(OUTPUT_BINDIR ${PROJECT_BINARY_DIR}/bin)
 set(OUTPUT_LIBDIR ${PROJECT_BINARY_DIR}/lib)
 
@@ -109,7 +106,7 @@ vsg_add_target_docs(
 vsg_add_target_uninstall()
 
 # only provide custom targets if not building as a submodule/FetchContent
-if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
+if (${PROJECT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
 
     option(MAINTAINER "Enable maintainer build methods, such as making git branches and tags." OFF)
     if (MAINTAINER)
@@ -118,14 +115,14 @@ if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
         # Provide target for tagging a release
         #
         SET(BASE_NAME osg2vsg)
-        SET(OSG2VSG_BRANCH ${BASE_NAME}-${OSG2VSG_VERSION_MAJOR}.${OSG2VSG_VERSION_MINOR})
+        SET(OSG2VSG_BRANCH ${BASE_NAME}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR})
 
         SET(GITCOMMAND git)
 
         IF   (OSG2VSG_RELEASE_CANDIDATE EQUAL 0)
-            SET(RELEASE_NAME ${BASE_NAME}-${OSG2VSG_VERSION})
+            SET(RELEASE_NAME ${BASE_NAME}-${PROJECT_VERSION})
         ELSE()
-            SET(RELEASE_NAME ${BASE_NAME}-${OSG2VSG_VERSION}-rc${OSG2VSG_RELEASE_CANDIDATE})
+            SET(RELEASE_NAME ${BASE_NAME}-${PROJECT_VERSION}-rc${OSG2VSG_RELEASE_CANDIDATE})
         ENDIF()
 
         SET(RELEASE_MESSAGE "Release ${RELEASE_NAME}")

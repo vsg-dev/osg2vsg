@@ -11,8 +11,8 @@ set_target_properties(osgdb_vsg PROPERTIES PREFIX "${OSG_PLUGINS_DIRECTORY}")
 set_property(TARGET osgdb_vsg PROPERTY CXX_STANDARD 17)
 
 target_include_directories(osgdb_vsg PUBLIC
-    $<BUILD_INTERFACE:${OSG2VSG_SOURCE_DIR}/include>
-    $<BUILD_INTERFACE:${OSG2VSG_BINARY_DIR}/include>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
     ${OSG_INCLUDE_DIR}
 )
 
