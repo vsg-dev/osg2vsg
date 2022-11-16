@@ -19,7 +19,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <osg/State>
 
 #if WIN32
-#include <Windows.h>
+#include <windows.h>
 #endif
 
 namespace osg
