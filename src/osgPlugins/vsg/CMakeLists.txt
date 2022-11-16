@@ -17,7 +17,16 @@ target_link_libraries(osgdb_vsg PUBLIC
     ${OPENTHREADS_LIBRARIES} ${OSG_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES}
 )
 
+# osg plugins related
 set(OSG_PLUGINS_DIRECTORY osgPlugins-${OPENSCENEGRAPH_VERSION})
+if(CYGWIN)
+    set(OSG_PLUGIN_PREFIX "cygwin_")
+elseif(MINGW)
+    set(OSG_PLUGIN_PREFIX "mingw_")
+else()
+    set(OSG_PLUGIN_PREFIX "")
+endif()
+set(CMAKE_SHARED_MODULE_PREFIX ${OSG_PLUGIN_PREFIX})
 
 # do not use INSTALL_TARGETS_DEFAULT_FLAGS, it does not match
 install(TARGETS osgdb_vsg EXPORT osg2vsgTargets
