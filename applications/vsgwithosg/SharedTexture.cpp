@@ -18,6 +18,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 using namespace osg;
 
+#define DEPRECATED_OPENSCENEGRAPH_3_7_0 (OPENSCENEGRAPH_MAJOR_VERSION == 3 && OPENSCENEGRAPH_MINOR_VERSION == 7 && OPENSCENEGRAPH_PATCH_VERSION == 0)
+
 SharedTexture::SharedTexture() :
     Texture(),
     _byteSize(0),
@@ -59,7 +61,7 @@ void SharedTexture::apply(State& state) const
 
     if (textureObject)
     {
-#if OSG_VERSION_GREATER_OR_EQUAL(3, 7, 0)
+#if DEPRECATED_OPENSCENEGRAPH_3_7_0
         textureObject->bind(state);
 #else
         textureObject->bind();
@@ -80,7 +82,7 @@ void SharedTexture::apply(State& state) const
             texStorageSizedInternalFormat != 0 ? texStorageSizedInternalFormat : _internalFormat,
             _textureWidth, _textureHeight, 1, 0);
 
-#if OSG_VERSION_GREATER_OR_EQUAL(3, 7, 0)
+#if DEPRECATED_OPENSCENEGRAPH_3_7_0
         textureObject->bind(state);
 #else
         textureObject->bind();
