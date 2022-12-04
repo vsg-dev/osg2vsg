@@ -16,6 +16,9 @@ Makefile
 cmake_install.cmake
 install_manifest.txt
 src/osg2vsg/osg2vsgConfigVersion.cmake
+CMakeDoxyfile.in
+CMakeDoxygenDefaults.cmake
+Doxyfile.docs-osg2vsg
 
 # Compiled Object files
 *.slo
