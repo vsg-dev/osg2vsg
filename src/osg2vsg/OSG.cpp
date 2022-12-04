@@ -77,7 +77,7 @@ bool OSG::getFeatures(Features& features) const
 
 bool OSG::readOptions(vsg::Options& options, vsg::CommandLine& arguments) const
 {
-    bool result = arguments.readAndAssign<void>(OSG::original_converter, &options);
+    bool result = arguments.readAndAssign<bool>(OSG::original_converter, &options);
     result = arguments.readAndAssign<std::string>(OSG::read_build_options, &options) || result;
     result = arguments.readAndAssign<std::string>(OSG::write_build_options, &options) || result;
     return result;
