@@ -103,7 +103,7 @@ vsg::ref_ptr<vsg::Object> OSG::read(const vsg::Path& filename, vsg::ref_ptr<cons
         auto foundPath = vsg::findFile(filename, options);
         if (foundPath)
         {
-            std::ifstream fin(foundPath);
+            std::ifstream fin(foundPath.c_str());
             if (!fin) return {};
 
             osg::ref_ptr<osg::AnimationPath> osg_animationPath = new osg::AnimationPath;
