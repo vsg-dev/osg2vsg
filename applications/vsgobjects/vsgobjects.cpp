@@ -68,9 +68,9 @@ int main(int /*argc*/, char** /*argv*/)
         //std::cout<<"++++ Removing child to group"<<std::endl;
         //group->removeChild(pos);
 
-        group->setObject("userdata", new vsg::Object());
-        group->setObject(vsg::make_string(10), new vsg::Object());
-        group->setObject(vsg::make_string("list",5), new vsg::Object());
+        group->setObject("userdata", vsg::Object::create());
+        group->setObject(vsg::make_string(10), vsg::Object::create());
+        group->setObject(vsg::make_string("list",5), vsg::Object::create());
 
         group->setValue("name", std::string("[first node]"));
         group->setValue("height", 1.52f);
