@@ -40,10 +40,13 @@ OSG::~OSG()
 
 bool OSG::getFeatures(Features& features) const
 {
+    std::cout<<"OSG::getFeatures(Features& features)"<<std::endl;
+
     osgDB::FileNameList all_plugins = osgDB::listAllAvailablePlugins();
     osgDB::FileNameList plugins;
     for (auto& filename : all_plugins)
     {
+        std::cout<<"   filename = "<<filename<<std::endl;
         // the plugin list icludes the OSG's serializers so we need to discard these from being queried.
         if (filename.find("osgdb_serializers_") == std::string::npos && filename.find("osgdb_deprecated_") == std::string::npos)
         {
@@ -54,12 +57,14 @@ bool OSG::getFeatures(Features& features) const
     osgDB::ReaderWriterInfoList infoList;
     for (auto& pluginName : plugins)
     {
+        std::cout<<"   querying plugin = "<<pluginName<<std::endl;
         osgDB::queryPlugin(pluginName, infoList);
     }
 
     const std::string dotPrefix = ".";
     for (auto& info : infoList)
     {
+
         for (auto& ext_description : info->extensions)
         {
             features.extensionFeatureMap[dotPrefix + ext_description.first] = vsg::ReaderWriter::READ_FILENAME;
