@@ -21,31 +21,31 @@ public:
 
     void apply(vsg::Object& object) final
     {
-        std::cout<<"Myvisitor::apply(Object& "<<&object<<")"<<std::endl;
+        std::cout<<"MyVisitor::apply(Object& "<<&object<<")"<<std::endl;
         object.traverse(*this);
     }
 
     void apply(vsg::Node& node) final
     {
-        std::cout<<"Myvisitor::apply(Node& "<<&node<<")"<<std::endl;
+        std::cout<<"MyVisitor::apply(Node& "<<&node<<")"<<std::endl;
         node.traverse(*this);
     }
 
     void apply(vsg::Group& group) final
     {
-        std::cout<<"Myvisitor::apply(Group& "<<&group<<")"<<std::endl;
+        std::cout<<"MyVisitor::apply(Group& "<<&group<<")"<<std::endl;
         group.traverse(*this);
     }
 
     void apply(vsg::QuadGroup& group) final
     {
-        std::cout<<"Myvisitor::apply(QuadGroup& "<<&group<<")"<<std::endl;
+        std::cout<<"MyVisitor::apply(QuadGroup& "<<&group<<")"<<std::endl;
         group.traverse(*this);
     }
 
     void apply(vsg::StateGroup& group) final
     {
-        std::cout<<"Myvisitor::apply(StateGroup& "<<&group<<")"<<std::endl;
+        std::cout<<"MyVisitor::apply(StateGroup& "<<&group<<")"<<std::endl;
         group.traverse(*this);
     }
 };
@@ -65,7 +65,7 @@ int main(int /*argc*/, char** /*argv*/)
         group->addChild(vsg::Node::create());
         group->addChild(vsg::Group::create());
 
-        //std::cout<<"++++ Removing child to group"<<std::endl;
+        //std::cout<<"++++ Removing child from group"<<std::endl;
         //group->removeChild(pos);
 
         group->setObject("userdata", vsg::Object::create());
@@ -91,11 +91,11 @@ int main(int /*argc*/, char** /*argv*/)
 
     std::string name;
     if (global->getValue("name", name)) std::cout<<" global->getValue(\"name\") = "<<name<<std::endl;
-    else std::cout<<" Failed global->getValue(\"name\") = "<<std::endl;
+    else std::cout<<" global->getValue(\"name\") failed "<<std::endl;
 
     float height;
     if (global->getValue("height", height)) std::cout<<" global->getValue(\"height\") = "<<height<<std::endl;
-    else std::cout<<" Failed global->getValue(\"height\") = "<<std::endl;
+    else std::cout<<" global->getValue(\"height\") failed "<<std::endl;
 
     vsg::observer_ptr<vsg::Group> observer;
 
@@ -122,7 +122,7 @@ int main(int /*argc*/, char** /*argv*/)
     std::cout<<"size_of<osg::Referenced> "<<sizeof(osg::Referenced)<<std::endl;
     std::cout<<"size_of<osg::Object> "<<sizeof(osg::Object)<<std::endl;
     std::cout<<"size_of<osg::Node> "<<sizeof(osg::Node)<<std::endl;
-    std::cout<<"size_of<osg::Grouo> "<<sizeof(osg::Group)<<std::endl;
+    std::cout<<"size_of<osg::Group> "<<sizeof(osg::Group)<<std::endl;
     std::cout<<"size_of<osg::ObserverSet> "<<sizeof(osg::ObserverSet)<<std::endl;
     std::cout<<"size_of<osg::UserDataContainer> "<<sizeof(osg::UserDataContainer)<<std::endl;
     std::cout<<std::endl;
@@ -130,7 +130,7 @@ int main(int /*argc*/, char** /*argv*/)
     std::cout<<"size_of<vsg::Node> "<<sizeof(vsg::Node)<<std::endl;
     std::cout<<"size_of<vsg::Group> "<<sizeof(vsg::Group)<<std::endl;
     std::cout<<"size_of<vsg::QuadGroup> "<<sizeof(vsg::QuadGroup)<<std::endl;
-    std::cout<<"size_of<vsg::StateGrouo> "<<sizeof(vsg::StateGroup)<<std::endl;
+    std::cout<<"size_of<vsg::StateGroup> "<<sizeof(vsg::StateGroup)<<std::endl;
     std::cout<<"size_of<vsg::Auxiliary> "<<sizeof(vsg::Auxiliary)<<std::endl;
 
     return 0;

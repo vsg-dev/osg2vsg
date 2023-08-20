@@ -33,7 +33,7 @@ namespace osg2vsg
         auto itr = s_GLtoVkFormatMap.find({dataType, pixelFormat});
         if (itr != s_GLtoVkFormatMap.end())
         {
-            std::cout << "convertGLImageFormatToVulkan(" << dataType << ", " << pixelFormat << ") vkFormat=" << itr->second << std::endl;
+            std::cout << "convertGLImageFormatToVulkan(" << dataType << ", " << pixelFormat << ") VkFormat=" << itr->second << std::endl;
             return itr->second;
         }
         else
@@ -93,7 +93,7 @@ namespace osg2vsg
             *reinterpret_cast<double*>(component_default) = 1.0;
             break;
         default: {
-            std::cout << "Warning: formateImage() DataType " << image->getDataType() << " not supported." << std::endl;
+            std::cout << "Warning: formatImage() DataType " << image->getDataType() << " not supported." << std::endl;
             return {};
         }
         }
@@ -110,7 +110,7 @@ namespace osg2vsg
         case (GL_RGBA): numComponents = 4; break;
         case (GL_BGRA): numComponents = 4; break;
         default: {
-            std::cout << "Warning: formateImage() targetPixelFormat " << targetPixelFormat << " not supported." << std::endl;
+            std::cout << "Warning: formatImage() targetPixelFormat " << targetPixelFormat << " not supported." << std::endl;
             return {};
         }
         }
@@ -143,7 +143,7 @@ namespace osg2vsg
             componentOffset = {numBytesPerComponent * 2, numBytesPerComponent, 0, numBytesPerComponent * 3};
             break;
         default: {
-            std::cout << "Warning: formateImage() source PixelFormat " << image->getPixelFormat() << " not supported." << std::endl;
+            std::cout << "Warning: formatImage() source PixelFormat " << image->getPixelFormat() << " not supported." << std::endl;
             return {};
         }
         }
@@ -411,7 +411,7 @@ namespace osg2vsg
             return {};
         }
 
-        // we want to pass ownership of the new_image data onto th vsg_image so reset the allocation mode on the image to prevent deletetion.
+        // we want to pass ownership of the new_image data on to the vsg_image so reset the allocation mode on the image to prevent deletion.
         new_image->setAllocationMode(osg::Image::NO_DELETE);
 
         vsg::ref_ptr<vsg::Data> vsg_data;

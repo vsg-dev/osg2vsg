@@ -1,7 +1,6 @@
 // Released under the OSGPL license, as part of the OpenSceneGraph distribution.
 //
-// ReaderWriter for sgi's .rgb format.
-// specification can be found at http://local.wasp.uwa.edu.au/~pbourke/dataformats/sgirgb/sgiversion.html
+// ReaderWriter for converting and writing scenes to vsgt/vsgb files. Reading files back in is not currently implemented.
 
 #include <osgDB/FileNameUtils>
 #include <osgDB/FileUtils>

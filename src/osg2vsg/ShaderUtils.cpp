@@ -44,22 +44,22 @@ uint32_t osg2vsg::calculateShaderModeMask(const osg::StateSet* stateSet)
     return stateMask;
 }
 
-// create defines string based of shader mask
+// create defines string based on shader mask
 
 std::set<std::string> osg2vsg::createPSCDefineStrings(const uint32_t& shaderModeMask, const uint32_t& geometryAttrbutes)
 {
     bool hasnormal = geometryAttrbutes & NORMAL;
-    bool hastanget = geometryAttrbutes & TANGENT;
+    bool hastangent = geometryAttrbutes & TANGENT;
     bool hascolor = geometryAttrbutes & COLOR;
     bool hastex0 = geometryAttrbutes & TEXCOORD0;
 
     std::set<std::string> defines;
 
-    // vertx inputs
+    // vertex inputs
     if (hasnormal) defines.insert("VSG_NORMAL");
     if (hascolor) defines.insert("VSG_COLOR");
     if (hastex0) defines.insert("VSG_TEXCOORD0");
-    if (hastanget) defines.insert("VSG_TANGENT");
+    if (hastangent) defines.insert("VSG_TANGENT");
 
     // shading modes/maps
     if (hasnormal && (shaderModeMask & LIGHTING)) defines.insert("VSG_LIGHTING");

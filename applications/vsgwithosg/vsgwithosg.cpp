@@ -79,14 +79,14 @@ vsg::ref_ptr<vsg::Node> createTextureQuad(vsg::ref_ptr<vsg::Data> sourceData)
     // set up graphics pipeline
     vsg::DescriptorSetLayoutBindings descriptorBindings
     {
-        {0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr} // { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
+        {0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr} // { binding, descriptorType, descriptorCount, stageFlags, pImmutableSamplers }
     };
 
     auto descriptorSetLayout = vsg::DescriptorSetLayout::create(descriptorBindings);
 
     vsg::PushConstantRanges pushConstantRanges
     {
-        {VK_SHADER_STAGE_VERTEX_BIT, 0, 128} // projection view, and model matrices, actual push constant calls autoaatically provided by the VSG's DispatchTraversal
+        {VK_SHADER_STAGE_VERTEX_BIT, 0, 128} // projection, view, and model matrices, actual push constant calls automatically provided by the VSG's RecordTraversal
     };
 
     vsg::VertexInputState::Bindings vertexBindingsDescriptions
@@ -123,7 +123,7 @@ vsg::ref_ptr<vsg::Node> createTextureQuad(vsg::ref_ptr<vsg::Data> sourceData)
     auto descriptorSet = vsg::DescriptorSet::create(descriptorSetLayout, vsg::Descriptors{texture});
     auto bindDescriptorSets = vsg::BindDescriptorSets::create(VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->layout, 0, vsg::DescriptorSets{descriptorSet});
 
-    // create StateGroup as the root of the scene/command graph to hold the GraphicsProgram, and binding of Descriptors to decorate the whole graph
+    // create StateGroup as the root of the scene/command graph to hold the GraphicsPipeline, and binding of Descriptors to decorate the whole graph
     auto scenegraph = vsg::StateGroup::create();
     scenegraph->add(bindGraphicsPipeline);
     scenegraph->add(bindDescriptorSets);
@@ -151,7 +151,7 @@ vsg::ref_ptr<vsg::Node> createTextureQuad(vsg::ref_ptr<vsg::Data> sourceData)
         {1.0f, 1.0f, 1.0f}
     }); // VK_FORMAT_R32G32B32_SFLOAT, VK_VERTEX_INPUT_RATE_VERTEX, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE
 
-    uint8_t origin = textureData->properties.origin; // in Vulkan the origin is by default top left.
+    uint8_t origin = textureData->properties.origin; // in Vulkan the origin is in the top left corner by default.
     float left = 0.0f;
     float right = 1.0f;
     float top = (origin == vsg::TOP_LEFT) ? 0.0f : 1.0f;
@@ -183,12 +183,12 @@ vsg::ref_ptr<vsg::Node> createTextureQuad(vsg::ref_ptr<vsg::Data> sourceData)
 }
 int main(int argc, char** argv)
 {
-    // set up vsg::Options to pass in filepaths and ReaderWriter's and other IO related options to use when reading and writing files.
+    // set up vsg::Options to pass in filepaths, ReaderWriters and other IO related options to use when reading and writing files.
     auto options = vsg::Options::create();
     options->fileCache = vsg::getEnv("VSG_FILE_CACHE");
     options->paths = vsg::getEnvPaths("VSG_FILE_PATH");
 
-    // add vsgXchange's support for reading and writing 3rd party file formats
+    // add OpenSceneGraph's support for reading and writing 3rd party file formats
     options->add(vsg::VSG::create());
     options->add(vsg::spirv::create());
     options->add(osg2vsg::OSG::create());
@@ -213,7 +213,7 @@ int main(int argc, char** argv)
 
     if (argc <= 1)
     {
-        std::cout<<"Please specifiy a model to load on commnadline."<<std::endl;
+        std::cout<<"Please specify a model to load on command line."<<std::endl;
     }
 
     vsg::Path filename = arguments[1];
@@ -268,7 +268,7 @@ int main(int argc, char** argv)
         }
         auto vsg_camera = vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(vsg_window->extent2D()));
 
-        // add close handler to respond the close window button and pressing escape
+        // add close handler to respond to the close window button and pressing escape
         vsg_viewer->addEventHandler(vsg::CloseHandler::create(vsg_viewer));
 
         if (pathFilename)
@@ -331,7 +331,7 @@ int main(int argc, char** argv)
     // rendering main loop
     while (vsg_viewer->advanceToNextFrame() && !osg_viewer.done())
     {
-        // render VulkanScenGraph frame
+        // render VulkanSceneGraph frame
         {
             vsg_viewer->handleEvents();
             vsg_viewer->update();
@@ -339,7 +339,7 @@ int main(int argc, char** argv)
             vsg_viewer->present();
         }
 
-        // render OpenScenGraph frame
+        // render OpenSceneGraph frame
         {
             osg_viewer.advance();
             osg_viewer.updateTraversal();

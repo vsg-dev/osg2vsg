@@ -41,7 +41,7 @@ namespace osg2vsg
 
         bool getFeatures(Features& features) const override;
 
-        // vsg::Options::setValue(str, value) suppoorted options:
+        // vsg::Options::setValue(str, value) supported options:
         static constexpr const char* original_converter = "original_converter";   // select early osg2vsg implementation
         static constexpr const char* read_build_options = "read_build_options";   // read build options from specified file
         static constexpr const char* write_build_options = "write_build_options"; // write build options to specified file

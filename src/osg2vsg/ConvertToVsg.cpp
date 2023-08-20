@@ -345,10 +345,9 @@ void ConvertToVsg::apply(osg::MatrixTransform& transform)
         }
     } checkForCullNodes;
 
-    // search the subgraph to see if any cull ndoes are present so we know whether transform the view frustum in local coords will be reuiqred.
+    // search the subgraph to see if any cull nodes are present so we know whether transforming the view frustum to local coords will be required.
     vsg_transform->accept(checkForCullNodes);
 
-    // need to run visitor to seeif it contains any CullNode/LOD/PagedLOD
     vsg_transform->subgraphRequiresLocalFrustum = checkForCullNodes.containsCullNodes;
 
     root = vsg_transform;
@@ -490,7 +489,7 @@ void ConvertToVsg::apply(osg::LOD& lod)
     const double pixel_ratio = 1.0 / 1080.0;
     const double angle_ratio = 1.0 / osg::DegreesToRadians(30.0); // assume a 60 fovy for reference
 
-    // build a map of minimum screen ration to child
+    // build a map of minimum screen ratio to child
     std::map<double, vsg::ref_ptr<vsg::Node>> ratioChildMap;
     for (unsigned int i = 0; i < numChildren; ++i)
     {

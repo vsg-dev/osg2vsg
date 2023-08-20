@@ -152,7 +152,7 @@ namespace osg2vsg
         return mask;
     }
 
-    VkSamplerAddressMode covertToSamplerAddressMode(osg::Texture::WrapMode wrapmode)
+    VkSamplerAddressMode convertToSamplerAddressMode(osg::Texture::WrapMode wrapmode)
     {
         switch (wrapmode)
         {
@@ -194,9 +194,9 @@ namespace osg2vsg
         sampler->minFilter = minFilterMipmapMode.first;
         sampler->magFilter = magFilterMipmapMode.first;
         sampler->mipmapMode = minFilterMipmapMode.second;
-        sampler->addressModeU = covertToSamplerAddressMode(texture->getWrap(osg::Texture::WrapParameter::WRAP_S));
-        sampler->addressModeV = covertToSamplerAddressMode(texture->getWrap(osg::Texture::WrapParameter::WRAP_T));
-        sampler->addressModeW = covertToSamplerAddressMode(texture->getWrap(osg::Texture::WrapParameter::WRAP_R));
+        sampler->addressModeU = convertToSamplerAddressMode(texture->getWrap(osg::Texture::WrapParameter::WRAP_S));
+        sampler->addressModeV = convertToSamplerAddressMode(texture->getWrap(osg::Texture::WrapParameter::WRAP_T));
+        sampler->addressModeW = convertToSamplerAddressMode(texture->getWrap(osg::Texture::WrapParameter::WRAP_R));
 
         // requires Logical device to have deviceFeatures.samplerAnisotropy = VK_TRUE; set when creating the vsg::Device
         sampler->anisotropyEnable = texture->getMaxAnisotropy() > 1.0f ? VK_TRUE : VK_FALSE;
@@ -220,7 +220,7 @@ namespace osg2vsg
             sampler->mipLodBias = 0;
         }
 
-        // Vulkan doesn't supoort a vec4 border colour so have to map across to the enum's based on a best fit.
+        // Vulkan doesn't support a vec4 border colour so have to map across to the enum's based on a best fit.
         osg::Vec4 borderColor = texture->getBorderColor();
         if (borderColor.a() < 0.5f)
         {
@@ -294,8 +294,8 @@ namespace osg2vsg
     {
         uint32_t instanceCount = 1;
 
-        // work out if we need to enable instance by looking at BIND_OVERALL entries
-        // to see if any have more than one element which we'll interpret requesting instancing, such as used for our custom osg::Billboard handling.
+        // work out if we need to enable instancing by looking at BIND_OVERALL entries
+        // to see if any have more than one element which we'll interpret as requesting instancing, such as for our custom osg::Billboard handling.
         {
             osg::Geometry::ArrayList arrays;
             if (ingeometry->getArrayList(arrays))
@@ -312,7 +312,7 @@ namespace osg2vsg
 
         uint32_t bindOverallPaddingCount = instanceCount;
 
-        // convert attribute arrays, create defaults for any requested that don't exist for now to ensure pipline gets required data
+        // convert attribute arrays, create defaults for any requested attributes that don't exist for now to ensure pipeline gets required data
         vsg::ref_ptr<vsg::Data> vertices(osg2vsg::convertToVsg(ingeometry->getVertexArray(), bindOverallPaddingCount));
         if (!vertices.valid() || vertices->valueCount() == 0) return {};
 
@@ -356,7 +356,7 @@ namespace osg2vsg
 
         // convert indices
 
-        // assume all the draw elements use the same primitive mode, copy all drawelements indices into one indicie array and use in single drawindexed command
+        // assume all the draw elements use the same primitive mode, copy all drawelements indices into one index array and use a single drawindexed command
         // create a draw command per drawarrays primitive set
 
         vsg::Geometry::DrawCommands drawCommands;

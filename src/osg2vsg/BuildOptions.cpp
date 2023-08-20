@@ -93,12 +93,12 @@ vsg::ref_ptr<vsg::BindGraphicsPipeline> PipelineCache::getOrCreateBindGraphicsPi
 
     vsg::DescriptorSetLayoutBindings descriptorBindings;
 
-    // add material first if any (for now material is hardcoded to binding MATERIAL_BINDING)
-    if (shaderModeMask & MATERIAL) descriptorBindings.push_back({MATERIAL_BINDING, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}); // { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
+    // add material first, if any (for now material is hardcoded to binding MATERIAL_BINDING)
+    if (shaderModeMask & MATERIAL) descriptorBindings.push_back({MATERIAL_BINDING, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}); // { binding, descriptorType, descriptorCount, stageFlags, pImmutableSamplers }
 
-    // these need to go in incremental order by texture unit value as that how they will have been added to the descriptor set
-    // VkDescriptorSetLayoutBinding { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
-    if (shaderModeMask & DIFFUSE_MAP) descriptorBindings.push_back({DIFFUSE_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}); // { binding, descriptorTpe, descriptorCount, stageFlags, pImmutableSamplers}
+    // these need to go in incremental order by texture unit value as that is how they will have been added to the descriptor set
+    // VkDescriptorSetLayoutBinding { binding, descriptorType, descriptorCount, stageFlags, pImmutableSamplers }
+    if (shaderModeMask & DIFFUSE_MAP) descriptorBindings.push_back({DIFFUSE_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}); // { binding, descriptorType, descriptorCount, stageFlags, pImmutableSamplers }
     if (shaderModeMask & OPACITY_MAP) descriptorBindings.push_back({OPACITY_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr});
     if (shaderModeMask & AMBIENT_MAP) descriptorBindings.push_back({AMBIENT_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr});
     if (shaderModeMask & NORMAL_MAP) descriptorBindings.push_back({NORMAL_TEXTURE_UNIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr});
@@ -154,7 +154,7 @@ vsg::ref_ptr<vsg::BindGraphicsPipeline> PipelineCache::getOrCreateBindGraphicsPi
     {
         VkVertexInputRate trate = geometryAttributesMask & TRANSLATE_OVERALL ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
         vertexBindingsDescriptions.push_back(VkVertexInputBindingDescription{vertexBindingIndex, sizeof(vsg::vec3), trate});
-        vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{TRANSLATE_CHANNEL, vertexBindingIndex, VK_FORMAT_R32G32B32_SFLOAT, 0}); // tangent as vec4
+        vertexAttributeDescriptions.push_back(VkVertexInputAttributeDescription{TRANSLATE_CHANNEL, vertexBindingIndex, VK_FORMAT_R32G32B32_SFLOAT, 0}); // translation as vec3
         vertexBindingIndex++;
     }
 

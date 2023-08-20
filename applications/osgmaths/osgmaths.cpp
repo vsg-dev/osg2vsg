@@ -140,7 +140,7 @@ int main(int argc, char** argv)
 
     if (vsg_test)
     {
-        vsg::dmat4 identiy;
+        vsg::dmat4 identity;
 
         double vsg_delta = 0.0;
         double vsg_transposed_delta = 0.0;
@@ -154,7 +154,7 @@ int main(int argc, char** argv)
             for(auto& matrix : vsg_dmatrices)
             {
                 auto inv = vsg::inverse(matrix);
-                auto result = difference(matrix * inv, identiy);
+                auto result = difference(matrix * inv, identity);
                 vsg_delta += result;
                 std::cout<<"\n\nvsgmatrix = "<<matrix<<std::endl;
                 std::cout<<"inv = "<<inv<<std::endl;
@@ -167,7 +167,7 @@ int main(int argc, char** argv)
             for(auto& matrix : vsg_transposed_dmatrices)
             {
                 auto inv = vsg::inverse(matrix);
-                auto result = difference(matrix * inv, identiy);
+                auto result = difference(matrix * inv, identity);
                 vsg_transposed_delta += result;
                 std::cout<<"\n\nvsgmatrix = "<<matrix<<std::endl;
                 std::cout<<"inv = "<<inv<<std::endl;

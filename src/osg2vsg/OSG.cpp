@@ -47,7 +47,7 @@ bool OSG::getFeatures(Features& features) const
     for (auto& filename : all_plugins)
     {
         std::cout<<"   filename = "<<filename<<std::endl;
-        // the plugin list icludes the OSG's serializers so we need to discard these from being queried.
+        // the plugin list includes the OSG's serializers so we need to discard these from being queried.
         if (filename.find("osgdb_serializers_") == std::string::npos && filename.find("osgdb_deprecated_") == std::string::npos)
         {
             plugins.push_back(filename);
@@ -169,7 +169,7 @@ vsg::ref_ptr<vsg::Object> OSG::read(const vsg::Path& filename, vsg::ref_ptr<cons
     }
     else
     {
-        vsg::warn("OSG::ImplementationreadFile(", filename, ") cannot convert object type ", object->className(), ")");
+        vsg::warn("OSG::read(", filename, ") cannot convert object type ", object->className(), ")");
     }
 
     return {};

@@ -12,7 +12,7 @@ set(OpenGL_GL_PREFERENCE "GLVND")
 find_package(OpenGL REQUIRED)
 
 # Find OpenSceneGraph packages for reference
-# set prefrence for using modern OpenGL library.
+# set preference for using modern OpenGL library.
 find_package(OpenSceneGraph REQUIRED COMPONENTS osgDB osgTerrain osgUtil osgGA osgViewer)
 
 if (VULKAN_SDK)

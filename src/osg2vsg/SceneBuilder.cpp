@@ -76,7 +76,7 @@ SceneBuilderBase::StatePair SceneBuilderBase::computeStatePair(osg::StateSet* st
         osg::Program* program = dynamic_cast<osg::Program*>(attribute.second.first.get());
         if (program)
         {
-            DEBUG_OUTPUT << "Found program removing from dataState" << program << " inserting into programState" << std::endl;
+            DEBUG_OUTPUT << "Found program, removing from dataState" << program << " and inserting into programState" << std::endl;
             dataState->removeAttribute(program);
             programState->setAttribute(program, attribute.second.second);
         }
@@ -342,7 +342,7 @@ void SceneBuilder::apply(osg::Geometry& geometry)
     {
         if (primitive->getNumPrimitives() == 0)
         {
-            DEBUG_OUTPUT << "SceneBuilder::apply(osg::Geometry& geometry), ignoring geometry with as it contains an empty PrimitiveSet : " << primitive->className() << std::endl;
+            DEBUG_OUTPUT << "SceneBuilder::apply(osg::Geometry& geometry), ignoring geometry as it contains an empty PrimitiveSet : " << primitive->className() << std::endl;
             return;
         }
     }
@@ -655,7 +655,7 @@ vsg::ref_ptr<vsg::Node> SceneBuilder::createTransformGeometryGraphVSG(TransformG
                 }
                 else
                 {
-                    DEBUG_OUTPUT << "Using CullGroupe" << std::endl;
+                    DEBUG_OUTPUT << "Using CullGroup" << std::endl;
                     auto cullGroup = vsg::CullGroup::create(boundingSphere);
                     cullGroup->addChild(leaf);
                     localGroup->addChild(cullGroup);
