@@ -273,16 +273,15 @@ int main(int argc, char** argv)
 
         if (pathFilename)
         {
-            auto animationPath = vsg::read_cast<vsg::AnimationPath>(pathFilename, options);
-            if (!animationPath)
+            auto animation = vsg::read_cast<vsg::Animation>(pathFilename, options);
+            if (!animation)
             {
                 std::cout<<"Warning: unable to read animation path : "<<pathFilename<<std::endl;
                 return 1;
             }
 
-            auto animationPathHandler = vsg::AnimationPathHandler::create(vsg_camera, animationPath, vsg_viewer->start_point());
-            animationPathHandler->printFrameStatsToConsole = true;
-            vsg_viewer->addEventHandler(animationPathHandler);
+            auto cameraAnimation = vsg::CameraAnimation::create(vsg_camera, pathFilename, options);
+            vsg_viewer->addEventHandler(cameraAnimation);
         }
         else vsg_viewer->addEventHandler(vsg::Trackball::create(vsg_camera));
 

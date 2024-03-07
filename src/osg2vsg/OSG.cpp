@@ -114,18 +114,21 @@ vsg::ref_ptr<vsg::Object> OSG::read(const vsg::Path& filename, vsg::ref_ptr<cons
             osg::ref_ptr<osg::AnimationPath> osg_animationPath = new osg::AnimationPath;
             osg_animationPath->read(fin);
 
-            auto vsg_animationPath = vsg::AnimationPath::create();
+            auto vsg_animation = vsg::Animation::create();
+            auto transformSampler = vsg::TransformSampler::create();
+            auto keyframes = transformSampler->keyframes = vsg::TransformKeyframes::create();
+            vsg_animation->samplers.push_back(transformSampler);
 
             switch (osg_animationPath->getLoopMode())
             {
             case (osg::AnimationPath::SWING):
-                vsg_animationPath->mode = vsg::AnimationPath::FORWARD_AND_BACK;
+                vsg_animation->mode = vsg::Animation::FORWARD_AND_BACK;
                 break;
             case (osg::AnimationPath::LOOP):
-                vsg_animationPath->mode = vsg::AnimationPath::REPEAT;
+                vsg_animation->mode = vsg::Animation::REPEAT;
                 break;
             case (osg::AnimationPath::NO_LOOPING):
-                vsg_animationPath->mode = vsg::AnimationPath::ONCE;
+                vsg_animation->mode = vsg::Animation::ONCE;
                 break;
             }
 
@@ -133,12 +136,14 @@ vsg::ref_ptr<vsg::Object> OSG::read(const vsg::Path& filename, vsg::ref_ptr<cons
             {
                 const auto& position = cp.getPosition();
                 const auto& rotation = cp.getRotation();
-                // const auto& scale = cp.getScale(); // TODO
+                const auto& scale = cp.getScale(); // TODO
 
-                vsg_animationPath->add(time, vsg::dvec3(position.x(), position.y(), position.z()), vsg::dquat(rotation.x(), rotation.y(), rotation.z(), rotation.w()));
+                keyframes->add(time, vsg::dvec3(position.x(), position.y(), position.z()),
+                                     vsg::dquat(rotation.x(), rotation.y(), rotation.z(), rotation.w()),
+                                     vsg::dvec3(scale.x(), scale.y(), scale.z()));
             }
 
-            return vsg_animationPath;
+            return vsg_animation;
         }
         return {};
     }
