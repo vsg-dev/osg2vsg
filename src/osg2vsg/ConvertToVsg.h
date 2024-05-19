@@ -31,6 +31,7 @@ namespace osg2vsg
 
         vsg::ref_ptr<vsg::Node> root;
 
+        using osg::NodeVisitor::apply;
         using MasksAndState = std::tuple<uint32_t, uint32_t, osg::ref_ptr<osg::StateSet>>;
         using BindDescriptorSetMap = std::map<MasksAndState, vsg::ref_ptr<vsg::BindDescriptorSet>>;
         BindDescriptorSetMap bindDescriptorSetMap;
