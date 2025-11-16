@@ -285,7 +285,7 @@ namespace osg2vsg
         void* data = vsg::allocate(size, vsg::ALLOCATOR_AFFINITY_DATA);
         memcpy(data, image->data(), size);
 
-        layout.maxNumMipmaps = image->getNumMipmapLevels();
+        layout.mipLevels = image->getNumMipmapLevels();
 
         uint32_t width = image->s() / layout.blockWidth;
         uint32_t height = image->t() / layout.blockHeight;
@@ -469,7 +469,7 @@ namespace osg2vsg
         }
 
         vsg::Data::Properties& layout = vsg_data->properties;
-        layout.maxNumMipmaps = image->getNumMipmapLevels();
+        layout.mipLevels = image->getNumMipmapLevels();
         layout.origin = (image->getOrigin() == osg::Image::BOTTOM_LEFT) ? vsg::BOTTOM_LEFT : vsg::TOP_LEFT;
 
         return vsg_data;
