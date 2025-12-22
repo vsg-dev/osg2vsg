@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.7)
 
 project(osg2vsg
-    VERSION 0.3.0
+    VERSION 0.4.0
     DESCRIPTION "OpenSceneGraph/VulkanSceneGraph integration library"
     LANGUAGES CXX
 )
@@ -19,7 +19,7 @@ if (VULKAN_SDK)
     set(ENV{VULKAN_SDK} ${VULKAN_SDK})
 endif()
 
-find_package(vsg 1.1.10)
+find_package(vsg 1.1.13)
 
 vsg_setup_dir_vars()
 vsg_setup_build_vars()
