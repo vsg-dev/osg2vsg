@@ -3,7 +3,6 @@ set(SOURCES
 )
 
 add_library(osgdb_vsg MODULE ${SOURCES})
-set_property(TARGET osgdb_vsg PROPERTY CXX_STANDARD 17)
 
 target_include_directories(osgdb_vsg PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
