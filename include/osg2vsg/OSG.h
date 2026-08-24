@@ -29,7 +29,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace osg2vsg
 {
     // forward declare
-    class PipelineCache;
+    struct PipelineCache;
 
     /// optional OSG ReaderWriter
     class OSG2VSG_DECLSPEC OSG : public vsg::Inherit<vsg::ReaderWriter, OSG>
