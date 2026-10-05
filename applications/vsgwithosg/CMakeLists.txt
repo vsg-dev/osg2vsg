@@ -16,6 +16,7 @@ target_link_libraries(vsgwithosg
     ${OSGUTIL_LIBRARIES}
     ${OSGDB_LIBRARIES}
     ${OSGGA_LIBRARIES}
+    ${OSGTEXT_LIBRARIES}
     ${OSGVIEWER_LIBRARIES}
     ${OPENGL_LIBRARIES}
 )

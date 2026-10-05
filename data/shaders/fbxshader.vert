@@ -77,7 +77,7 @@ void main()
 #endif
 #ifdef VSG_LIGHTING
     vec4 lpos = /*osg_LightSource.position*/ vec4(0.0, 0.25, 1.0, 0.0);
-#ifdef VSG_NORMAL_MAP
+#if defined(VSG_NORMAL_MAP) && defined(VSG_TANGENT)
     vec3 t = (modelView * vec4(osg_Tangent.xyz, 0.0)).xyz;
     vec3 b = cross(n, t);
     vec3 dir = -vec3(modelView * vec4(osg_Vertex, 1.0));
